@@ -52,7 +52,29 @@ button,input,select,textarea{font-family:inherit}a{color:inherit;text-decoration
 
 /* TOOLBAR */
 #tb{background:var(--s1);border-bottom:1px solid var(--bd);padding:.45rem 1.1rem;
-  display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex-shrink:0}
+  display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex-shrink:0;position:relative;z-index:1}
+@media(max-width:640px){#tb{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:.3rem;padding:.35rem .7rem}}
+/* Mobile filter-tab dropdown */
+#ftabsDrop{display:none}
+@media(max-width:640px){
+  #ftabs{display:none!important}
+  #ftabsDrop{display:flex;align-items:center;gap:.3rem;flex-shrink:0;
+    background:transparent;border:1px solid var(--bd);color:var(--t2);border-radius:var(--r);
+    padding:.25rem .55rem;font-size:.7rem;font-weight:500;cursor:pointer;transition:all .15s;
+    white-space:nowrap;font-family:'Inter',sans-serif}
+  #ftabsDrop.is-active{background:var(--blue);border-color:var(--blue);color:#031329;font-weight:700}
+  #ftabsDrop svg{flex-shrink:0;transition:transform .15s}
+  #ftabsDrop.open svg{transform:rotate(180deg)}
+}
+#ftabsPop{display:none;position:fixed;background:var(--s1);
+  border:1px solid var(--bd2);border-radius:var(--rl);z-index:600;min-width:160px;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);padding:.35rem;overflow:hidden}
+#ftabsPop.open{display:block}
+.ftpop-opt{display:flex;align-items:center;gap:.5rem;padding:.35rem .6rem;
+  border-radius:calc(var(--rl) - 2px);font-size:.75rem;font-weight:500;color:var(--t2);
+  cursor:pointer;transition:background .1s;white-space:nowrap}
+.ftpop-opt:hover{background:var(--s3);color:var(--text)}
+.ftpop-opt.on{background:#02b3fc18;color:var(--blue);font-weight:700}
 .ft{background:transparent;border:1px solid var(--bd);color:var(--t2);border-radius:var(--r);
   padding:.25rem .65rem;font-size:.7rem;font-weight:500;cursor:pointer;transition:all .15s;
   white-space:nowrap;font-family:'Inter',sans-serif}
@@ -885,7 +907,7 @@ body.bulk-mode .gc.bulk-selected{border-color:var(--blue);box-shadow:0 0 0 2px #
     <button class="hb hb-desk" id="expBtn" title="Export"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 14l6 6 6-6"/></svg><span class="hb-label"> Export</span></button>
     <button class="hb hb-desk" id="impBtn" title="Import"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V8M6 10l6-6 6 6"/></svg><span class="hb-label"> Import</span></button>
     <button class="hb hb-desk kb-help-btn" id="kbHelpBtn" title="Keyboard shortcuts">?</button>
-    <button class="hb" id="collectionToggleBtn">Collection</button>
+    <button class="hb hb-desk" id="collectionToggleBtn">Collection</button>
     <button class="hb p" id="addBtn">＋<span class="hb-label"> Add game</span></button>
     <button class="hb hb-mob" id="hamburgerBtn" style="font-size:1rem;padding:0 .5rem" title="Menu">☰</button>
   </div>
@@ -921,13 +943,26 @@ body.bulk-mode .gc.bulk-selected{border-color:var(--blue);box-shadow:0 0 0 2px #
 </div>
 
 <div id="tb">
-  <div style="display:flex;gap:.35rem;flex-wrap:wrap" id="ftabs">
+  <div style="display:flex;gap:.35rem;flex-wrap:nowrap" id="ftabs">
     <button class="ft on" data-f="all">All</button>
     <button class="ft" data-f="wishlist">Wishlist</button>
     <button class="ft" data-f="cancelled">Cancelled</button>
     <button class="ft" data-f="removed">Removed</button>
     <button class="ft" data-f="review">To Review</button>
     <button class="ft" data-f="unreleased">Unreleased</button>
+  </div>
+  <!-- Mobile filter-tab dropdown (replaces #ftabs on small screens) -->
+  <button id="ftabsDrop">
+    <span id="ftabsDropLabel">All</span>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+  <div id="ftabsPop">
+    <div class="ftpop-opt on" data-f="all">All</div>
+    <div class="ftpop-opt" data-f="wishlist">Wishlist</div>
+    <div class="ftpop-opt" data-f="cancelled">Cancelled</div>
+    <div class="ftpop-opt" data-f="removed">Removed</div>
+    <div class="ftpop-opt" data-f="review">To Review</div>
+    <div class="ftpop-opt" data-f="unreleased">Unreleased</div>
   </div>
   <div class="tsep"></div>
   <select class="ts" id="sortSel">
@@ -3342,6 +3377,13 @@ function openPanel(id){
       psInlinePickerPanel.style.display=isOpen?'none':'flex';
       if(!isOpen)_buildInlinePicker();
     });
+    // Close picker when clicking outside
+    document.addEventListener('click',function _psOutsideClick(e){
+      if(!psInlinePickerPanel.isConnected){document.removeEventListener('click',_psOutsideClick);return;}
+      if(psInlinePickerPanel.style.display==='none')return;
+      if(!e.target.closest('#psInlinePickerPanel')&&!e.target.closest('#psInlineBtn'))
+        psInlinePickerPanel.style.display='none';
+    });
     _buildInlinePicker();
   }
   if(psInlineSave){
@@ -4460,6 +4502,42 @@ document.getElementById('ftabs').onclick=e=>{
   const b=e.target.closest('.ft');if(!b)return;
   af=b.dataset.f;document.querySelectorAll('.ft').forEach(x=>x.classList.toggle('on',x===b));renderAll();
 };
+// Mobile filter-tab dropdown
+(function(){
+  const drop=document.getElementById('ftabsDrop');
+  const pop=document.getElementById('ftabsPop');
+  const label=document.getElementById('ftabsDropLabel');
+  const labels={'all':'All','wishlist':'Wishlist','cancelled':'Cancelled','removed':'Removed','review':'To Review','unreleased':'Unreleased'};
+  function syncDrop(){
+    label.textContent=labels[af]||'All';
+    drop.classList.toggle('is-active',af!=='all');
+    pop.querySelectorAll('.ftpop-opt').forEach(o=>o.classList.toggle('on',o.dataset.f===af));
+  }
+  drop.addEventListener('click',e=>{
+    e.stopPropagation();
+    const rect=drop.getBoundingClientRect();
+    pop.style.top=(rect.bottom+window.scrollY+4)+'px';
+    pop.style.left=rect.left+'px';
+    pop.classList.toggle('open');
+    drop.classList.toggle('open');
+  });
+  pop.addEventListener('click',e=>{
+    const opt=e.target.closest('.ftpop-opt');if(!opt)return;
+    af=opt.dataset.f;
+    document.querySelectorAll('.ft').forEach(x=>x.classList.toggle('on',x.dataset.f===af));
+    pop.classList.remove('open');drop.classList.remove('open');
+    syncDrop();renderAll();
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#ftabsDrop')&&!e.target.closest('#ftabsPop')){
+      pop.classList.remove('open');drop.classList.remove('open');
+    }
+  });
+  // Keep dropdown in sync when desktop tabs are used
+  const origFtabs=document.getElementById('ftabs');
+  origFtabs.addEventListener('click',()=>requestAnimationFrame(syncDrop));
+  syncDrop();
+})();
 document.getElementById('sortSel').onchange=renderAll;
 document.getElementById('groupSel').onchange=renderAll;
 document.getElementById('searchInput').oninput=function(){
@@ -4475,7 +4553,7 @@ document.getElementById('searchClear').onclick=function(){
   si.value='';if(sm)sm.value='';
   this.classList.remove('visible');
   document.getElementById('searchClearMob').classList.remove('visible');
-  si.focus();renderAll();
+  si.focus();dispatchRender();
 };
 document.getElementById('searchClearMob').onclick=function(){
   const si=document.getElementById('searchInput');
@@ -4483,7 +4561,7 @@ document.getElementById('searchClearMob').onclick=function(){
   si.value='';if(sm)sm.value='';
   this.classList.remove('visible');
   document.getElementById('searchClear').classList.remove('visible');
-  sm.focus();renderAll();
+  sm.focus();dispatchRender();
 };
 (function(){
   const mob=document.getElementById('searchInputMob');
@@ -4491,7 +4569,7 @@ document.getElementById('searchClearMob').onclick=function(){
     document.getElementById('searchInput').value=this.value;
     document.getElementById('searchClear').classList.toggle('visible',!!this.value);
     document.getElementById('searchClearMob').classList.toggle('visible',!!this.value);
-    renderAll();
+    dispatchRender();
   });
 })();
 
