@@ -28,14 +28,8 @@ jobs:
           SHEET_URL: ${{ secrets.SHEET_URL }}
         run: |
           if [ -n "$SHEET_URL" ]; then
-            python3 -c "
-import sys, json
-url = sys.argv[1]
-with open('index.html') as f: content = f.read()
-content = content.replace('window.BTB_SHEET_URL = \"\";', 'window.BTB_SHEET_URL = ' + json.dumps(url) + ';', 1)
-with open('index.html', 'w') as f: f.write(content)
-print('SHEET_URL injected into index.html.')
-" "$SHEET_URL"
+            sed -i "s|window\.BTB_SHEET_URL = \"\";|window.BTB_SHEET_URL = \"$SHEET_URL\";|" index.html
+            echo "SHEET_URL injected into index.html."
           else
             echo "No SHEET_URL secret — site will run in offline mode."
           fi
