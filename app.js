@@ -188,11 +188,7 @@ function normalise(g){
   }
   if(!Array.isArray(g.steamCollection))g.steamCollection=[];
   // Normalise purchaseDate to dd/mm/yyyy
-  if(g.purchaseDate&&g.purchaseDate.includes('T')){
-    try{const d=new Date(g.purchaseDate);g.purchaseDate=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}catch(e){}
-  } else if(g.purchaseDate&&g.purchaseDate.match(/^\d{4}-\d{2}-\d{2}$/)){
-    const p=g.purchaseDate.split('-');g.purchaseDate=p[2]+'/'+p[1]+'/'+p[0];
-  }
+  if(g.purchaseDate){const pf=fmtDate(String(g.purchaseDate));if(pf&&pf!==String(g.purchaseDate))g.purchaseDate=pf;}
   // parentAppId: ensure string or null
   if(g.parentAppId!==undefined&&g.parentAppId!==null&&g.parentAppId!=='')
     g.parentAppId=String(g.parentAppId);
@@ -713,6 +709,12 @@ function normaliseDate(raw){
   if(/^\d{4}-\d{2}-\d{2}T/.test(String(raw))){
     const d=new Date(String(raw));
     return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  // Numeric epoch: 10 digits = seconds, 13 digits = milliseconds
+  if(/^\d{10,13}$/.test(String(raw))){
+    const ms=String(raw).length<=10?Number(raw)*1000:Number(raw);
+    const d=new Date(ms);
+    if(!isNaN(d))return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
   const m=String(raw).match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2}|\d{4})$/);
   if(m){let[,d,mo,y]=m;if(y.length===2)y=(parseInt(y)<50?'20':'19')+y;return`${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`}
@@ -1900,7 +1902,7 @@ function openPanel(id){
     <div id="noteList" style="margin-top:.45rem">
     ${[...notes].reverse().map(n=>`
       <div class="note-entry" data-nid="${esc(n.id)}">
-        <div class="note-date">${esc(n.date)}</div>
+        <div class="note-date">${esc(fmtDate(n.date)||n.date||'')}</div>
         <div class="note-text">${esc(n.text)}</div>
         <div class="note-edit-wrap" style="display:none">
           <div class="note-compose" style="margin-bottom:.25rem">
@@ -2660,7 +2662,7 @@ function renderModalNotes(g){
   if(!notes.length){mnList.innerHTML='';return}
   mnList.innerHTML=[...notes].reverse().map(n=>`
     <div class="note-entry" data-nid="${esc(n.id)}">
-      <div class="note-date">${esc(n.date)}</div>
+      <div class="note-date">${esc(fmtDate(n.date)||n.date||'')}</div>
       <div class="note-text">${esc(n.text)}</div>
       <div class="note-edit-wrap" style="display:none">
         <div class="note-compose" style="margin-bottom:.25rem">
@@ -2710,7 +2712,7 @@ function renderModalNoteList(){
   const list=document.getElementById('fNoteList');if(!list)return;
   list.innerHTML=[..._modalNotes].reverse().map(n=>`
     <div class="note-entry" data-nid="${esc(n.id)}">
-      <div class="note-date">${esc(n.date)}</div>
+      <div class="note-date">${esc(fmtDate(n.date)||n.date||'')}</div>
       <div class="note-text">${esc(n.text)}</div>
       <div class="note-edit-wrap" style="display:none">
         <div class="note-compose" style="margin-bottom:.25rem">
