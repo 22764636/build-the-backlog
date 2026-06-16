@@ -1,8 +1,6 @@
-const CACHE='btb-v4';
+const CACHE='btb-v5';
 self.addEventListener('install',e=>{
-  e.waitUntil(
-    caches.open(CACHE).then(c=>c.add(self.registration.scope)).then(()=>self.skipWaiting())
-  );
+  e.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate',e=>{
   e.waitUntil(
@@ -13,6 +11,13 @@ self.addEventListener('activate',e=>{
 });
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
+  const url=new URL(e.request.url);
+  // Never cache HTML — always fetch fresh so deployments take effect immediately
+  if(url.pathname.endsWith('/')||url.pathname.endsWith('.html')){
+    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+    return;
+  }
+  // Cache-first for static assets (JS, CSS, images, fonts)
   e.respondWith(
     caches.match(e.request).then(cached=>{
       const fresh=fetch(e.request).then(r=>{
