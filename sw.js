@@ -1,4 +1,4 @@
-const CACHE='btb-v8';
+const CACHE='btb-v9';
 self.addEventListener('install',e=>{
   e.waitUntil(self.skipWaiting());
 });
@@ -11,8 +11,9 @@ self.addEventListener('activate',e=>{
 });
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
-  // Network-first for HTML navigation — always fetch fresh so deployments take effect
-  if(e.request.mode==='navigate'){
+  const url=new URL(e.request.url);
+  // Never cache the URL config or HTML — always fetch fresh
+  if(url.pathname.endsWith('/_btb_url.js')||e.request.mode==='navigate'){
     e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match(e.request)));
     return;
   }

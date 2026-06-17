@@ -23,18 +23,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject SHEET_URL
+      - name: Write SHEET_URL
         env:
           SHEET_URL: ${{ secrets.SHEET_URL }}
         run: |
           if [ -n "$SHEET_URL" ]; then
-            sed -i "s|window\.BTB_SHEET_URL = \"\";|window.BTB_SHEET_URL = \"$SHEET_URL\";|" index.html
-            echo "SHEET_URL injected."
+            printf 'window.BTB_SHEET_URL = "%s";\n' "$SHEET_URL" > _btb_url.js
+            echo "SHEET_URL written to _btb_url.js (${#SHEET_URL} chars)"
           else
-            echo "No SHEET_URL — site will run in offline mode."
+            echo "No SHEET_URL secret — site will run in offline mode."
           fi
-          sed -i 's|<script src="config\.js" onerror="void 0"></script>||' index.html
-          echo "config.js tag removed from deployed HTML."
 
       - uses: actions/configure-pages@v5
 
