@@ -13,7 +13,7 @@ self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const url=new URL(e.request.url);
   // Never cache the URL config or HTML — always fetch fresh
-  if(url.pathname.endsWith('/_btb_url.js')||e.request.mode==='navigate'){
+  if(url.pathname.endsWith('/btb-url.js')||e.request.mode==='navigate'){
     e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match(e.request)));
     return;
   }
