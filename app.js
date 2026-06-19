@@ -835,6 +835,9 @@ function normaliseDate(raw){
   // Google Visualization API date format: "Date(2024,3,25)" — month is 0-based
   const gv=String(raw).match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})\)$/);
   if(gv){const[,y,mo,d]=gv;return`${y}-${String(Number(mo)+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+  // "25 Nov 2019" display format produced by fmtDate
+  const dm=String(raw).match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if(dm){const MM={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};const[,d,mo,y]=dm;const moN=MM[mo.charAt(0).toUpperCase()+mo.slice(1,3).toLowerCase()];if(moN)return`${y}-${String(moN).padStart(2,'0')}-${d.padStart(2,'0')}`;}
   // Last resort: try native Date parsing (handles "Mon Apr 25 2024 ..." etc.)
   const fd=new Date(String(raw));
   if(!isNaN(fd)&&fd.getFullYear()>1900){return`${fd.getFullYear()}-${String(fd.getMonth()+1).padStart(2,'0')}-${String(fd.getDate()).padStart(2,'0')}`}
@@ -856,7 +859,11 @@ function isTodayDate(raw){return normaliseDate(raw)===todayISO()}
 function fmtDate(d){
   if(!d)return'';
   const n=normaliseDate(d);
-  if(/^\d{4}-\d{2}-\d{2}$/.test(n)){const[y,mo,dd]=n.split('-');return`${dd}/${mo}/${y}`}
+  if(/^\d{4}-\d{2}-\d{2}$/.test(n)){
+    const[y,mo,dd]=n.split('-');
+    const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return`${dd} ${M[Number(mo)-1]} ${y}`;
+  }
   return '';
 }
 function parseDate(raw){return normaliseDate(raw)}
