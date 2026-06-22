@@ -728,6 +728,14 @@ const isUnreleased=g=>isGameUnreleased(g); // alias
 const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
 
 function prioColor(p){return p==='high'?'var(--cyan)':p==='low'?'var(--lime)':'var(--magenta)'}
+const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#555','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
+function platColor(p){return PLAT_COLORS[p]||'#555'}
+function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':'#031329'}
+function platBadgesHTML(g){
+  const ps=g.platforms&&g.platforms.length?g.platforms:(g.platform?g.platform.split(',').map(s=>s.trim()).filter(Boolean):[]);
+  if(!ps.length)return'';
+  return ps.map(p=>`<span class="b-plat" style="background:${platColor(p)};color:${platTextColor(p)}">${esc(p)}</span>`).join('');
+}
 function prioLabel(p){return t(p==='high'?'pHi':p==='low'?'pLo':'pMe')}
 
 // ── DATE HELPERS ─────────────────────────
@@ -1129,6 +1137,7 @@ function cardHTML(g){
       <div class="ct">${esc(g.title)}</div>
       <div class="cbot">
         ${priceEl}
+        ${platBadgesHTML(g)}
         <div class="cq">
           <a href="${stUrl}" class="qb" title="Steam" target="_blank" onclick="event.stopPropagation()">${favImg(FAV_STEAM,'steam')}</a>
           <a href="${ggUrl}" class="qb" title="gg.deals" target="_blank" onclick="event.stopPropagation()">${favImg(FAV_GG,'gg')}</a>
@@ -1215,6 +1224,7 @@ function colCardHTML(g){
       <div class="ct">${esc(g.title)}</div>
       <div class="cbot">
         ${costEl}
+        ${platBadgesHTML(g)}
         ${dlcBadge}
         <div class="cq">
           <a href="${stUrl}" class="qb" title="Steam" target="_blank" onclick="event.stopPropagation()">${favImg(FAV_STEAM,'steam')}</a>
@@ -3106,32 +3116,50 @@ makeFilterPopover({
   },
   renderFn:renderCollection,
 });
-makeFilterPopover({
+function makePlatFilterPopover({btnId,popId,badgeId,clearId,listId,getSelected,setSelected,getFreq,doRender}){
+  const btn=document.getElementById(btnId);
+  const pop=document.getElementById(popId);
+  const badge=document.getElementById(badgeId);
+  const clearBtn=document.getElementById(clearId);
+  const list=document.getElementById(listId);
+  function updateBtn(){const active=getSelected().size>0;btn.classList.toggle('active',active);badge.textContent=getSelected().size;badge.style.display=active?'':'none';}
+  function renderList(){
+    const freq=getFreq();const sel=getSelected();
+    const platforms=Object.keys(freq);
+    if(!platforms.length){list.innerHTML=`<div class="fpop-empty">No platforms</div>`;return;}
+    list.innerHTML=`<div class="plat-filter-pills">${platforms.map(p=>`<button class="b-plat plat-filter-pill${sel.has(p)?' selected':''}" data-val="${esc(p)}" style="background:${platColor(p)};color:${platTextColor(p)}">${esc(p)}<span class="plat-pill-count">${freq[p]}</span></button>`).join('')}</div>`;
+    list.querySelectorAll('.plat-filter-pill').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const v=el.dataset.val;
+        getSelected().has(v)?getSelected().delete(v):getSelected().add(v);
+        el.classList.toggle('selected',getSelected().has(v));
+        updateBtn();doRender();
+      });
+    });
+  }
+  clearBtn.onclick=()=>{setSelected(new Set());updateBtn();renderList();doRender();};
+  btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    document.querySelectorAll('.fpop.open').forEach(p=>{if(p!==pop)p.classList.remove('open')});
+    const opening=!pop.classList.contains('open');
+    pop.classList.toggle('open',opening);
+    if(opening){positionFpop(btn,pop);renderList();}
+  });
+  document.addEventListener('click',e=>{if(!pop.contains(e.target)&&e.target!==btn)pop.classList.remove('open')});
+}
+makePlatFilterPopover({
   btnId:'platFilterBtn',popId:'platFilterPop',badgeId:'platFilterBadge',
   clearId:'platFilterClear',listId:'platFilterList',
   getSelected:()=>fPlats,setSelected:s=>{fPlats=s},
-  getOptions:()=>{
-    const freq={};
-    games.filter(g=>g.status!=='bought').forEach(g=>{
-      const gp=g.platforms&&g.platforms.length?g.platforms:(g.platform?g.platform.split(',').map(s=>s.trim()).filter(Boolean):[]);
-      gp.forEach(p=>{if(p)freq[p]=(freq[p]||0)+1});
-    });
-    return Object.keys(freq).sort().map(v=>({value:v,count:freq[v]}));
-  },
+  getFreq:()=>{const freq={};games.filter(g=>g.status!=='bought').forEach(g=>{const gp=g.platforms&&g.platforms.length?g.platforms:(g.platform?g.platform.split(',').map(s=>s.trim()).filter(Boolean):[]);gp.forEach(p=>{if(p)freq[p]=(freq[p]||0)+1})});return freq;},
+  doRender:renderAll,
 });
-makeFilterPopover({
+makePlatFilterPopover({
   btnId:'cPlatFilterBtn',popId:'cPlatFilterPop',badgeId:'cPlatFilterBadge',
   clearId:'cPlatFilterClear',listId:'cPlatFilterList',
   getSelected:()=>cfPlats,setSelected:s=>{cfPlats=s},
-  getOptions:()=>{
-    const freq={};
-    games.filter(g=>g.status==='bought').forEach(g=>{
-      const gp=g.platforms&&g.platforms.length?g.platforms:(g.platform?g.platform.split(',').map(s=>s.trim()).filter(Boolean):[]);
-      gp.forEach(p=>{if(p)freq[p]=(freq[p]||0)+1});
-    });
-    return Object.keys(freq).sort().map(v=>({value:v,count:freq[v]}));
-  },
-  renderFn:renderCollection,
+  getFreq:()=>{const freq={};games.filter(g=>g.status==='bought').forEach(g=>{const gp=g.platforms&&g.platforms.length?g.platforms:(g.platform?g.platform.split(',').map(s=>s.trim()).filter(Boolean):[]);gp.forEach(p=>{if(p)freq[p]=(freq[p]||0)+1})});return freq;},
+  doRender:renderCollection,
 });
 
 // Search also triggers collection render when in collection mode
