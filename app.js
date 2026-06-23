@@ -1854,18 +1854,16 @@ function handleMarkBought(id){
   if(isGameUnreleased(g)){
     _preorderPendingId=id;
     const ttl=document.getElementById('preorderGameTitle');if(ttl)ttl.textContent=g.title||'';
-    _pushModalHistory();
     document.getElementById('preorderConfirm').classList.add('on');
     return;
   }
   openCollectionModal(id);
 }
-document.getElementById('preorderCancel').onclick=()=>history.back();
-document.getElementById('preorderConfirm').onclick=e=>{if(e.target===e.currentTarget)history.back()};
+document.getElementById('preorderCancel').onclick=()=>{document.getElementById('preorderConfirm').classList.remove('on');_preorderPendingId=null;};
+document.getElementById('preorderConfirm').onclick=e=>{if(e.target===e.currentTarget){e.currentTarget.classList.remove('on');_preorderPendingId=null;}};
 document.getElementById('preorderConfirmBtn').onclick=()=>{
   const id=_preorderPendingId;_preorderPendingId=null;
   document.getElementById('preorderConfirm').classList.remove('on');
-  _popModalHistory();
   if(id)openCollectionModal(id);
 };
 
@@ -2555,8 +2553,6 @@ window.addEventListener('popstate',function(){
   if(rmov&&rmov.classList.contains('on')){rmov.classList.remove('on');return;}
   const riov=document.getElementById('riov');
   if(riov&&riov.classList.contains('on')){riov.classList.remove('on');return;}
-  const preov=document.getElementById('preorderConfirm');
-  if(preov&&preov.classList.contains('on')){preov.classList.remove('on');_preorderPendingId=null;return;}
   const wlov=document.getElementById('wlovConfirm');
   if(wlov&&wlov.classList.contains('on')){wlov.classList.remove('on');return;}
   if(document.getElementById('panel').classList.contains('on')){
@@ -4283,6 +4279,7 @@ function _openSharePicker(url){
       if(Math.abs(dy)>V_CANCEL&&Math.abs(dy)>Math.abs(dx)){sw=null;return;}
       if(Math.abs(dx)<8)return;
       sw.live=true;
+      sw.card.style.zIndex='20';
     }
     e.preventDefault();
     sw.dx=dx;
@@ -4299,6 +4296,7 @@ function _openSharePicker(url){
   function _resetCard(card){
     card.style.transition='transform .2s ease';
     card.style.transform='';
+    card.style.zIndex='';
     card.querySelectorAll('.swipe-hint-r,.swipe-hint-l').forEach(el=>{
       el.style.transition='opacity .2s';el.style.opacity=0;
     });
@@ -4321,7 +4319,7 @@ function _openSharePicker(url){
         card.style.transition='transform .25s ease,opacity .25s ease';
         card.style.transform='translateX(-110%)';
         card.style.opacity='0';
-        setTimeout(()=>{card.style.transform='';card.style.opacity='';_clearHints(card);startMoveToWishlist(id);},250);
+        setTimeout(()=>{card.style.transform='';card.style.opacity='';card.style.zIndex='';_clearHints(card);startMoveToWishlist(id);},250);
       } else {
         _resetCard(card);
       }
@@ -4331,7 +4329,7 @@ function _openSharePicker(url){
         card.style.transition='transform .25s ease,opacity .25s ease';
         card.style.transform='translateX(110%)';
         card.style.opacity='0';
-        setTimeout(()=>{card.style.transform='';card.style.opacity='';_clearHints(card);handleMarkBought(id);},250);
+        setTimeout(()=>{card.style.transform='';card.style.opacity='';card.style.zIndex='';_clearHints(card);handleMarkBought(id);},250);
       } else if(dx<-THRESHOLD){
         _resetCard(card);
         startRemove(id);
