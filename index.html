@@ -122,25 +122,19 @@
       <div class="fbar-sort-row">
         <div class="fbar-sort-item">
           <label class="fbar-sort-label">Sort</label>
-          <select class="ts" id="sortSel">
-            <option value="hotness">Hotness</option>
-            <option value="priority">Priority</option>
-            <option value="title">Title</option>
-            <option value="release-asc">Release Date</option>
-            <option value="price-asc">Price ↑</option>
-            <option value="price-desc">Price ↓</option>
-            <option value="added">Date Added</option>
-          </select>
+          <input type="hidden" id="sortSel" value="hotness">
+          <div class="pick-wrap">
+            <button type="button" class="store-pick-btn" id="sortSelBtn"><span id="sortSelLabel">Hotness</span><span class="spb-arrow">▾</span></button>
+            <div class="pick-dd" id="sortSelDd"></div>
+          </div>
         </div>
         <div class="fbar-sort-item">
           <label class="fbar-sort-label">Group</label>
-          <select class="ts" id="groupSel">
-            <option value="none">None</option>
-            <option value="priority">Priority</option>
-            <option value="genre">Genre</option>
-            <option value="platform">Platform</option>
-            <option value="year">Year</option>
-          </select>
+          <input type="hidden" id="groupSel" value="none">
+          <div class="pick-wrap">
+            <button type="button" class="store-pick-btn" id="groupSelBtn"><span id="groupSelLabel">None</span><span class="spb-arrow">▾</span></button>
+            <div class="pick-dd" id="groupSelDd"></div>
+          </div>
         </div>
       </div>
       <div class="fbar-section" id="fbar-genre-sec">
@@ -200,16 +194,11 @@
           <span class="fbar-sec-arrow">▾</span>
         </button>
         <div class="fbar-sec-body" id="fbar-hot-body" style="display:none">
-          <div class="fbar-hot-inputs">
-            <input type="number" class="fbar-hot-num" id="fbar-hrMinInp" min="0" max="100" value="0" placeholder="0">
-            <span class="fbar-hot-sep">–</span>
-            <input type="number" class="fbar-hot-num" id="fbar-hrMaxInp" min="0" max="100" value="100" placeholder="100">
-          </div>
-          <div class="fbar-slider-wrap" id="fbar-hrSliderWrap">
-            <div class="fbar-slider-track"></div>
-            <div class="fbar-slider-fill" id="fbar-hrFill"></div>
-            <div class="fbar-slider-thumb" id="fbar-hrThumbMin"><span class="fbar-slider-tip" id="fbar-hrTipMin">0</span></div>
-            <div class="fbar-slider-thumb" id="fbar-hrThumbMax"><span class="fbar-slider-tip" id="fbar-hrTipMax">100</span></div>
+          <div class="fbar-hot-chips" id="fbar-hot-chips">
+            <button class="fbar-hot-chip active" data-min="0" data-max="100">Any</button>
+            <button class="fbar-hot-chip" data-min="70" data-max="100">🔥 70+</button>
+            <button class="fbar-hot-chip" data-min="40" data-max="69">▶ 40–69</button>
+            <button class="fbar-hot-chip" data-min="0" data-max="39">⬇ &lt;40</button>
           </div>
         </div>
       </div>
@@ -219,14 +208,11 @@
       <div class="fbar-sort-row">
         <div class="fbar-sort-item" style="flex:1">
           <label class="fbar-sort-label">Sort</label>
-          <select class="ts" id="cSortSel">
-            <option value="steamcol">Steam Collection</option>
-            <option value="title">Title</option>
-            <option value="playstatus">Play Status</option>
-            <option value="purchaseDate">Purchase Date</option>
-            <option value="cost-desc">Cost ↓</option>
-            <option value="cost-asc">Cost ↑</option>
-          </select>
+          <input type="hidden" id="cSortSel" value="steamcol">
+          <div class="pick-wrap">
+            <button type="button" class="store-pick-btn" id="cSortSelBtn"><span id="cSortSelLabel">Steam Collection</span><span class="spb-arrow">▾</span></button>
+            <div class="pick-dd" id="cSortSelDd"></div>
+          </div>
         </div>
       </div>
       <div class="fbar-section" id="fbar-cgenre-sec">

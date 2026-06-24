@@ -987,23 +987,13 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .fbar-opt-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fbar-opt-count{font-size:.62rem;color:var(--t3);flex-shrink:0}
 
-/* Hotness section */
-.fbar-hot-inputs{display:none}
-.fbar-hot-num{width:54px;background:var(--base);border:1px solid var(--bd);border-radius:5px;
-  padding:.22rem .35rem;color:var(--text);font-size:.72rem;text-align:center;outline:none;transition:border-color .12s}
-.fbar-hot-num:focus{border-color:var(--blue)}
-.fbar-hot-sep{color:var(--t3);font-size:.8rem}
-.fbar-slider-wrap{position:relative;height:28px;padding:0 8px;cursor:pointer;margin-top:.15rem}
-.fbar-slider-track{position:absolute;top:50%;left:8px;right:8px;height:3px;
-  background:var(--s3);border-radius:99px;transform:translateY(-50%)}
-.fbar-slider-fill{position:absolute;top:50%;height:3px;background:var(--pink);
-  border-radius:99px;transform:translateY(-50%)}
-.fbar-slider-thumb{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;
-  background:var(--pink);border:2px solid var(--s1);transform:translate(-50%,-50%);
-  cursor:grab;z-index:2;box-shadow:0 0 0 2px var(--pink)}
-.fbar-slider-thumb:active{cursor:grabbing}
-.fbar-slider-tip{position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);
-  font-size:.6rem;color:var(--pink);font-weight:700;pointer-events:none;white-space:nowrap}
+/* Hotness tier chips */
+.fbar-hot-chips{display:flex;gap:.4rem;flex-wrap:wrap;padding:.45rem .75rem .6rem}
+.fbar-hot-chip{background:var(--base);border:1px solid var(--bd);border-radius:99px;
+  color:var(--t2);font-size:.72rem;padding:.25rem .65rem;cursor:pointer;font-family:inherit;
+  transition:background .12s,border-color .12s,color .12s;touch-action:manipulation}
+.fbar-hot-chip:hover{border-color:var(--blue);color:var(--blue)}
+.fbar-hot-chip.active{background:#02b3fc18;border-color:var(--blue);color:var(--blue)}
 
 /* Priority pills */
 .fbar-prio-pill{display:flex;align-items:center;gap:.35rem;padding:.28rem .5rem;border-radius:6px;

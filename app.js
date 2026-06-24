@@ -2105,7 +2105,8 @@ function _toggleInlineStorePicker(dd,stores,currentVal,onSelect,triggerEl){
   setTimeout(()=>si.focus(),50);
 }
 function _positionPickDd(dd,triggerEl){
-  const r=triggerEl.getBoundingClientRect();
+  const wrap=triggerEl.closest('.pick-wrap')||triggerEl;
+  const r=wrap.getBoundingClientRect();
   dd.style.position='fixed';dd.style.left=r.left+'px';dd.style.top=(r.bottom+2)+'px';
   dd.style.width=r.width+'px';dd.style.right='auto';dd.style.bottom='auto';dd.style.zIndex='620';
 }
@@ -3676,9 +3677,9 @@ function restoreFromHash(){
       if(si){si.value=val;const sc=document.getElementById('searchClear');if(sc)sc.classList.toggle('visible',!!val);}
       if(sm){sm.value=val;const scm=document.getElementById('searchClearMob');if(scm)scm.classList.toggle('visible',!!val);}
     }
-    if(p.has('sort')){const ss=document.getElementById('sortSel');if(ss)ss.value=p.get('sort');}
-    if(p.has('group')){const gs=document.getElementById('groupSel');if(gs)gs.value=p.get('group');}
-    if(p.has('csort')){const cs=document.getElementById('cSortSel');if(cs)cs.value=p.get('csort');}
+    if(p.has('sort')){const ss=document.getElementById('sortSel');if(ss){ss.value=p.get('sort');const o=FBAR_SORT_OPTS.find(x=>x.v===ss.value);const l=document.getElementById('sortSelLabel');if(o&&l)l.textContent=o.l;}}
+    if(p.has('group')){const gs=document.getElementById('groupSel');if(gs){gs.value=p.get('group');const o=FBAR_GROUP_OPTS.find(x=>x.v===gs.value);const l=document.getElementById('groupSelLabel');if(o&&l)l.textContent=o.l;}}
+    if(p.has('csort')){const cs=document.getElementById('cSortSel');if(cs){cs.value=p.get('csort');const o=FBAR_CSORT_OPTS.find(x=>x.v===cs.value);const l=document.getElementById('cSortSelLabel');if(o&&l)l.textContent=o.l;}}
     if(p.has('g'))fGenres=new Set(p.get('g').split('|').filter(Boolean));
     if(p.has('gl'))fGenreLogic=p.get('gl');
     if(p.has('t'))fTags=new Set(p.get('t').split('|').filter(Boolean));
@@ -3686,6 +3687,7 @@ function restoreFromHash(){
     if(p.has('pr'))fPrios=new Set(p.get('pr').split('|').filter(Boolean));
     if(p.has('hmin'))hrMinVal=Math.max(0,Math.min(100,parseInt(p.get('hmin'))||0));
     if(p.has('hmax'))hrMaxVal=Math.max(0,Math.min(100,parseInt(p.get('hmax'))||100));
+    document.querySelectorAll('.fbar-hot-chip').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.min)===hrMinVal&&parseInt(c.dataset.max)===hrMaxVal));
     if(p.has('cg'))cfGenres=new Set(p.get('cg').split('|').filter(Boolean));
     if(p.has('cgl'))cfGenreLogic=p.get('cgl');
     if(p.has('cps'))cfPlayStatus=new Set(p.get('cps').split('|').filter(Boolean));
@@ -3721,8 +3723,46 @@ document.getElementById('cSortSel').onchange=renderCollection;
 // ══════════════════════════════════════════
 //  VIEW / FILTER / SORT
 // ══════════════════════════════════════════
-document.getElementById('sortSel').onchange=renderAll;
-document.getElementById('groupSel').onchange=renderAll;
+// ── FBAR SORT/GROUP CUSTOM PICKERS ───────────────────────────────────────────
+const FBAR_SORT_OPTS=[
+  {v:'hotness',l:'Hotness'},{v:'priority',l:'Priority'},{v:'title',l:'Title'},
+  {v:'release-asc',l:'Release Date'},{v:'price-asc',l:'Price ↑'},
+  {v:'price-desc',l:'Price ↓'},{v:'added',l:'Date Added'}
+];
+const FBAR_GROUP_OPTS=[
+  {v:'none',l:'None'},{v:'priority',l:'Priority'},{v:'genre',l:'Genre'},
+  {v:'platform',l:'Platform'},{v:'year',l:'Year'}
+];
+const FBAR_CSORT_OPTS=[
+  {v:'steamcol',l:'Steam Collection'},{v:'title',l:'Title'},
+  {v:'playstatus',l:'Play Status'},{v:'purchaseDate',l:'Purchase Date'},
+  {v:'cost-desc',l:'Cost ↓'},{v:'cost-asc',l:'Cost ↑'}
+];
+function _initFbarPicker(hidId,btnId,lblId,ddId,opts){
+  const hid=document.getElementById(hidId),btn=document.getElementById(btnId);
+  const lbl=document.getElementById(lblId),dd=document.getElementById(ddId);
+  if(!hid||!btn||!dd)return;
+  function _sync(){const o=opts.find(x=>x.v===hid.value);if(lbl&&o)lbl.textContent=o.l;}
+  btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const wasOpen=dd.classList.contains('on');
+    document.querySelectorAll('.pick-dd.on').forEach(el=>{el.classList.remove('on');el.style.cssText=''});
+    if(wasOpen)return;
+    dd.innerHTML=opts.map(o=>`<div class="store-pick-opt${o.v===hid.value?' active':''}" data-v="${esc(o.v)}">${esc(o.l)}</div>`).join('');
+    dd.querySelectorAll('.store-pick-opt').forEach(opt=>{
+      opt.addEventListener('click',ev=>{
+        ev.stopPropagation();hid.value=opt.dataset.v;_sync();
+        dd.classList.remove('on');dd.style.cssText='';renderAll();
+      });
+    });
+    _positionPickDd(dd,btn);
+    dd.classList.add('on');
+  });
+  _sync();
+}
+_initFbarPicker('sortSel','sortSelBtn','sortSelLabel','sortSelDd',FBAR_SORT_OPTS);
+_initFbarPicker('groupSel','groupSelBtn','groupSelLabel','groupSelDd',FBAR_GROUP_OPTS);
+_initFbarPicker('cSortSel','cSortSelBtn','cSortSelLabel','cSortSelDd',FBAR_CSORT_OPTS);
 const _searchRender=debounce(()=>dispatchRender(),150);
 document.getElementById('searchInput').oninput=function(){
   const mob=document.getElementById('searchInputMob');
@@ -4180,84 +4220,22 @@ function _closeAllFloating(){
   wireAccordion('fbar-cplat-toggle','fbar-cplat-body');
   wireAccordion('fbar-ccol-toggle','fbar-ccol-body');
 
-  // ── Hotness sidebar slider ──
-  const FBAR_PAD=8;
-  const fbarMinInp=document.getElementById('fbar-hrMinInp');
-  const fbarMaxInp=document.getElementById('fbar-hrMaxInp');
-  const fbarWrap=document.getElementById('fbar-hrSliderWrap');
-  const fbarFill=document.getElementById('fbar-hrFill');
-  const fbarThumbMin=document.getElementById('fbar-hrThumbMin');
-  const fbarThumbMax=document.getElementById('fbar-hrThumbMax');
-  const fbarTipMin=document.getElementById('fbar-hrTipMin');
-  const fbarTipMax=document.getElementById('fbar-hrTipMax');
-
+  // ── Hotness tier chips ──
   function fbarApply(mn,mx){
     hrMinVal=mn;hrMaxVal=mx;
-    fbarMinInp.value=mn;fbarMaxInp.value=mx;
-    fbarUpdateSlider();
+    _syncHotChips();
     renderAll();
     syncFbarBadges();
   }
-  function fbarUpdateSlider(){
-    if(!fbarWrap)return;
-    fbarThumbMin.style.left=`calc(${FBAR_PAD}px + (100% - ${FBAR_PAD*2}px) * ${hrMinVal/100})`;
-    fbarThumbMax.style.left=`calc(${FBAR_PAD}px + (100% - ${FBAR_PAD*2}px) * ${hrMaxVal/100})`;
-    fbarFill.style.left=`calc(${FBAR_PAD}px + (100% - ${FBAR_PAD*2}px) * ${hrMinVal/100})`;
-    fbarFill.style.width=`calc((100% - ${FBAR_PAD*2}px) * ${(hrMaxVal-hrMinVal)/100})`;
-    if(fbarTipMin)fbarTipMin.textContent=hrMinVal;
-    if(fbarTipMax)fbarTipMax.textContent=hrMaxVal;
-  }
-  function fbarOnNumChange(){
-    if(fbarMinInp.value===''||fbarMaxInp.value==='')return;
-    let mn=Math.max(0,Math.min(100,parseInt(fbarMinInp.value)||0));
-    let mx=Math.max(0,Math.min(100,parseInt(fbarMaxInp.value)||100));
-    if(mn>mx)mx=mn;
-    fbarApply(mn,mx);
-  }
-  if(fbarMinInp){
-    fbarMinInp.addEventListener('input',fbarOnNumChange);
-    fbarMinInp.addEventListener('blur',()=>{if(fbarMinInp.value==='')fbarApply(0,hrMaxVal);});
-  }
-  if(fbarMaxInp){
-    fbarMaxInp.addEventListener('input',fbarOnNumChange);
-    fbarMaxInp.addEventListener('blur',()=>{if(fbarMaxInp.value==='')fbarApply(hrMinVal,100);});
-  }
-  // Slider drag
-  function fbarMakeDraggable(thumb,isMin){
-    let dragging=false;
-    function getVal(clientX){
-      const rect=fbarWrap.getBoundingClientRect();
-      const trackW=rect.width-FBAR_PAD*2;
-      return Math.round(Math.max(0,Math.min(1,(clientX-rect.left-FBAR_PAD)/trackW))*100);
-    }
-    thumb.addEventListener('mousedown',e=>{dragging=true;thumb.classList.add('dragging');e.preventDefault();e.stopPropagation();});
-    document.addEventListener('mousemove',e=>{
-      if(!dragging)return;
-      const val=getVal(e.clientX);
-      isMin?fbarApply(Math.min(val,hrMaxVal),hrMaxVal):fbarApply(hrMinVal,Math.max(val,hrMinVal));
-    });
-    document.addEventListener('mouseup',()=>{dragging=false;thumb.classList.remove('dragging');});
-    thumb.addEventListener('touchstart',e=>{dragging=true;thumb.classList.add('dragging');e.preventDefault();e.stopPropagation();},{passive:false});
-    document.addEventListener('touchmove',e=>{
-      if(!dragging)return;
-      const val=getVal(e.touches[0].clientX);
-      isMin?fbarApply(Math.min(val,hrMaxVal),hrMaxVal):fbarApply(hrMinVal,Math.max(val,hrMinVal));
-    },{passive:true});
-    document.addEventListener('touchend',()=>{dragging=false;thumb.classList.remove('dragging');});
-  }
-  if(fbarThumbMin)fbarMakeDraggable(fbarThumbMin,true);
-  if(fbarThumbMax)fbarMakeDraggable(fbarThumbMax,false);
-  if(fbarWrap){
-    fbarWrap.addEventListener('mousedown',e=>{
-      if(e.target===fbarThumbMin||e.target===fbarThumbMax)return;
-      const rect=fbarWrap.getBoundingClientRect();
-      const trackW=rect.width-FBAR_PAD*2;
-      const val=Math.round(Math.max(0,Math.min(1,(e.clientX-rect.left-FBAR_PAD)/trackW))*100);
-      const dMin=Math.abs(val-hrMinVal);const dMax=Math.abs(val-hrMaxVal);
-      if(dMin<=dMax)fbarApply(Math.min(val,hrMaxVal),hrMaxVal);
-      else fbarApply(hrMinVal,Math.max(val,hrMinVal));
+  function _syncHotChips(){
+    document.querySelectorAll('.fbar-hot-chip').forEach(chip=>{
+      chip.classList.toggle('active',parseInt(chip.dataset.min)===hrMinVal&&parseInt(chip.dataset.max)===hrMaxVal);
     });
   }
+  document.querySelectorAll('.fbar-hot-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>fbarApply(parseInt(chip.dataset.min),parseInt(chip.dataset.max)));
+  });
+  _syncHotChips();
 
   // ── Generic list renderer ──
   function renderGenreTagList(listEl,searchEl,logicEl,getSelected,setSelected,getLogic,setLogic,getOptions,doRender){
@@ -4442,9 +4420,7 @@ function _closeAllFloating(){
       renderCollection();
     } else {
       fGenres=new Set();fTags=new Set();fPrios=new Set();
-      hrMinVal=0;hrMaxVal=100;
-      fbarUpdateSlider();
-      fbarMinInp.value=0;fbarMaxInp.value=100;
+      hrMinVal=0;hrMaxVal=100;_syncHotChips();
       renderAll();
     }
     syncFbarBadges();
