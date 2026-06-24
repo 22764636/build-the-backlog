@@ -2105,10 +2105,12 @@ function _toggleInlineStorePicker(dd,stores,currentVal,onSelect,triggerEl){
   setTimeout(()=>si.focus(),50);
 }
 function _positionPickDd(dd,triggerEl){
+  // Portal to body: escapes transform/backdrop-filter containing blocks on #fbar and #mov
+  if(dd.parentElement!==document.body)document.body.appendChild(dd);
   const wrap=triggerEl.closest('.pick-wrap')||triggerEl;
   const r=wrap.getBoundingClientRect();
   dd.style.position='fixed';dd.style.left=r.left+'px';dd.style.top=(r.bottom+2)+'px';
-  dd.style.width=r.width+'px';dd.style.right='auto';dd.style.bottom='auto';dd.style.zIndex='620';
+  dd.style.width=r.width+'px';dd.style.right='auto';dd.style.bottom='auto';dd.style.zIndex='9999';
 }
 function _toggleInlinePsPicker(dd,hiddenInput,syncFn,triggerEl){
   const wasOpen=dd.classList.contains('on');
@@ -2155,9 +2157,9 @@ document.addEventListener('click',e=>{
   e.stopPropagation();
   _toggleInlinePsPicker(document.getElementById('btcPsDd'),document.getElementById('btcPlayStatus'),_syncBtcPsBtn,btn);
 });
-// Close .pick-dd on click outside
+// Close .pick-dd on click outside (portaled dds live in body, not inside .pick-wrap)
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.pick-wrap'))
+  if(!e.target.closest('.pick-wrap')&&!e.target.closest('.pick-dd'))
     document.querySelectorAll('.pick-dd.on').forEach(el=>{el.classList.remove('on');el.style.cssText=''});
 });
 
@@ -4215,6 +4217,13 @@ function _closeAllFloating(){
   wireAccordion('fbar-cplat-toggle','fbar-cplat-body');
   wireAccordion('fbar-ccol-toggle','fbar-ccol-body');
 
+  // Close portaled pickers if modal body scrolls
+  document.querySelectorAll('.modal-body').forEach(mb=>{
+    mb.addEventListener('scroll',()=>{
+      document.querySelectorAll('.pick-dd.on').forEach(el=>{el.classList.remove('on');el.style.cssText='';});
+    },{passive:true});
+  });
+
   // ── Hotness tier chips ──
   function fbarApply(mn,mx){
     hrMinVal=mn;hrMaxVal=mx;
@@ -4243,6 +4252,7 @@ function _closeAllFloating(){
       return`<div class="fbar-opt${sel?' selected':''}" data-val="${esc(o.value)}">
         <span class="fbar-opt-check">${sel?'✓':''}</span>
         <span class="fbar-opt-label">${esc(o.value)}</span>
+        ${metaTipHTML(o.value)}
         <span class="fbar-opt-count">${o.count||''}</span>
       </div>`;
     }).join('');

@@ -13,7 +13,7 @@ html,body{height:100%}
 body{font-family:'Inter',sans-serif;font-weight:300;background:var(--base);color:var(--text);
   display:flex;flex-direction:column;overflow:hidden;transition:background .3s,color .3s}
 button,input,select,textarea{font-family:inherit}a{color:inherit;text-decoration:none}
-button{text-transform:uppercase;letter-spacing:.04em}
+button{text-transform:none;letter-spacing:0}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--s3);border-radius:99px}
 
@@ -877,9 +877,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .store-pick-btn{display:flex;align-items:center;gap:.4rem;padding:.35rem .7rem;
   border-radius:var(--r);border:1px solid var(--bd);background:var(--base);
   color:var(--t2);font-size:.78rem;font-weight:500;cursor:pointer;width:100%;
-  text-align:left;transition:border-color .15s;box-sizing:border-box}
+  text-align:left;transition:border-color .15s;box-sizing:border-box;min-width:0;overflow:hidden}
 .store-pick-btn:hover{border-color:var(--blue);color:var(--text)}
-.store-pick-btn .spb-arrow{margin-left:auto;color:var(--t3);font-size:.65rem}
+.store-pick-btn > span:not(.spb-arrow){flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-pick-btn .spb-arrow{flex-shrink:0;color:var(--t3);font-size:.65rem}
 
 .store-picker{position:fixed;z-index:620;background:var(--s1);border:1px solid var(--bd2);
   border-radius:var(--rl);box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:200px;max-width:260px;
@@ -1009,9 +1010,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .fbar-plat-pill.selected{opacity:1;box-shadow:0 0 0 2px #fff4,inset 0 0 0 1px #fff3}
 
 /* Sidebar footer */
-.fbar-footer{padding:0;padding-bottom:env(safe-area-inset-bottom,0);border-top:1px solid var(--bd)}
+.fbar-footer{padding:0;border-top:1px solid var(--bd)}
 .fbar-clearall{width:100%;background:var(--base);border:none;color:var(--pink);
-  border-radius:0;padding:0;height:44px;font-size:.78rem;font-weight:500;cursor:pointer;
+  border-radius:0;padding:0 0 env(safe-area-inset-bottom,0);min-height:44px;font-size:.78rem;font-weight:500;cursor:pointer;
   transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .fbar-clearall:hover{background:#ff00aa18}
 .fbar-clearall:active{background:#ff00aa33;color:var(--pink);transform:scale(0.97);transition:transform .05s}
@@ -1079,7 +1080,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .modal{display:flex;flex-direction:column;overflow:hidden;padding:0}
 .modal-body{flex:1;min-height:0;overflow-y:auto;padding:1.3rem 1.3rem .5rem}
 .modal .ma{flex-shrink:0;display:flex;gap:0;padding:0;border-top:1px solid var(--bd);margin-top:0}
-.modal .mb2{flex:1;height:44px;border-radius:0;border:none;border-left:1px solid var(--bd);background:var(--base);color:var(--t3);font-size:.8rem;padding:0;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background .12s,color .12s}
+.modal .mb2{flex:1;height:44px;border-radius:0;border:none;border-left:1px solid var(--bd);background:var(--base);color:var(--t3);font-size:.8rem;padding:0;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background .12s,color .12s;text-transform:uppercase;letter-spacing:.04em}
 .modal .mb2:first-child{border-left:none}
 .modal .mb2.p{background:var(--base);color:var(--blue)}
 .modal .mb2.p:hover{background:#02b3fc15}
