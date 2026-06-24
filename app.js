@@ -2124,21 +2124,6 @@ function _positionPickDd(dd,triggerEl){
   const r=wrap.getBoundingClientRect();
   dd.style.position=posType;dd.style.left=r.left+'px';dd.style.top=(r.bottom+2)+'px';
   dd.style.width=r.width+'px';dd.style.right='auto';dd.style.bottom='auto';dd.style.zIndex='9999';
-  // Lock fbar-body scroll while the dropdown is open so the sort/group trigger stays aligned
-  const fbarBody=triggerEl.closest('.fbar-body');
-  if(fbarBody&&!fbarBody._pickLocked){
-    fbarBody._pickLocked=true;
-    fbarBody._pickPrevOverflow=fbarBody.style.overflowY;
-    fbarBody.style.overflowY='hidden';
-    const obs=new MutationObserver(()=>{
-      if(!dd.classList.contains('on')){
-        fbarBody.style.overflowY=fbarBody._pickPrevOverflow||'';
-        fbarBody._pickLocked=false;
-        obs.disconnect();
-      }
-    });
-    obs.observe(dd,{attributes:true,attributeFilter:['class']});
-  }
 }
 function _toggleInlinePsPicker(dd,hiddenInput,syncFn,triggerEl){
   const wasOpen=dd.classList.contains('on');
