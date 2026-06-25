@@ -2144,16 +2144,22 @@ function _toggleInlinePsPicker(dd,hiddenInput,syncFn,triggerEl){
 }
 function _pickDdFlip(dd,triggerEl){
   dd.classList.remove('up');
+  dd.style.maxHeight='';
   if(!triggerEl)return;
   const wrap=triggerEl.closest('.pick-wrap')||triggerEl;
   const r=wrap.getBoundingClientRect();
-  let el=wrap.parentElement,boundary=window.innerHeight;
-  while(el&&el!==document.documentElement){
-    const ov=getComputedStyle(el).overflowY;
-    if(ov==='hidden'){boundary=el.getBoundingClientRect().bottom;break;}
-    el=el.parentElement;
+  const modal=wrap.closest('.modal');
+  const boundaryTop=modal?modal.getBoundingClientRect().top:0;
+  const boundaryBottom=modal?modal.getBoundingClientRect().bottom:window.innerHeight;
+  const gap=6;
+  const spaceBelow=boundaryBottom-r.bottom-gap;
+  const spaceAbove=r.top-boundaryTop-gap;
+  if(spaceBelow<230&&spaceAbove>spaceBelow){
+    dd.classList.add('up');
+    dd.style.maxHeight=Math.max(spaceAbove,80)+'px';
+  }else{
+    dd.style.maxHeight=Math.min(Math.max(spaceBelow,80),320)+'px';
   }
-  if(boundary-r.bottom<230)dd.classList.add('up');
 }
 
 // btcStorePick
