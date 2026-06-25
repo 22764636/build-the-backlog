@@ -1079,8 +1079,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 /* ── RADIAL QUICK-ACCESS FAB (mobile only) ── */
 #qfab{
   display:none;
-  position:fixed;bottom:1.5rem;right:1rem;width:48px;height:48px;z-index:87;
+  position:fixed;bottom:1.5rem;right:1rem;width:48px;height:48px;z-index:90;
+  opacity:1;transition:opacity .15s,transform .15s;
 }
+#qfab.fbar-on{opacity:0;pointer-events:none;transform:scale(0)}
 @media(max-width:640px){
   #qfab{display:block}
 }
@@ -1108,22 +1110,21 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 #qfab.open #qfabMode{transform:translate(-45px,-78px)   scale(1);opacity:1;pointer-events:auto;transition-delay:.04s}
 #qfab.open #qfabView{transform:translate(-78px,-45px)   scale(1);opacity:1;pointer-events:auto;transition-delay:.08s}
 #qfab.open #qfabSync{transform:translate(-90px,0px)     scale(1);opacity:1;pointer-events:auto;transition-delay:.12s}
-/* Item icon colors — SVGs centered as block, text in fixed container */
+/* Item icon colors — white on dark navy */
 #qfabCal svg,#qfabSync svg{display:block;flex-shrink:0}
-#qfabCal svg{stroke:var(--blue)}
-#qfabSync svg{stroke:var(--green)}
+#qfabCal svg,#qfabSync svg{stroke:#fff}
 #qfabModeIco{
   display:flex;align-items:center;justify-content:center;
   width:20px;height:20px;
   font-size:.72rem;font-weight:800;line-height:1;
-  color:var(--pink)}
+  color:#fff}
 #qfabViewIco{
   display:flex;align-items:center;justify-content:center;
   width:20px;height:20px;
   font-size:1rem;line-height:1;
-  color:var(--text)}
-/* Radial backdrop */
-#qfab-ov{display:none;position:fixed;inset:0;z-index:88;
+  color:#fff}
+/* Radial backdrop — must be below #qfab (z-index:90) so arc items are tappable */
+#qfab-ov{display:none;position:fixed;inset:0;z-index:89;
   background:rgba(0,0,0,.35);backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px)}
 #qfab-ov.on{display:block}
 

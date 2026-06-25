@@ -4236,12 +4236,16 @@ function _closeAllFloating(){
     document.getElementById('fbar').classList.add('on');
     document.getElementById('fbar-ov').classList.add('on');
     document.getElementById('main').classList.add('fbar-open');
+    const qf=document.getElementById('qfab');
+    if(qf){qf.classList.add('fbar-on');qf.classList.remove('open');document.getElementById('qfab-ov').classList.remove('on');}
     _fbarRefreshAll();
   }
   function _rawCloseFbar(){
     document.getElementById('fbar').classList.remove('on');
     document.getElementById('fbar-ov').classList.remove('on');
     document.getElementById('main').classList.remove('fbar-open');
+    const qf=document.getElementById('qfab');
+    if(qf)qf.classList.remove('fbar-on');
   }
   function closeFbar(){
     _rawCloseFbar();
