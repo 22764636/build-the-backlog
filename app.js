@@ -307,6 +307,7 @@ function normalise(g){
     if(p.purchaseDate){const pf=fmtDate(String(p.purchaseDate));if(pf&&pf!==String(p.purchaseDate))p.purchaseDate=pf;}
   });
   syncLegacyFromPurchases(g);
+  g.delisted=g.delisted===true||g.delisted==='true'||g.delisted==='TRUE';
   return g;
 }
 function toSheetRecord(g){
@@ -1254,7 +1255,10 @@ function cardHTML(g){
 
   // Price / date / unreleased display
   let priceEl;
-  if(isFutureDate(g.releaseDate)){
+  if(g.delisted){
+    const dlBdg=`<span class="b-delisted">DELISTED</span>`;
+    priceEl=g.price?`<span class="cprice">€${parseFloat(g.price).toFixed(2)}</span>${dlBdg}`:dlBdg;
+  } else if(isFutureDate(g.releaseDate)){
     const days=Math.ceil((new Date(normaliseDate(g.releaseDate))-new Date(todayISO()))/(1000*60*60*24));
     const cd=days===1?'tomorrow':days<=30?`in ${days}d`:null;
     const cdLabel=cd?` <span style="color:var(--amber);font-size:.6rem;font-weight:700">${cd}</span>`:'';
@@ -1284,7 +1288,7 @@ function cardHTML(g){
     rmBtn=`<button class="qb qr" title="Remove" onclick="event.stopPropagation();startRemove('${gid_s}')">${IC.close}</button>`;
   }
 
-  return`<div class="gc st-${g.status||'wishlist'}${g.status==='bought'?' sb2':''}${isCancelled(g)?' cancelled':''}" data-id="${gid_s}" tabindex="0" role="button" aria-label="${esc(g.title)}"${tip?` data-added-tip="${esc(tip)}"`:''}>
+  return`<div class="gc st-${g.status||'wishlist'}${g.status==='bought'?' sb2':''}${isCancelled(g)?' cancelled':''}${g.delisted?' delisted':''}" data-id="${gid_s}" tabindex="0" role="button" aria-label="${esc(g.title)}"${tip?` data-added-tip="${esc(tip)}"`:''}>
     <div class="cc">
       <div class="cph" ${phStyle}>🎮</div>${cImg}
       <div class="cg"></div>
@@ -2370,7 +2374,13 @@ function openPanel(id){
   ];
   const detRight=[
     [t('pGenre'), genreHTML],
-    [t('pPrice'), g.price?`<b style="color:var(--blue)">€${parseFloat(g.price).toFixed(2)}</b>`:isGameUnreleased(g)?`<span style="color:var(--lime);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Unreleased</span>`:`<span style="color:var(--t3)">—</span>`],
+    [t('pPrice'), (()=>{
+      const dlBdg=g.delisted?` <span class="b-delisted">DELISTED</span>`:'';
+      if(g.price)return`<b style="color:var(--blue)">€${parseFloat(g.price).toFixed(2)}</b>${dlBdg}`;
+      if(g.delisted)return`<span class="b-delisted">DELISTED</span>`;
+      if(isGameUnreleased(g))return`<span style="color:var(--lime);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Unreleased</span>`;
+      return`<span style="color:var(--t3)">—</span>`;
+    })()],
     ['Added', `<span style="color:var(--t2)">${fmtAdded(daysAgo(g.added),g.added)}</span>`],
   ];
   const _kvCol=items=>`<div class="pv pv-kv">${items.map(([l,v])=>`<span class="pv-kv-lbl">${l}:</span><span>${v}</span>`).join('')}</div>`;
@@ -4054,6 +4064,27 @@ document.addEventListener('keydown',function(e){
     log.scrollTop=log.scrollHeight;
   }
 
+  async function fetchPriceFromWayback(appId){
+    try{
+      const availRes=await fetch(`https://archive.org/wayback/available?url=store.steampowered.com/api/appdetails?appids=${appId}`);
+      if(!availRes.ok)return null;
+      const availJson=await availRes.json();
+      const snap=availJson?.archived_snapshots?.closest;
+      if(!snap?.available||!snap?.url)return null;
+      // Insert 'if_' after the timestamp to retrieve raw content without Wayback UI wrapper
+      const ifUrl=snap.url.replace(/\/web\/(\d{14})\//, '/web/$1if_/');
+      const snapRes=await fetch(ifUrl);
+      if(!snapRes.ok)return null;
+      const snapJson=await snapRes.json();
+      const entry=snapJson?.[String(appId)];
+      if(!entry?.success||!entry?.data)return null;
+      const d=entry.data;
+      if(d.price_overview?.initial!=null)return(d.price_overview.initial/100).toFixed(2);
+      if(d.is_free)return'0.00';
+      return null;
+    }catch(e){return null;}
+  }
+
   async function run(){
     if(OFFLINE){showToast('Offline — cannot reach Steam.');return}
     const targets=games.filter(g=>g.steamAppId&&!g.price&&!isGameUnreleased(g)&&!isCancelled(g));
@@ -4095,15 +4126,19 @@ document.addEventListener('keydown',function(e){
           plcLog(`✔ ${g.title}  free-to-play`,'plc-ok');
           found++;
         }else{
+          // No price on Steam — try Wayback Machine for a historical snapshot
+          summary.textContent=`${i+1}/${targets.length} — ${g.title} (trying archive…)`;
+          const archivedPrice=await fetchPriceFromWayback(g.steamAppId);
           const gg=games.find(x=>x.id===g.id);
-          if(gg){
-            if(!Array.isArray(gg.tags))gg.tags=[];
-            if(!gg.tags.includes('Delisted'))gg.tags.push('Delisted');
-            save(gg.id);
+          if(archivedPrice!=null){
+            if(gg){gg.price=archivedPrice;gg.delisted=true;save(gg.id);}
+            plcLog(`✔ ${g.title}  €${archivedPrice} (archived · delisted)`,'plc-ok');
+            found++;
+          }else{
+            if(gg){gg.delisted=true;save(gg.id);}
+            plcLog(`— ${g.title}  delisted · no archived price found`,'plc-skip');
+            unavailable++;
           }
-          const sdbUrl=`https://www.steamdb.info/app/${g.steamAppId}/`;
-          plcLog(`— ${g.title}  delisted · check SteamDB for price history`,'plc-skip',sdbUrl);
-          unavailable++;
         }
       }catch(err){
         plcLog(`✗ ${g.title} — ${err.message}`,'plc-err');
