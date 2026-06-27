@@ -1248,6 +1248,8 @@ function cardHTML(g){
   else if(g.status==='bought')   lBdg=`<span class="bdg b-bt">${t('bdgBt')}</span>`;
   else if(g.status==='removed')  lBdg=`<span class="bdg b-rm">${t('bdgRm')}</span>`;
   else if(isNR)                  lBdg=`<span class="b-rev">${t('bdgRev')}</span>`;
+  else if(isGameUnreleased(g))   lBdg=`<span class="bdg b-unrel">UNRELEASED</span>`;
+  else if(g.price!=null&&parseFloat(g.price)===0) lBdg=`<span class="bdg b-free">FREE</span>`;
   else                           lBdg=`<span class="bdg b-hot">${h}</span>`;
 
   // Priority label badge (right side of pill bar)
@@ -1262,6 +1264,8 @@ function cardHTML(g){
     priceEl=`<span class="b-unrel-card">${fmtDate(g.releaseDate)}${cdLabel}</span>`;
   } else if(g.releaseDate&&!/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate)){
     priceEl=`<span class="b-unrel-card">${esc(g.releaseDate)}</span>`;
+  } else if(g.price!=null&&parseFloat(g.price)===0){
+    priceEl=`<span class="bdg b-free">FREE</span>`;
   } else if(g.price){
     priceEl=`<span class="cprice">€${parseFloat(g.price).toFixed(2)}</span>`;
   } else {
@@ -2311,6 +2315,8 @@ function openPanel(id){
       ${g.status==='removed'?`<span class="bdg b-rm">${t('bdgRm')}</span>`:''}
       ${isCancelled(g)?`<span class="b-cancelled">CANCELLED</span>`:''}
       ${isNR&&g.status==='wishlist'&&!isCancelled(g)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
+      ${!isNR&&g.status==='wishlist'&&!isCancelled(g)&&isGameUnreleased(g)?`<span class="bdg b-unrel">UNRELEASED</span>`:''}
+      ${!isNR&&g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&g.price!=null&&parseFloat(g.price)===0?`<span class="bdg b-free">FREE</span>`:''}
       <span class="bdg" style="background:${prioColor(g.priority)};color:#031329">${prioLabel(g.priority)}</span>
       ${_plats.map(p=>`<span class="b-plat" style="background:${platColor(p)};color:${platTextColor(p)}">${esc(p)}</span>`).join('')}
       ${g.type==='dlc'?`<span class="bdg" style="background:#3a1a6e;color:#c4a0ff">DLC</span>`:''}
@@ -2373,9 +2379,10 @@ function openPanel(id){
     [t('pGenre'), genreHTML],
     [t('pPrice'), (()=>{
       const dlBdg=g.delisted?` <span class="b-delisted">DELISTED</span>`:'';
+      if(g.price!=null&&parseFloat(g.price)===0)return`<span class="bdg b-free">FREE</span>`;
       if(g.price)return`<b style="color:var(--blue)">€${parseFloat(g.price).toFixed(2)}</b>${dlBdg}`;
       if(g.delisted)return`<span class="b-delisted">DELISTED</span>`;
-      if(isGameUnreleased(g))return`<span style="color:var(--lime);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Unreleased</span>`;
+      if(isGameUnreleased(g))return`<span class="bdg b-unrel">UNRELEASED</span>`;
       return`<span style="color:var(--t3)">—</span>`;
     })()],
     ['Added', `<span style="color:var(--t2)">${fmtAdded(daysAgo(g.added),g.added)}</span>`],
