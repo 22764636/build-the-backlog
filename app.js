@@ -1392,8 +1392,10 @@ function hotnessCircleSVG(h,isNR){
   }
   let paths='';
   if(isNR){
-    const nrSvg=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--amber)" stroke-width="1.5"/>`;
-    return`<span class="hotness-circle-wrap"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="hotness-circle" title="Not Rated" aria-label="Not Rated">${nrSvg}</svg></span>`;
+    let nrPaths='';
+    for(let i=0;i<segments;i++)
+      nrPaths+=`<path d="${arc(i*36,segAngle)}" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="butt"/>`;
+    return`<span class="hotness-circle-wrap"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="hotness-circle" title="Not Rated" aria-label="Not Rated">${nrPaths}</svg></span>`;
   }
   for(let i=0;i<segments;i++){
     const fill=Math.min(1,Math.max(0,(h-i*10)/10));
@@ -2562,13 +2564,18 @@ function openPanel(id){
     if(_hasRev){
       const _dateCol=g.myReviewDate?esc(fmtDate(g.myReviewDate)||g.myReviewDate):'—';
       b+=`<div class="ps"><div class="psl">${t('pReview')}</div>
-        <div id="reviewView" class="review-row">
-          <div class="review-row-date">${_dateCol}</div>
-          <div class="review-row-text note-md">${renderMd(g.myReview)}</div>
-          <div class="review-row-stars">
-            <div class="stars" id="pstars" style="margin-bottom:.2rem">${sh}</div>
-            <div class="review-score" style="font-size:1rem;text-align:right">${_scoreDisp}</div>
-            <button class="note-btn edit-btn" id="reviewEditBtn" style="margin-top:.3rem">Edit</button>
+        <div id="reviewView">
+          <div class="review-row">
+            <div class="review-row-stars">
+              <div class="stars" id="pstars" style="margin-bottom:.2rem">${sh}</div>
+              <div class="review-score" style="font-size:1rem">${_scoreDisp}</div>
+            </div>
+            <div class="review-row-date">${_dateCol}</div>
+            <div class="review-row-text note-md">${renderMd(g.myReview)}</div>
+          </div>
+          <div class="note-actions">
+            <button class="note-btn edit-btn" id="reviewEditBtn">Edit</button>
+            <button class="note-btn del-btn del" id="reviewDelBtn">Delete</button>
           </div>
         </div>
         ${_composeSection}
@@ -2739,6 +2746,13 @@ function openPanel(id){
       document.getElementById('reviewView').style.display='none';
       document.getElementById('reviewCompose').style.display='';
       _editStars=cStars;_checkSave();
+    };
+    const _revDelBtn=document.getElementById('reviewDelBtn');
+    if(_revDelBtn)_revDelBtn.onclick=()=>{
+      if(!confirm('Delete this review?'))return;
+      const gg=games.find(x=>x.id===openId);if(!gg)return;
+      gg.myRating=0;gg.myReview='';gg.myReviewDate='';
+      save();openPanel(openId);
     };
     const _revToggle=document.getElementById('reviewToggle');
     if(_revToggle)_revToggle.onclick=()=>{
