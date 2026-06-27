@@ -2367,6 +2367,7 @@ function openPanel(id){
   const sdbUrl=g.steamAppId?`https://www.steamdb.info/app/${g.steamAppId}/`:`https://www.steamdb.info/search/?q=${sl}`;
   const stUrl=g.storeLink||(g.steamAppId?`https://store.steampowered.com/app/${g.steamAppId}/`:`https://store.steampowered.com/search/?term=${sl}`);
   const sh=[1,2,3,4,5].map(i=>`<span class="star-pos" data-pos="${i}"><span class="star-half star-l${cStars>=i-0.5?' on':''}" data-v="${i-0.5}">★</span><span class="star-half star-r${cStars>=i?' on':''}" data-v="${i}">★</span></span>`).join('');
+  const shBlank=[1,2,3,4,5].map(i=>`<span class="star-pos" data-pos="${i}"><span class="star-half star-l" data-v="${i-0.5}">★</span><span class="star-half star-r" data-v="${i}">★</span></span>`).join('');
   const _plats=ownedPlatforms(g);
 
   const genreD=(g.genres||[]).join(', ')||g.genre||'';
@@ -2537,17 +2538,43 @@ function openPanel(id){
 
 
   if(g.status==='bought'){
-    const scoreDisp=cStars>0?`${cStars}<span class="review-score-denom">/5</span>`:`<span style="color:var(--t3);font-size:1rem">—</span>`;
-    b+=`<div class="ps"><div class="psl">${t('pReview')}</div>
-      <div class="review-card">
-        <div class="review-rating-row">
-          <div class="stars" id="pstars">${sh}</div>
-          <div class="review-score" id="previewScore">${scoreDisp}</div>
+    const _hasRev=!!(g.myReview&&g.myReview.trim());
+    const _scoreDisp=cStars>0?`${cStars}<span class="review-score-denom">/5</span>`:`<span style="color:var(--t3);font-size:1rem">—</span>`;
+    const _revDateStr=g.myReviewDate?`<div class="note-date">${esc(fmtDate(g.myReviewDate)||g.myReviewDate)}</div>`:'';
+    const _composeStars=_hasRev?sh:shBlank;
+    const _composeDateVal=g.myReviewDate||todayIso;
+    const _composeSection=`
+      <div id="reviewCompose" style="display:none">
+        <div class="note-compose" style="margin-bottom:.35rem">
+          <input type="date" id="reviewDate" class="note-compose-date" value="${_composeDateVal}">
+          <div class="stars" id="pstarsEdit">${_composeStars}</div>
         </div>
-        <textarea class="rta" id="prevta" placeholder="Your thoughts…">${esc(g.myReview||'')}</textarea>
-        <button class="pa s" style="width:100%;margin-top:.35rem" id="psrv">${t('pSaveRev')}</button>
-      </div>
-    </div>`;
+        <div class="review-score" id="previewScore" style="margin-bottom:.35rem">${_hasRev?_scoreDisp:'<span style="color:var(--t3);font-size:1rem">—</span>'}</div>
+        <textarea class="rta" id="prevta" placeholder="Your thoughts…" style="min-height:60px;resize:none">${_hasRev?esc(g.myReview):''}</textarea>
+        <div style="display:flex;gap:.4rem;margin-top:.35rem">
+          <button class="note-save-btn" id="psrv" disabled>${t('pSaveRev')}</button>
+          <button class="note-save-btn" id="reviewCancel">Cancel</button>
+        </div>
+      </div>`;
+    if(_hasRev){
+      b+=`<div class="ps"><div class="psl">${t('pReview')}</div>
+        <div id="reviewView">
+          ${_revDateStr}
+          <div class="review-rating-row">
+            <div class="stars" id="pstars">${sh}</div>
+            <div class="review-score">${_scoreDisp}</div>
+          </div>
+          <div class="note-text note-md" style="margin-top:.4rem">${renderMd(g.myReview)}</div>
+          <button class="note-btn edit-btn" id="reviewEditBtn" style="margin-top:.4rem">Edit</button>
+        </div>
+        ${_composeSection}
+      </div>`;
+    }else{
+      b+=`<div class="ps"><div class="psl">${t('pReview')}</div>
+        <button class="note-add-toggle" id="reviewToggle">＋ Write review</button>
+        ${_composeSection}
+      </div>`;
+    }
   }
 
   const bl=g.status==='bought'?'Move to Wishlist':'Add to Collection';
@@ -2672,28 +2699,58 @@ function openPanel(id){
     };
   });
   if(g.status==='bought'){
-    const _updateStars=(v)=>{
-      document.querySelectorAll('#pstars .star-half').forEach(x=>x.classList.toggle('on',parseFloat(x.dataset.v)<=v));
+    const _hasRev2=!!(g.myReview&&g.myReview.trim());
+    let _editStars=_hasRev2?cStars:null;
+    const _checkSave=()=>{
+      const btn=document.getElementById('psrv');
+      const ta=document.getElementById('prevta');
+      if(btn)btn.disabled=(_editStars===null||!ta||!ta.value.trim());
+    };
+    const _updateEditStars=(v,commit)=>{
+      document.querySelectorAll('#pstarsEdit .star-half').forEach(x=>x.classList.toggle('on',parseFloat(x.dataset.v)<=v));
       const sc=document.getElementById('previewScore');
       if(sc)sc.innerHTML=v>0?`${v}<span class="review-score-denom">/5</span>`:`<span style="color:var(--t3);font-size:1rem">—</span>`;
+      if(commit){_editStars=v;_checkSave();}
     };
-    document.querySelectorAll('#pstars .star-pos').forEach(pos=>{
+    document.querySelectorAll('#pstarsEdit .star-pos').forEach(pos=>{
       pos.addEventListener('mousemove',e=>{
         const r=pos.getBoundingClientRect();
-        const half=e.clientX<r.left+r.width/2;
-        const base=parseFloat(pos.dataset.pos);
-        _updateStars(half?base-0.5:base);
+        _updateEditStars((e.clientX<r.left+r.width/2?parseFloat(pos.dataset.pos)-0.5:parseFloat(pos.dataset.pos)),false);
       });
-      pos.addEventListener('mouseleave',()=>_updateStars(cStars));
+      pos.addEventListener('mouseleave',()=>_updateEditStars(_editStars===null?0:_editStars,false));
       pos.addEventListener('click',e=>{
         const r=pos.getBoundingClientRect();
-        const half=e.clientX<r.left+r.width/2;
-        const base=parseFloat(pos.dataset.pos);
-        cStars=half?base-0.5:base;
-        _updateStars(cStars);
+        const val=e.clientX<r.left+r.width/2?parseFloat(pos.dataset.pos)-0.5:parseFloat(pos.dataset.pos);
+        _updateEditStars(_editStars===val?0:val,true);
       });
     });
-    document.getElementById('psrv').onclick=()=>{const gg=games.find(x=>x.id===openId);if(gg){gg.myRating=cStars;gg.myReview=document.getElementById('prevta').value;save()}};
+    const _prevta=document.getElementById('prevta');
+    if(_prevta)_prevta.addEventListener('input',_checkSave);
+    const _revEditBtn=document.getElementById('reviewEditBtn');
+    if(_revEditBtn)_revEditBtn.onclick=()=>{
+      document.getElementById('reviewView').style.display='none';
+      document.getElementById('reviewCompose').style.display='';
+      _editStars=cStars;_checkSave();
+    };
+    const _revToggle=document.getElementById('reviewToggle');
+    if(_revToggle)_revToggle.onclick=()=>{
+      _revToggle.style.display='none';
+      document.getElementById('reviewCompose').style.display='';
+    };
+    const _revCancel=document.getElementById('reviewCancel');
+    if(_revCancel)_revCancel.onclick=()=>{
+      document.getElementById('reviewCompose').style.display='none';
+      if(_hasRev2)document.getElementById('reviewView').style.display='';
+      else{const t=document.getElementById('reviewToggle');if(t)t.style.display='';}
+    };
+    const _psrv=document.getElementById('psrv');
+    if(_psrv)_psrv.onclick=()=>{
+      const gg=games.find(x=>x.id===openId);if(!gg)return;
+      gg.myRating=_editStars||0;
+      gg.myReview=document.getElementById('prevta').value.trim();
+      const de=document.getElementById('reviewDate');if(de&&de.value)gg.myReviewDate=de.value;
+      save();openPanel(openId);
+    };
   }
   document.getElementById('ped').onclick=()=>{
     const _pov=document.getElementById('pov');
@@ -3669,7 +3726,7 @@ document.getElementById('msave').onclick=()=>{
           updatedPurchases.push({platform:_modalColPlat,store:colFields.store,cost:colFields.cost,purchaseDate:colFields.purchaseDate,playStatus:colFields.playStatus,steamCollection:_modalColPlat==='Steam'?[...cModalCol]:[]});
         }
       }
-      const preserved={notes:[..._modalNotes],status:games[i].status,added:games[i].added,removeNote:games[i].removeNote,myRating:games[i].myRating,myReview:games[i].myReview,shortDescription:data.shortDescription||games[i].shortDescription,steamWishlist:_modalSteamWishlist,...colFields,purchases:updatedPurchases};
+      const preserved={notes:[..._modalNotes],status:games[i].status,added:games[i].added,removeNote:games[i].removeNote,myRating:games[i].myRating,myReview:games[i].myReview,myReviewDate:games[i].myReviewDate,shortDescription:data.shortDescription||games[i].shortDescription,steamWishlist:_modalSteamWishlist,...colFields,purchases:updatedPurchases};
       // parentAppId comes from data object, not preserved
       games[i]={...games[i],...data,...preserved};
     }
