@@ -260,6 +260,11 @@ button{text-transform:none;letter-spacing:0}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .cbot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.3rem;margin-top:auto}
 .cprice{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.88rem;color:var(--blue);flex-shrink:0}
+.ggp{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap}
+.ggp-retail{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.78rem;color:var(--blue);background:#02b3fc18;border-radius:3px;padding:.1rem .35rem}
+.ggp-keys{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.78rem;color:var(--amber);background:#f7cd2618;border-radius:3px;padding:.1rem .35rem}
+.ggp-low{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.72rem;color:var(--green);background:#9cff0018;border-radius:3px;padding:.1rem .35rem}
+.gg.lv .ggp{display:none}
 .b-unrel-card{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--lime);flex-shrink:0}
 /* buttons row — centered */

@@ -49,9 +49,10 @@ function doPost(e) {
   let result;
   try {
     switch (action) {
-      case 'setRows':  result = setRows(JSON.parse(e.postData.contents));  break;
-      case 'setAll':   result = setAll(JSON.parse(e.postData.contents));   break;
-      case 'deleteRow':result = deleteRow(params.id);                      break;
+      case 'setRows':   result = setRows(JSON.parse(e.postData.contents));   break;
+      case 'setAll':    result = setAll(JSON.parse(e.postData.contents));    break;
+      case 'deleteRow': result = deleteRow(params.id);                       break;
+      case 'logPrices': result = logPrices(JSON.parse(e.postData.contents)); break;
       default:         result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -187,6 +188,22 @@ function deleteRow(id) {
     }
   }
   return { error: 'Row not found: ' + id };
+}
+
+// ── Append price history rows ────────────────────────────────
+function logPrices(entries) {
+  if (!Array.isArray(entries) || !entries.length) return { ok: true };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = 'PriceHistory';
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['date', 'steamAppId', 'title', 'retail', 'keyshop', 'currency']);
+  }
+  entries.forEach(e => {
+    sheet.appendRow([e.date, e.steamAppId, e.title, e.retail, e.keyshop, e.currency]);
+  });
+  return { ok: true };
 }
 
 // ── Helper: get or create sheet tab ─────────────────────────
