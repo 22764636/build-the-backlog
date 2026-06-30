@@ -2154,10 +2154,10 @@ document.addEventListener('click',e=>{
 // ── INLINE MODAL PICKERS (play status) ───────────────────────────────
 function updateStoreDd(inp,dd,hidden,plat){
   const q=(inp.value||'').toLowerCase().trim();
-  const all=allStoresForPlatform(plat);
-  const opts=q?all.filter(s=>s.toLowerCase().includes(q)):all;
+  const freq={};games.forEach(g=>(g.purchases||[]).forEach(p=>{if(p.platform===plat&&p.store)freq[p.store]=(freq[p.store]||0)+1;}));
+  const opts=Object.keys(freq).sort((a,b)=>freq[b]-freq[a]||a.localeCompare(b)).filter(s=>!q||s.toLowerCase().includes(q));
   if(!opts.length){dd.classList.remove('on');return;}
-  dd.innerHTML=opts.map(s=>`<div class="dd-opt${s===hidden.value?' active':''}" data-s="${esc(s)}">${esc(s)}</div>`).join('');
+  dd.innerHTML=opts.map(s=>`<div class="dd-opt${s===hidden.value?' active':''}" data-s="${esc(s)}">${esc(s)}<span class="dd-opt-count">${freq[s]}</span></div>`).join('');
   dd.querySelectorAll('.dd-opt').forEach(el=>{
     el.onclick=()=>{inp.value=el.dataset.s;hidden.value=el.dataset.s;dd.classList.remove('on');};
   });
@@ -2952,9 +2952,10 @@ const renderModalCol=makeChip('fColColWrap','fColColInput',()=>cModalCol,v=>{cMo
 function updateModalColDd(){
   const dd=document.getElementById('fColColDd');
   const q=(document.getElementById('fColColInput').value||'').toLowerCase().trim();
+  const freq={};games.forEach(g=>(g.steamCollection||[]).forEach(c=>{if(c)freq[c]=(freq[c]||0)+1;}));
   const opts=allSteamCollections().filter(s=>!cModalCol.includes(s)&&(!q||s.toLowerCase().includes(q)));
   if(!opts.length){dd.classList.remove('on');return}
-  dd.innerHTML=opts.map(s=>`<div class="dd-opt" data-v="${esc(s)}">${esc(colLabel(s))}</div>`).join('');
+  dd.innerHTML=opts.map(s=>`<div class="dd-opt" data-v="${esc(s)}">${esc(colLabel(s))}${freq[s]?`<span class="dd-opt-count">${freq[s]}</span>`:''}</div>`).join('');
   dd.querySelectorAll('.dd-opt').forEach(el=>{
     el.onclick=()=>{cModalCol.push(el.dataset.v);document.getElementById('fColColInput').value='';renderModalCol();dd.classList.remove('on')};
   });
@@ -2966,9 +2967,10 @@ document.getElementById('fColColInput').addEventListener('focus',updateModalColD
 function updateBtcColDd(){
   const dd=document.getElementById('btcColDd');
   const q=(document.getElementById('btcColInput').value||'').toLowerCase().trim();
+  const freq={};games.forEach(g=>(g.steamCollection||[]).forEach(c=>{if(c)freq[c]=(freq[c]||0)+1;}));
   const opts=allSteamCollections().filter(s=>!cBtcCol.includes(s)&&(!q||s.toLowerCase().includes(q)));
   if(!opts.length){dd.classList.remove('on');return}
-  dd.innerHTML=opts.map(s=>`<div class="dd-opt" data-v="${esc(s)}">${esc(colLabel(s))}</div>`).join('');
+  dd.innerHTML=opts.map(s=>`<div class="dd-opt" data-v="${esc(s)}">${esc(colLabel(s))}${freq[s]?`<span class="dd-opt-count">${freq[s]}</span>`:''}</div>`).join('');
   dd.querySelectorAll('.dd-opt').forEach(el=>{
     el.onclick=()=>{cBtcCol.push(el.dataset.v);document.getElementById('btcColInput').value='';renderBtcCol();dd.classList.remove('on')};
   });
