@@ -434,6 +434,7 @@ function openCalendar(){
 function _rawCloseCalendar(){
   document.getElementById('calOv').classList.remove('on');
   document.getElementById('calOv').style.display='none';
+  document.getElementById('calFloatPop').classList.remove('open');
   calShowTba=false;
 }
 function closeCalendar(){
