@@ -489,7 +489,7 @@ function renderCalendar(){
     for(let p=0;p<totalPages;p++){
       const slice=tbaGames.slice(p*TBA_PAGE_SIZE,(p+1)*TBA_PAGE_SIZE);
       pagesHTML+=`<div class="tba-list-page"><div class="cal-tba-grid">${slice.map(g=>{
-        const pc=g.priority==='high'?'prio-high':g.priority==='low'?'prio-low':'prio-medium';
+        const pc=prioClass(g.priority);
         return`<div class="cal-tba-chip ${pc}" title="${esc(g.title)} — ${esc(g.releaseDate)}" onclick="openPanel('${g.id}')"><span class="cal-tba-chip-title">${esc(g.title)}</span><span class="cal-tba-chip-sub">${esc(g.releaseDate)}</span></div>`;
       }).join('')}</div></div>`;
     }
@@ -589,11 +589,14 @@ function renderCalendar(){
     renderTbaDots();
   }
 
-  // Update TBA button badge on mobile
+  // Update TBA filter pill (mobile) — hidden entirely when there's nothing to show
   const tbaBtn=document.getElementById('calTbaBtn');
+  const tbaCount=document.getElementById('calTbaCount');
+  if(!tbaGames.length)calShowTba=false;
   if(tbaBtn){
-    tbaBtn.textContent=tbaGames.length?`TBA (${tbaGames.length})`:'TBA';
-    tbaBtn.classList.toggle('on',calShowTba);
+    if(tbaCount)tbaCount.textContent=tbaGames.length||'';
+    tbaBtn.classList.toggle('selected',calShowTba);
+    tbaBtn.classList.toggle('cal-tba-empty',tbaGames.length===0);
   }
 
   const main=document.getElementById('calMain');
@@ -608,7 +611,7 @@ function renderCalendar(){
     if(vp)vp.style.height='280px';
     return;
   } else {
-    if(isMobile)calTbaEl.style.display='none';
+    if(isMobile||!tbaGames.length)calTbaEl.style.display='none';
     else calTbaEl.style.cssText='';// use .cal-tba-wide CSS
     main.style.display='';
   }
@@ -621,12 +624,22 @@ function renderCalendar(){
     if(!monthGames.length){
       main.innerHTML=`<div style="color:var(--t3);font-size:.8rem;padding:1rem 0">No releases this month.</div>`;
     } else {
-      main.innerHTML=monthGames.map(g=>`
-        <div class="cal-list-item${isPreOrder(g)?' pre':''}" onclick="openPanel('${g.id}')">
-          <div class="cal-list-date">${fmtDate(g.releaseDate)}</div>
-          <div class="cal-list-title">${esc(g.title)}</div>
-          ${isPreOrder(g)?'<span style="font-size:.6rem;background:var(--amber);color:#031329;border-radius:4px;padding:1px 5px;font-weight:700;flex-shrink:0">PRE</span>':''}
-        </div>`).join('');
+      const byDay={};
+      monthGames.forEach(g=>{
+        const d=normaliseDate(g.releaseDate);
+        (byDay[d]=byDay[d]||[]).push(g);
+      });
+      main.innerHTML=Object.keys(byDay).map(d=>{
+        const rows=byDay[d].map(g=>`
+          <div class="cal-list-item ${prioClass(g.priority)}" onclick="openPanel('${g.id}')">
+            <div class="cal-list-title">${esc(g.title)}</div>
+            ${isPreOrder(g)?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}
+          </div>`).join('');
+        return `<div class="cal-list-day">
+          <div class="cal-list-day-hdr">${fmtDate(d)}</div>
+          ${rows}
+        </div>`;
+      }).join('');
     }
     return;
   }
@@ -713,7 +726,7 @@ function renderCalendar(){
       floatPop.classList.remove('open');
       if(alreadyOpenHere)return;
       const cellGames=byDate[dateStr]||[];
-      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item${isPreOrder(g)?' pre':''}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')">${esc(g.title)}</div>`).join('');
+      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item ${prioClass(g.priority)}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')"><span class="cal-pop-item-title">${esc(g.title)}</span>${isPreOrder(g)?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}</div>`).join('');
       floatPop.dataset.date=dateStr;
       floatPop.classList.add('open');
       positionFloatPop(floatPop,this);
@@ -761,24 +774,73 @@ document.addEventListener('click',function(e){
     document.querySelectorAll('.cal-pop.open').forEach(p=>p.classList.remove('open'));
   }
 });
-// Mobile swipe to change month (horizontal swipe > 50px, must dominate vertical)
+// Mobile swipe to change month — live drag-follow + edge hints + slide transition,
+// same mechanic as the card swipe-actions (touchmove tracks the finger, hint fades
+// in with drag progress, threshold commits) so the gesture actually gives feedback.
 (function(){
-  let _csx=null,_csy=null;
+  const THRESHOLD=50;
+  let sx=null,sy=null,live=false;
   const ov=document.getElementById('calOv');
+  function hintEls(){
+    return{l:document.querySelector('.cal-swipe-hint-l'),r:document.querySelector('.cal-swipe-hint-r')};
+  }
   ov.addEventListener('touchstart',e=>{
     if(window.innerWidth>640||calShowTba)return; // TBA panel handles its own swipes
     if(e.target.closest('#calTba'))return;
-    _csx=e.touches[0].clientX;_csy=e.touches[0].clientY;
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;live=false;
   },{passive:true});
+  ov.addEventListener('touchmove',e=>{
+    if(sx===null||window.innerWidth>640)return;
+    const dx=e.touches[0].clientX-sx;
+    const dy=e.touches[0].clientY-sy;
+    if(!live){
+      if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){sx=null;return;}
+      if(Math.abs(dx)<8)return;
+      live=true;
+    }
+    e.preventDefault();
+    const main=document.getElementById('calMain');
+    if(main){main.style.transition='none';main.style.transform=`translateX(${dx}px)`;}
+    const prog=Math.min(Math.abs(dx)/THRESHOLD,1);
+    const{l,r}=hintEls();
+    if(dx>0){if(r)r.style.opacity=0;if(l)l.style.opacity=prog;}
+    else{if(l)l.style.opacity=0;if(r)r.style.opacity=prog;}
+  },{passive:false});
   ov.addEventListener('touchend',e=>{
-    if(_csx===null||window.innerWidth>640)return;
-    const dx=e.changedTouches[0].clientX-_csx;
-    const dy=e.changedTouches[0].clientY-_csy;
-    _csx=null;_csy=null;
-    if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx))return;
+    if(sx===null||window.innerWidth>640){sx=null;return;}
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=e.changedTouches[0].clientY-sy;
+    const wasLive=live;
+    sx=null;live=false;
+    const main=document.getElementById('calMain');
+    const{l,r}=hintEls();
+    if(l){l.style.transition='opacity .18s';l.style.opacity=0;}
+    if(r){r.style.transition='opacity .18s';r.style.opacity=0;}
+    if(!wasLive||Math.abs(dx)<THRESHOLD||Math.abs(dy)>Math.abs(dx)){
+      if(main){main.style.transition='transform .18s ease';main.style.transform='';}
+      return;
+    }
+    const dir=dx<0?1:-1; // 1 = advancing to next month, -1 = back to previous
+    if(main){
+      main.style.transition='transform .16s ease,opacity .16s ease';
+      main.style.transform=`translateX(${-dir*60}px)`;
+      main.style.opacity='0';
+    }
     if(dx<0){calMonth++;if(calMonth>11){calMonth=0;calYear++;}}
     else{calMonth--;if(calMonth<0){calMonth=11;calYear--;}}
-    populateCalSelects();renderCalendar();
+    setTimeout(()=>{
+      populateCalSelects();renderCalendar();
+      if(main){
+        main.style.transition='none';
+        main.style.transform=`translateX(${dir*60}px)`;
+        main.style.opacity='0';
+        requestAnimationFrame(()=>{
+          main.style.transition='transform .18s ease,opacity .18s ease';
+          main.style.transform='';
+          main.style.opacity='1';
+        });
+      }
+    },160);
   },{passive:true});
 })();
 
@@ -850,6 +912,7 @@ const isUnreleased=g=>isGameUnreleased(g); // alias
 const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
 
 function prioColor(p){return p==='high'?'var(--cyan)':p==='low'?'var(--lime)':'var(--magenta)'}
+function prioClass(p){return p==='high'?'prio-high':p==='low'?'prio-low':'prio-medium'}
 const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#555','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
 function platColor(p){return PLAT_COLORS[p]||'#555'}
 function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':'#031329'}
@@ -924,9 +987,9 @@ function isGameUnreleased(g){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate))return true;
   return isFutureDate(g.releaseDate);
 }
-// A game is a pre-order if: status=bought AND future ISO releaseDate
+// A game is a pre-order if: status=bought AND not yet released (future ISO date, or TBA/unknown date)
 function isPreOrder(g){
-  return g.status==='bought'&&isFutureDate(g.releaseDate);
+  return g.status==='bought'&&isGameUnreleased(g);
 }
 // A game is cancelled if its status is 'cancelled'
 function isCancelled(g){ return g.status==='cancelled'; }
@@ -1502,8 +1565,28 @@ function renderTicker(){
   const inner=document.getElementById('tickerInner');
   if(!hits.length){ticker.classList.remove('active');return}
   ticker.classList.add('active');
-  inner.innerHTML=hits.map(g=>`<span class="ticker-item" onclick="openPanel('${g.id}')">${g.title}</span>`).join('');
+  const itemsHTML=hits.map(g=>`<span class="ticker-item" onclick="openPanel('${g.id}')">${g.title}</span>`).join('');
+  inner.innerHTML=itemsHTML;
+  inner.classList.remove('marquee');
+  inner.style.animationDuration='';
+  const track=inner.parentElement;
+  // Only scroll if the items actually overflow the bar — a short list just sits still.
+  requestAnimationFrame(()=>{
+    if(inner.scrollWidth>track.clientWidth){
+      inner.innerHTML=itemsHTML+itemsHTML; // duplicated copy → seamless 50%-translate loop
+      const PX_PER_SEC=40;
+      inner.style.animationDuration=Math.max(8,inner.scrollWidth/2/PX_PER_SEC)+'s';
+      inner.classList.add('marquee');
+    }
+  });
 }
+let _tickerResizeT=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(_tickerResizeT);
+  _tickerResizeT=setTimeout(()=>{
+    if(document.getElementById('todayTicker')?.classList.contains('active'))renderTicker();
+  },200);
+});
 
 // ══════════════════════════════════════════
 //  COLLAPSIBLE SECTIONS

@@ -454,7 +454,7 @@
           <button class="hb cal-arrow accent" id="calNext">›</button>
         </div>
         <div class="cal-hdr-right">
-          <button class="hb cal-tba-toggle accent" id="calTbaBtn" title="Date Unknown games" style="display:none">TBA</button>
+          <button class="fbar-pill cal-tba-toggle" id="calTbaBtn" title="Date Unknown games" style="display:none">TBA<span class="fbar-pill-count fpc-dark" id="calTbaCount"></span></button>
           <button class="hb accent" id="calClose">✕</button>
         </div>
       </div>
@@ -462,7 +462,11 @@
     <!-- Calendar body -->
     <div style="display:flex;gap:0;min-height:400px;align-items:center;" id="calBody">
       <!-- 3-month stacked grid area -->
-      <div id="calMain" style="flex:1;padding:.5rem .6rem;min-width:0;overflow:hidden"></div>
+      <div id="calMainWrap" style="flex:1;min-width:0;position:relative">
+        <div id="calMain" style="padding:.5rem .6rem;overflow:hidden"></div>
+        <div class="cal-swipe-hint cal-swipe-hint-l">‹</div>
+        <div class="cal-swipe-hint cal-swipe-hint-r">›</div>
+      </div>
       <!-- TBA sidebar (desktop, wider) -->
       <div id="calTba" class="cal-tba-wide">
         <div style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:.6rem;flex-shrink:0">Date Unknown</div>
