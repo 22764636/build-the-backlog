@@ -605,10 +605,8 @@ function renderCalendar(){
 
   // Mobile TBA panel toggle
   if(isMobile&&calShowTba){
-    calTbaEl.style.cssText='display:flex;flex-direction:column;width:100%;border-left:none;padding:.85rem 1rem;min-height:300px';
+    calTbaEl.style.cssText='display:flex;flex-direction:column;width:100%;border-left:none;padding:.85rem 1rem;height:420px';
     main.style.display='none';
-    const vp=document.getElementById('calTbaViewport');
-    if(vp)vp.style.height='280px';
     return;
   } else {
     if(isMobile||!tbaGames.length)calTbaEl.style.display='none';
@@ -701,16 +699,7 @@ function renderCalendar(){
   html+='</div></div>';
   main.innerHTML=html;
 
-  // Sync TBA viewport height
-  requestAnimationFrame(()=>{
-    const vp=document.getElementById('calTbaViewport');
-    if(vp&&main){
-      const availH=Math.max(120,main.offsetHeight-68);
-      vp.style.height=availH+'px';
-      vp.style.overflow='hidden';
-    }
-    renderTbaList();
-  });
+  requestAnimationFrame(()=>{renderTbaList();});
 
   // Wire count badge clicks — fill the singleton floating popover (a
   // "portal": it lives outside calMain in the DOM and is position:fixed,
