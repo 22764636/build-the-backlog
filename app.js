@@ -472,8 +472,26 @@ function renderCalendar(){
   const tbaGames=allCal.filter(g=>!/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate));
   const datedGames=allCal.filter(g=>/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate));
 
-  // TBA list — paginated sidebar
-  const TBA_PAGE_SIZE=20;
+  // TBA list — paginated sidebar. Page size is measured from the actual
+  // rendered row height so every page fills the viewport with whole rows —
+  // no clipped row, no dead space, no hidden unreachable games.
+  let TBA_PAGE_SIZE=20;
+  function measureTbaPageSize(){
+    const vp=document.getElementById('calTbaViewport');
+    if(!vp||!vp.clientHeight)return 20;
+    // Measure two real rows inside an actual .cal-tba-grid so the grid's own
+    // row gap (which a standalone chip's own box never includes) is captured.
+    const probeWrap=document.createElement('div');
+    probeWrap.className='cal-tba-grid';
+    probeWrap.style.cssText='position:absolute;visibility:hidden;pointer-events:none;left:-9999px;width:'+vp.clientWidth+'px';
+    probeWrap.innerHTML='<div class="cal-tba-chip"><span class="cal-tba-chip-title">X</span><span class="cal-tba-chip-sub">X</span></div>'.repeat(2);
+    vp.appendChild(probeWrap);
+    const rows=probeWrap.querySelectorAll('.cal-tba-chip');
+    const rowH=rows[1].getBoundingClientRect().top-rows[0].getBoundingClientRect().top;
+    probeWrap.remove();
+    if(!rowH)return 20;
+    return Math.max(1,Math.floor(vp.clientHeight/rowH));
+  }
   let tbaPage=0;
   function renderTbaList(){
     const track=document.getElementById('calTbaTrack');
@@ -484,6 +502,7 @@ function renderCalendar(){
       if(pagination)pagination.style.display='none';
       return;
     }
+    TBA_PAGE_SIZE=measureTbaPageSize();
     const totalPages=Math.ceil(tbaGames.length/TBA_PAGE_SIZE);
     let pagesHTML='';
     for(let p=0;p<totalPages;p++){
@@ -604,15 +623,20 @@ function renderCalendar(){
   const calTbaEl=document.getElementById('calTba');
   const isMobile=window.innerWidth<=640;
 
-  // Mobile TBA panel toggle
+  // Mobile TBA panel toggle — also hides the month/year selects, since there's
+  // no month grid to navigate while the TBA panel is showing
+  const hdrNav=document.querySelector('.cal-hdr-nav');
   if(isMobile&&calShowTba){
     calTbaEl.style.cssText='display:flex;flex-direction:column;width:100%;border-left:none;padding:.85rem 1rem;height:420px';
     mainWrap.style.display='none';
+    if(hdrNav)hdrNav.style.display='none';
+    renderTbaList(); // re-measure now that the panel actually has its real height
     return;
   } else {
     if(isMobile||!tbaGames.length)calTbaEl.style.display='none';
     else calTbaEl.style.cssText='';// use .cal-tba-wide CSS
     mainWrap.style.display='';
+    if(hdrNav)hdrNav.style.display='';
   }
 
   // Mobile: list view for current month only
