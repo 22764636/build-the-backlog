@@ -27,6 +27,12 @@
 .subcat-why b{color:var(--text)}
 .no-subcat{font-size:.78rem;color:var(--t3);font-style:italic;margin-bottom:1rem}
 
+/* shared-states block (once per subcategory) */
+.states-block{background:#02b3fc0a;border:1px solid var(--bd2);border-radius:var(--r);padding:.8rem .9rem;margin-bottom:1rem}
+.states-hdr{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.85rem;color:var(--blue);margin-bottom:.15rem}
+.states-note{font-size:.7rem;color:var(--t2);margin-bottom:.6rem;line-height:1.5}
+.states-note code{color:var(--amber)}
+
 /* per-element block */
 .el-block{background:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:.8rem .9rem;margin-bottom:1rem}
 .el-block:last-child{margin-bottom:0}
@@ -75,6 +81,20 @@
       <div class="subcat-title">Selector Pill</div>
       <div class="subcat-why"><b>Purpose:</b> assign a value to <b>one</b> item. <b>Why its own subcategory:</b> stays colorless (transparent background, muted border) until you pick a value — no count, since it's not summarizing anything across the collection.</div>
 
+      <div class="states-block">
+        <div class="states-hdr">States (shared by every Selector Pill below)</div>
+        <div class="states-note">Every Selector Pill uses the same unselected/hover treatment — only the "Selected" color differs per element/value, already shown in each table below. Exception: <code>.ps-modal-btn</code> (Play status) has no unselected look at all — it always shows a filled value — and its hover is a brightness filter instead of a border/text change.</div>
+        <table class="v-table">
+          <tr><th>State</th><th>Preview</th><th>Background</th><th>Border</th><th>Text</th></tr>
+          <tr><td class="v-name">Unselected</td><td class="v-preview"><button class="prio-btn">High</button></td>
+            <td><span class="hexdash">transparent</span></td><td class="varname">var(--bd)</td><td class="varname">var(--t2)</td></tr>
+          <tr><td class="v-name">Hover</td><td class="v-preview"><button class="prio-btn" style="border-color:#02b3fc;color:#e8f4ff">High</button></td>
+            <td><span class="hexdash">transparent</span></td><td class="varname">var(--blue)</td><td class="varname">var(--text)</td></tr>
+          <tr><td class="v-name">Selected</td><td class="v-preview"><button class="prio-btn prio-btn-on" style="background:#02b3fc;border-color:transparent;color:#031329">High</button></td>
+            <td class="v-note" colspan="3">Fill color varies per value — see each element's table below</td></tr>
+        </table>
+      </div>
+
       <div class="el-block">
         <div class="el-hdr"><span class="el-hdr-name">Priority</span><span class="el-hdr-class">.prio-btn</span></div>
         <div class="el-hdr-usage">Add/Edit modal — sets a game's priority</div>
@@ -94,10 +114,10 @@
 
       <div class="el-block">
         <div class="el-hdr"><span class="el-hdr-name">Type</span><span class="el-hdr-class">.type-btn</span></div>
-        <div class="el-hdr-usage">Add/Edit modal — is this a base game or DLC</div>
+        <div class="el-hdr-usage">Add/Edit modal — is this a base game or DLC. Note: unlike every other Selector Pill, the selected color here is applied via hardcoded ID selectors (<code>#fTypeGame.on</code> / <code>#fTypeDlc.on</code>) instead of a reusable class/attribute pattern — works correctly in the live app (the real buttons have those exact IDs) but is a code-consistency outlier worth knowing about.</div>
         <table class="v-table">
           <tr><th>Value</th><th>Preview</th><th>Background</th><th>BG var</th><th>Text</th><th>Text var</th></tr>
-          <tr><td class="v-name">Game</td><td class="v-preview"><button class="type-btn on">Game</button></td>
+          <tr><td class="v-name">Game</td><td class="v-preview"><button class="type-btn on" style="background:#02b3fc;border-color:transparent;color:#031329">Game</button></td>
             <td><span class="hexcopy" onclick="copyHex(this,'#02b3fc')">#02b3fc</span></td><td class="varname">var(--blue)</td>
             <td><span class="hexcopy" onclick="copyHex(this,'#031329')">#031329</span></td><td class="varname">—</td></tr>
           <tr><td class="v-name">DLC</td><td class="v-preview"><button class="type-btn on" style="background:#c4a0ff;color:#1a0a3a">DLC</button></td>
@@ -209,6 +229,17 @@
     <div class="subcat">
       <div class="subcat-title">Filter Pill</div>
       <div class="subcat-why"><b>Purpose:</b> filter your <b>whole collection</b> by a value. <b>Why its own subcategory:</b> stays tinted with its color at all times (dims to 55% opacity when not selected, rather than going transparent) so you can scan the full palette of options at a glance, and always shows a live count of how many games match — the count sits in its own small contrasting sub-chip so it stays legible regardless of the pill's own color.</div>
+
+      <div class="states-block">
+        <div class="states-hdr">States (shared by every Filter Pill below, no exceptions)</div>
+        <div class="states-note">A Filter Pill's own color never changes between states — only its opacity does. All four elements below (Priority/Platform/Play status/Hotness filters) use the exact same opacity values.</div>
+        <table class="v-table">
+          <tr><th>State</th><th>Preview</th><th>Opacity</th></tr>
+          <tr><td class="v-name">Unselected</td><td class="v-preview"><button class="b-plat fbar-pill" style="background:#02b3fc;color:#031329">High<span class="fbar-pill-count fpc-dark">12</span></button></td><td class="varname">.55</td></tr>
+          <tr><td class="v-name">Hover</td><td class="v-preview"><button class="b-plat fbar-pill" style="background:#02b3fc;color:#031329;opacity:.8">High<span class="fbar-pill-count fpc-dark">12</span></button></td><td class="varname">.8</td></tr>
+          <tr><td class="v-name">Selected</td><td class="v-preview"><button class="b-plat fbar-pill selected" style="background:#02b3fc;color:#031329">High<span class="fbar-pill-count fpc-dark">12</span></button></td><td class="varname">1</td></tr>
+        </table>
+      </div>
 
       <div class="el-block">
         <div class="el-hdr"><span class="el-hdr-name">Priority filter</span><span class="el-hdr-class">.b-plat.fbar-pill</span></div>
@@ -574,6 +605,10 @@
           <tr><td class="v-name">Border</td><td></td><td><span class="hexdash">—</span></td><td class="varname">var(--bd2)</td><td></td><td></td></tr>
           <tr><td class="v-name">Label text ("Priority:")</td><td></td><td><span class="hexcopy" onclick="copyHex(this,'#8aabcc')">#8aabcc</span></td><td class="varname">var(--t2)</td><td></td><td></td></tr>
           <tr><td class="v-name">Value text ("High")</td><td></td><td><span class="hexcopy" onclick="copyHex(this,'#02b3fc')">#02b3fc</span></td><td class="varname">var(--blue)</td><td></td><td></td></tr>
+          <tr><td class="v-name">× remove, resting</td><td class="v-preview"><button class="fchip-x" style="background:transparent;border:none;color:#4a6280;font-size:.9em">✕</button></td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#4a6280')">#4a6280</span></td><td class="varname">var(--t3)</td><td></td><td></td></tr>
+          <tr><td class="v-name">× remove, hover</td><td class="v-preview"><button class="fchip-x" style="background:transparent;border:none;color:#ff00aa;font-size:.9em">✕</button></td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#ff00aa')">#ff00aa</span></td><td class="varname">var(--pink)</td><td></td><td></td></tr>
         </table>
       </div>
     </div>
@@ -581,6 +616,7 @@
     <div class="subcat">
       <div class="subcat-title">Tag Chip</div>
       <div class="subcat-why"><b>Purpose:</b> represent one value in a multi-value list you're actively editing. <b>Why its own subcategory:</b> shows a bare value (no label prefix, since the field it belongs to is already labeled above the input) — same chip grammar as the Filter Chip, just simpler content.</div>
+      <div class="states-note" style="margin-bottom:.8rem">Its × remove button shares the exact same resting/hover colors as the Filter Chip's above (<span class="varname">var(--t3)</span> → <span class="varname">var(--pink)</span>) — not repeated below.</div>
       <div class="el-block">
         <div class="el-hdr"><span class="el-hdr-name">Tag input</span><span class="el-hdr-class">.cich</span></div>
         <div class="el-hdr-usage">Add/Edit modal — genre, developer, publisher, and collection multi-value inputs</div>
@@ -610,8 +646,10 @@
             <td><span class="hexcopy" onclick="copyHex(this,'#ff00aa')">#ff00aa</span></td><td class="varname">var(--pink)</td><td></td><td></td></tr>
           <tr><td class="v-name">Offline</td><td class="v-preview" style="background:var(--base);border-radius:6px"><span style="display:inline-flex;align-items:center;gap:.25rem;background:#0d1e33;border:1px solid #02b3fc44;border-radius:99px;padding:.18rem .5rem .18rem .6rem;font-size:.65rem;color:#4a6280"><span style="width:7px;height:7px;border-radius:50%;background:#4a6280;display:inline-block"></span>Offline</span></td>
             <td><span class="hexcopy" onclick="copyHex(this,'#4a6280')">#4a6280</span></td><td class="varname">var(--t3)</td><td></td><td></td></tr>
-          <tr><td class="v-name">Background / border / text (all states)</td><td></td>
-            <td colspan="4" class="v-note">bg <span class="hexcopy" onclick="copyHex(this,'#0d1e33')">#0d1e33</span> (var(--s1)) · border <span class="hexcopy" onclick="copyHex(this,'#02b3fc44')">#02b3fc44</span> (var(--bd2)) · text <span class="hexcopy" onclick="copyHex(this,'#4a6280')">#4a6280</span> (var(--t3))</td></tr>
+          <tr><td class="v-name">Container, resting (any state)</td><td class="v-preview" style="background:var(--base);border-radius:6px"><span style="display:inline-flex;align-items:center;gap:.25rem;background:#0d1e33;border:1px solid #02b3fc44;border-radius:99px;padding:.18rem .5rem .18rem .6rem;font-size:.65rem;color:#4a6280"><span style="width:7px;height:7px;border-radius:50%;background:#4a6280;display:inline-block"></span>Offline</span></td>
+            <td colspan="4" class="v-note">bg <span class="hexcopy" onclick="copyHex(this,'#0d1e33')">#0d1e33</span> var(--s1) · border <span class="hexcopy" onclick="copyHex(this,'#02b3fc44')">#02b3fc44</span> var(--bd2) · text <span class="hexcopy" onclick="copyHex(this,'#4a6280')">#4a6280</span> var(--t3)</td></tr>
+          <tr><td class="v-name">Container, hover — only in Sync failed / Offline (the only clickable states)</td><td class="v-preview" style="background:var(--base);border-radius:6px"><span style="display:inline-flex;align-items:center;gap:.25rem;background:#0d1e33;border:1px solid #ff00aa;border-radius:99px;padding:.18rem .5rem .18rem .6rem;font-size:.65rem;color:#ff00aa"><span style="width:7px;height:7px;border-radius:50%;background:#ff00aa;display:inline-block"></span>Sync failed</span></td>
+            <td colspan="4" class="v-note">border + text both switch to <span class="hexcopy" onclick="copyHex(this,'#ff00aa')">#ff00aa</span> var(--pink)</td></tr>
         </table>
       </div>
     </div>
