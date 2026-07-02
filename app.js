@@ -600,18 +600,19 @@ function renderCalendar(){
   }
 
   const main=document.getElementById('calMain');
+  const mainWrap=document.getElementById('calMainWrap');
   const calTbaEl=document.getElementById('calTba');
   const isMobile=window.innerWidth<=640;
 
   // Mobile TBA panel toggle
   if(isMobile&&calShowTba){
     calTbaEl.style.cssText='display:flex;flex-direction:column;width:100%;border-left:none;padding:.85rem 1rem;height:420px';
-    main.style.display='none';
+    mainWrap.style.display='none';
     return;
   } else {
     if(isMobile||!tbaGames.length)calTbaEl.style.display='none';
     else calTbaEl.style.cssText='';// use .cal-tba-wide CSS
-    main.style.display='';
+    mainWrap.style.display='';
   }
 
   // Mobile: list view for current month only
