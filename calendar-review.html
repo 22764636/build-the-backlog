@@ -85,7 +85,7 @@
             <button class="hb cal-arrow accent">›</button>
           </div>
           <div class="cal-hdr-right">
-            <button class="hb cal-tba-toggle accent" style="display:none">TBA</button>
+            <button class="fbar-pill cal-tba-toggle" style="display:none">TBA<span class="fbar-pill-count fpc-dark"></span></button>
             <button class="hb accent">✕</button>
           </div>
         </div>
@@ -124,12 +124,15 @@
   <div class="sec-desc">
     <code>.cal-count</code> — a 22×22px circle in the bottom of a day cell showing how many releases land that day.
     Blue (<code>var(--blue)</code>) normally, amber (<code>var(--amber)</code>, <code>.has-pre</code>) if any of that
-    day's games is a pre-order. Click opens <code>#calFloatPop.cal-pop</code>, a singleton <code>position:fixed</code>
-    popover listing each game (<code>.cal-pop-item</code>, pre-orders tinted amber) — clicking a row opens that game's
-    side panel. <b>Live demo below — click a bubble.</b> This is the one calendar element flagged as a deliberate
-    taxonomy exception: it acts like a Chip (standalone, own click action) but its shape/styling (perfect circle, no
-    visible border at rest, number instead of a text label) doesn't match Chip canon, so per your call it stays a
-    standalone "counter bubble" pattern rather than being folded in.
+    day's games is a pre-order. No border at rest anymore — the old <code>border:2px solid transparent</code> was
+    dead CSS (never overridden anywhere; the hover ring already gives feedback via <code>box-shadow</code>), removed.
+    Click opens <code>#calFloatPop.cal-pop</code>, a singleton <code>position:fixed</code> popover listing each game
+    — each row now carries the same priority-colored left border as the TBA sidebar (<code>.prio-high/medium/low</code>)
+    plus a proper <code>.bdg.b-pre</code> "PRE-ORDER" badge for pre-orders, replacing the old plain amber-text
+    treatment, for visual consistency across all three calendar row types. <b>Live demo below — click a bubble.</b>
+    This is the one calendar element flagged as a deliberate taxonomy exception: it acts like a Chip (standalone, own
+    click action) but its shape (perfect circle, number instead of a text label) doesn't match Chip canon, so per
+    your call it stays a standalone "counter bubble" pattern rather than being folded in.
   </div>
   <div class="stage">
     <div class="stage-lbl">Desktop — try clicking a bubble</div>
@@ -142,15 +145,21 @@
 <!-- TBA LIST -->
 <div class="sec" id="tba">
   <div class="sec-hdr"><h2>TBA (Date Unknown) List</h2><span class="sec-tag both">different layout per breakpoint</span></div>
-  <div class="sec-desc">Games with a non-ISO release date (e.g. blank, "TBA", "2027"). On desktop it's a permanent
-    sidebar (<code>.cal-tba-wide</code>, 2-column grid of <code>.cal-tba-chip</code> rows, paginated 20/page with
-    swipe/drag). On mobile there's no room for a sidebar, so it collapses into a header toggle button
-    (<code>.cal-tba-toggle</code>, shows a live count e.g. "TBA (4)") that swaps the entire body over to the same
-    TBA list full-width, hiding the month view. Each <code>.cal-tba-chip</code> gets a 3px left-border accent from
-    the game's priority (<code>.prio-high</code>=blue, <code>.prio-medium</code>=pink, <code>.prio-low</code>=lime) —
-    worth flagging: this reuses the exact same 3 hex values as the Priority pill/badge but through a different
-    mechanism (border-left, not fill), so it's a soft crossover worth checking when you get to the pill/badge color
-    pass.</div>
+  <div class="sec-desc">Games with a non-ISO release date (e.g. blank, "TBA", "2027"). On desktop it's a sidebar
+    (<code>.cal-tba-wide</code>, 2-column grid of <code>.cal-tba-chip</code> rows, paginated 20/page with swipe/drag)
+    — now hidden entirely (no reserved space, no "None" placeholder) when there are zero TBA-date games, letting the
+    month grid use the full width. On mobile there's no room for a sidebar, so it collapses into a header toggle
+    — now a proper Filter Pill (<code>.fbar-pill.cal-tba-toggle</code> with a <code>.fbar-pill-count</code> sub-chip,
+    matching every other filter pill's count convention instead of baking "(4)" into the button text) — that swaps
+    the entire body over to the same TBA list full-width, hiding the month view; also hidden when zero TBA games.
+    Each <code>.cal-tba-chip</code> gets a 3px left-border accent from the game's priority (<code>.prio-high</code>=blue,
+    <code>.prio-medium</code>=pink, <code>.prio-low</code>=lime) — confirmed: yes, this reuses the exact same 3 hex
+    values as the Priority pill/badge but through a different mechanism (border-left, not fill), so it's a soft
+    crossover worth checking when you get to the pill/badge color pass. This same left-border pattern has now been
+    extended to the popover and mobile list rows below, for one consistent "row = priority-colored left edge" visual
+    language across all three calendar list surfaces. Open question: chip titles can still silently truncate
+    (2-column grid + ellipsis, no wrap) — a 1-column layout would fix it but roughly doubles the vertical space
+    needed per page; flagging for a decision rather than changing unilaterally.</div>
   <div class="stage">
     <div class="stage-lbl">Desktop — permanent sidebar</div>
     <div class="stage-cal" style="padding:.75rem .85rem;display:flex">
@@ -185,16 +194,20 @@
 <!-- MOBILE LIST VIEW -->
 <div class="sec" id="list">
   <div class="sec-hdr"><h2>Mobile List View</h2><span class="sec-tag mob">mobile only</span></div>
-  <div class="sec-desc">Replaces the month grid entirely below 640px. Shows only the currently-selected month's
-    dated releases as flat rows (<code>.cal-list-item</code>: date + title + inline PRE badge if pre-order), no
-    per-day grouping or popover. Note the PRE badge here (<code>background:var(--amber)</code>, 4px radius, inline
-    styled in JS rather than a CSS class) — it's a second amber-badge lookalike alongside <code>.b-hot</code> and the
-    hotness filter pill, worth a look during the color-crossover pass.</div>
+  <div class="sec-desc">Replaces the month grid entirely below 640px. Shows the currently-selected month's dated
+    releases grouped by day (<code>.cal-list-day</code> + <code>.cal-list-day-hdr</code> date header, so a shared
+    date no longer repeats per row), each release a <code>.cal-list-item</code> row carrying the same
+    priority-colored left border as the TBA chip/popover, plus the reused <code>.bdg.b-pre</code> "PRE-ORDER" badge
+    (previously a one-off inline-styled "PRE" badge — now the real badge class, matching what the side panel shows).
+    <b>Also fixed a real bug here:</b> a bought game only got the pre-order badge if it had a future <em>ISO</em>
+    release date — a bought game with a TBA/unknown date fell through and silently showed nothing. Pre-order status
+    is now based on the same "unreleased" check used elsewhere (future date OR non-ISO/TBA text), so it's consistent
+    with the side panel's own PRE-ORDER badge everywhere a bought-but-not-out game shows up.</div>
   <div class="stage" style="padding:0">
     <div class="stage-lbl" style="padding:1.1rem 1.1rem 0">Mobile (live iframe)</div>
     <div class="mob-wrap" style="padding:.7rem 0 1.1rem">
       <div style="width:380px;border:1px solid var(--bd2);border-radius:16px;overflow:hidden">
-        <iframe src="calendar-review-mobile-list.html" style="width:100%;height:260px;border:none" scrolling="no"></iframe>
+        <iframe src="calendar-review-mobile-list.html" style="width:100%;height:340px;border:none" scrolling="no"></iframe>
       </div>
     </div>
   </div>
@@ -232,17 +245,18 @@
     <tr><td><code>.cal-hdr-inner</code> / <code>.cal-hdr-title</code> / <code>.cal-hdr-nav</code> / <code>.cal-hdr-right</code></td><td>Both</td><td>Header layout wrapper; wraps to 2 rows &lt;640px</td></tr>
     <tr><td><code>.cal-arrow</code></td><td>Desktop only</td><td>Base <code>.hb.accent</code>, hidden entirely on mobile</td></tr>
     <tr><td><code>.cal-month-sel</code> / <code>.cal-year-sel</code></td><td>Both</td><td>Base <code>.ts</code> plain select, no custom dropdown styling</td></tr>
-    <tr><td><code>.cal-tba-toggle</code></td><td>Mobile only</td><td>Base <code>.hb.accent</code>; desktop keeps inline <code>display:none</code> forever, only <code>@media(max-width:640px)</code> forces it visible</td></tr>
+    <tr><td><code>.cal-tba-toggle</code></td><td>Mobile only</td><td>Now <code>.fbar-pill</code> (Filter Pill) with a <code>.fbar-pill-count</code> sub-chip; <code>.selected</code> when panel open; <code>.cal-tba-empty</code> hides it (and the desktop sidebar) when zero TBA games</td></tr>
     <tr><td><code>.cal-2stack</code> / <code>.cal-months-col</code> / <code>.cal-month-block</code> / <code>.cal-month-label</code></td><td>Desktop only</td><td>Two-month stacked grid wrapper</td></tr>
     <tr><td><code>.cal-grid</code> / <code>.cal-dow</code> / <code>.cal-cell</code> / <code>.cal-dn</code></td><td>Desktop only</td><td>7-col day grid, fixed 46×46px cells</td></tr>
-    <tr><td><code>.cal-count</code></td><td>Desktop only</td><td>Day-count circle; blue / amber(<code>.has-pre</code>); opens popover</td></tr>
-    <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code></td><td>Desktop only</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code></td></tr>
-    <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: permanent sidebar. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places</td></tr>
-    <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code></td></tr>
+    <tr><td><code>.cal-count</code></td><td>Desktop only</td><td>Day-count circle; blue / amber(<code>.has-pre</code>); opens popover; dead <code>border:2px solid transparent</code> removed</td></tr>
+    <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code> / <code>.cal-pop-item-title</code></td><td>Desktop only</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code>; rows now carry the priority left-border + <code>.bdg.b-pre</code> badge</td></tr>
+    <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: sidebar, hidden when empty. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places</td></tr>
+    <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code>, now shared with <code>.cal-pop-item</code>/<code>.cal-list-item</code></td></tr>
     <tr><td><code>.tba-list-viewport</code> / <code>.tba-list-track</code> / <code>.tba-list-page</code></td><td>Both</td><td>Swipe/drag pagination for TBA list, 20 per page</td></tr>
     <tr><td><code>.tba-pagination</code> / <code>.tba-page-dot</code> / <code>.tba-page-btn</code></td><td>Both</td><td>Dot pager, only rendered when &gt;1 page</td></tr>
-    <tr><td><code>.cal-list-item</code> / <code>.cal-list-date</code> / <code>.cal-list-title</code></td><td>Mobile only</td><td>Replaces the grid; current-month releases as flat rows</td></tr>
-    <tr><td>inline PRE badge in <code>.cal-list-item</code></td><td>Mobile only</td><td>Not a CSS class — inline-styled in JS, amber</td></tr>
+    <tr><td><code>.cal-list-day</code> / <code>.cal-list-day-hdr</code></td><td>Mobile only</td><td>New — groups same-day releases under one date header instead of repeating the date per row</td></tr>
+    <tr><td><code>.cal-list-item</code> / <code>.cal-list-title</code></td><td>Mobile only</td><td>Replaces the grid; priority left-border; date column removed (now in the day header)</td></tr>
+    <tr><td><code>.bdg.b-pre</code> in <code>.cal-list-item</code>/<code>.cal-pop-item</code></td><td>Mobile + desktop popover</td><td>Reused the existing side-panel badge class/text ("PRE-ORDER") instead of a one-off inline-styled "PRE" span</td></tr>
     <tr><td><code>#todayTicker</code> / <code>.ticker-label</code> / <code>.ticker-track</code> / <code>.ticker-inner</code> / <code>.ticker-item</code></td><td>Both, identical</td><td>No dedicated mobile CSS at all</td></tr>
   </table>
 </div>
@@ -253,11 +267,11 @@
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const todayISO='2026-07-02';
 const SAMPLE={
-  '2026-07-04':[{t:'Starfall Odyssey',pre:true}],
-  '2026-07-09':[{t:'Nightfall Protocol'}],
-  '2026-07-18':[{t:'Rust Vanguard'},{t:'Glass Meridian'},{t:'Echo District'}],
-  '2026-08-14':[{t:'Ashen Court'}],
-  '2026-08-27':[{t:'Voidbreaker',pre:true},{t:'Twin Peaks Reborn'}]
+  '2026-07-04':[{t:'Starfall Odyssey',pre:true,prio:'prio-high'}],
+  '2026-07-09':[{t:'Nightfall Protocol',prio:'prio-medium'}],
+  '2026-07-18':[{t:'Rust Vanguard',prio:'prio-low'},{t:'Glass Meridian',prio:'prio-medium'},{t:'Echo District',prio:'prio-medium'}],
+  '2026-08-14':[{t:'Ashen Court',prio:'prio-medium'}],
+  '2026-08-27':[{t:'Voidbreaker',pre:true,prio:'prio-high'},{t:'Twin Peaks Reborn',prio:'prio-low'}]
 };
 function renderMonthGrid(year,month,withCounts){
   const DAYS=['M','T','W','T','F','S','S'];
@@ -306,7 +320,7 @@ document.getElementById('countDemo').addEventListener('click',e=>{
   pop.classList.remove('open');
   if(already)return;
   const items=SAMPLE[badge.dataset.date]||[];
-  pop.innerHTML=items.map(g=>`<div class="cal-pop-item${g.pre?' pre':''}">${g.t}</div>`).join('');
+  pop.innerHTML=items.map(g=>`<div class="cal-pop-item ${g.prio}"><span class="cal-pop-item-title">${g.t}</span>${g.pre?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}</div>`).join('');
   pop.dataset.date=badge.dataset.date;
   const r=badge.getBoundingClientRect();
   pop.style.top=(r.bottom+6)+'px';

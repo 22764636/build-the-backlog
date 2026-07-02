@@ -489,7 +489,7 @@ function renderCalendar(){
     for(let p=0;p<totalPages;p++){
       const slice=tbaGames.slice(p*TBA_PAGE_SIZE,(p+1)*TBA_PAGE_SIZE);
       pagesHTML+=`<div class="tba-list-page"><div class="cal-tba-grid">${slice.map(g=>{
-        const pc=g.priority==='high'?'prio-high':g.priority==='low'?'prio-low':'prio-medium';
+        const pc=prioClass(g.priority);
         return`<div class="cal-tba-chip ${pc}" title="${esc(g.title)} — ${esc(g.releaseDate)}" onclick="openPanel('${g.id}')"><span class="cal-tba-chip-title">${esc(g.title)}</span><span class="cal-tba-chip-sub">${esc(g.releaseDate)}</span></div>`;
       }).join('')}</div></div>`;
     }
@@ -589,11 +589,14 @@ function renderCalendar(){
     renderTbaDots();
   }
 
-  // Update TBA button badge on mobile
+  // Update TBA filter pill (mobile) — hidden entirely when there's nothing to show
   const tbaBtn=document.getElementById('calTbaBtn');
+  const tbaCount=document.getElementById('calTbaCount');
+  if(!tbaGames.length)calShowTba=false;
   if(tbaBtn){
-    tbaBtn.textContent=tbaGames.length?`TBA (${tbaGames.length})`:'TBA';
-    tbaBtn.classList.toggle('on',calShowTba);
+    if(tbaCount)tbaCount.textContent=tbaGames.length||'';
+    tbaBtn.classList.toggle('selected',calShowTba);
+    tbaBtn.classList.toggle('cal-tba-empty',tbaGames.length===0);
   }
 
   const main=document.getElementById('calMain');
@@ -608,7 +611,7 @@ function renderCalendar(){
     if(vp)vp.style.height='280px';
     return;
   } else {
-    if(isMobile)calTbaEl.style.display='none';
+    if(isMobile||!tbaGames.length)calTbaEl.style.display='none';
     else calTbaEl.style.cssText='';// use .cal-tba-wide CSS
     main.style.display='';
   }
@@ -621,12 +624,22 @@ function renderCalendar(){
     if(!monthGames.length){
       main.innerHTML=`<div style="color:var(--t3);font-size:.8rem;padding:1rem 0">No releases this month.</div>`;
     } else {
-      main.innerHTML=monthGames.map(g=>`
-        <div class="cal-list-item${isPreOrder(g)?' pre':''}" onclick="openPanel('${g.id}')">
-          <div class="cal-list-date">${fmtDate(g.releaseDate)}</div>
-          <div class="cal-list-title">${esc(g.title)}</div>
-          ${isPreOrder(g)?'<span style="font-size:.6rem;background:var(--amber);color:#031329;border-radius:4px;padding:1px 5px;font-weight:700;flex-shrink:0">PRE</span>':''}
-        </div>`).join('');
+      const byDay={};
+      monthGames.forEach(g=>{
+        const d=normaliseDate(g.releaseDate);
+        (byDay[d]=byDay[d]||[]).push(g);
+      });
+      main.innerHTML=Object.keys(byDay).map(d=>{
+        const rows=byDay[d].map(g=>`
+          <div class="cal-list-item ${prioClass(g.priority)}" onclick="openPanel('${g.id}')">
+            <div class="cal-list-title">${esc(g.title)}</div>
+            ${isPreOrder(g)?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}
+          </div>`).join('');
+        return `<div class="cal-list-day">
+          <div class="cal-list-day-hdr">${fmtDate(d)}</div>
+          ${rows}
+        </div>`;
+      }).join('');
     }
     return;
   }
@@ -713,7 +726,7 @@ function renderCalendar(){
       floatPop.classList.remove('open');
       if(alreadyOpenHere)return;
       const cellGames=byDate[dateStr]||[];
-      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item${isPreOrder(g)?' pre':''}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')">${esc(g.title)}</div>`).join('');
+      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item ${prioClass(g.priority)}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')"><span class="cal-pop-item-title">${esc(g.title)}</span>${isPreOrder(g)?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}</div>`).join('');
       floatPop.dataset.date=dateStr;
       floatPop.classList.add('open');
       positionFloatPop(floatPop,this);
@@ -850,6 +863,7 @@ const isUnreleased=g=>isGameUnreleased(g); // alias
 const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
 
 function prioColor(p){return p==='high'?'var(--cyan)':p==='low'?'var(--lime)':'var(--magenta)'}
+function prioClass(p){return p==='high'?'prio-high':p==='low'?'prio-low':'prio-medium'}
 const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#555','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
 function platColor(p){return PLAT_COLORS[p]||'#555'}
 function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':'#031329'}
@@ -924,9 +938,9 @@ function isGameUnreleased(g){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate))return true;
   return isFutureDate(g.releaseDate);
 }
-// A game is a pre-order if: status=bought AND future ISO releaseDate
+// A game is a pre-order if: status=bought AND not yet released (future ISO date, or TBA/unknown date)
 function isPreOrder(g){
-  return g.status==='bought'&&isFutureDate(g.releaseDate);
+  return g.status==='bought'&&isGameUnreleased(g);
 }
 // A game is cancelled if its status is 'cancelled'
 function isCancelled(g){ return g.status==='cancelled'; }

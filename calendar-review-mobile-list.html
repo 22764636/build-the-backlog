@@ -15,7 +15,7 @@
 </head>
 <body>
 
-<div class="frame-lbl">List View (default mobile state, TBA off)</div>
+<div class="frame-lbl">List View (default mobile state, TBA off) — grouped by day</div>
 <div id="calOv">
   <div style="background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rl);width:100%;margin:0 auto">
     <div id="calHdr" style="border-bottom:1px solid var(--bd)">
@@ -26,25 +26,32 @@
           <select class="ts cal-year-sel"><option>2026</option></select>
         </div>
         <div class="cal-hdr-right">
-          <button class="hb cal-tba-toggle accent" title="Date Unknown games">TBA (4)</button>
+          <button class="fbar-pill cal-tba-toggle" title="Date Unknown games">TBA<span class="fbar-pill-count fpc-dark">4</span></button>
           <button class="hb accent">✕</button>
         </div>
       </div>
     </div>
-    <div style="display:flex;gap:0;min-height:200px;align-items:center;padding:.6rem .75rem">
-      <div style="flex:1;min-width:0">
-        <div class="cal-list-item pre" onclick="return false">
-          <div class="cal-list-date">Jul 4</div>
+    <div style="padding:.6rem .75rem">
+      <div class="cal-list-day">
+        <div class="cal-list-day-hdr">04 Jul 2026</div>
+        <div class="cal-list-item prio-high" onclick="return false">
           <div class="cal-list-title">Starfall Odyssey</div>
-          <span style="font-size:.6rem;background:var(--amber);color:#031329;border-radius:4px;padding:1px 5px;font-weight:700;flex-shrink:0">PRE</span>
+          <span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>
         </div>
-        <div class="cal-list-item" onclick="return false">
-          <div class="cal-list-date">Jul 9</div>
+      </div>
+      <div class="cal-list-day">
+        <div class="cal-list-day-hdr">09 Jul 2026</div>
+        <div class="cal-list-item prio-medium" onclick="return false">
           <div class="cal-list-title">Nightfall Protocol: A Very Long Title That Truncates</div>
         </div>
-        <div class="cal-list-item" onclick="return false">
-          <div class="cal-list-date">Jul 18</div>
+      </div>
+      <div class="cal-list-day">
+        <div class="cal-list-day-hdr">18 Jul 2026</div>
+        <div class="cal-list-item prio-low" onclick="return false">
           <div class="cal-list-title">Rust Vanguard</div>
+        </div>
+        <div class="cal-list-item prio-medium" onclick="return false">
+          <div class="cal-list-title">Glass Meridian</div>
         </div>
       </div>
     </div>
