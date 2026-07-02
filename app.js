@@ -434,6 +434,7 @@ function openCalendar(){
 function _rawCloseCalendar(){
   document.getElementById('calOv').classList.remove('on');
   document.getElementById('calOv').style.display='none';
+  document.getElementById('calFloatPop').classList.remove('open');
   calShowTba=false;
 }
 function closeCalendar(){
@@ -460,6 +461,7 @@ function calendarGames(){
 }
 
 function renderCalendar(){
+  document.getElementById('calFloatPop').classList.remove('open');
   // Keep selects in sync
   const mSel=document.getElementById('calMonthSel');
   const ySel=document.getElementById('calYearSel');
@@ -663,10 +665,7 @@ function renderCalendar(){
       const cellGames=byDate[dateStr]||[];
       const hasPre=cellGames.some(g=>isPreOrder(g));
       const countBadge=cellGames.length>0
-        ?`<div class="cal-count${hasPre?' has-pre':''}" data-date="${dateStr}">${cellGames.length}</div>
-          <div class="cal-pop" id="pop-${dateStr}">
-            ${cellGames.map(g=>`<div class="cal-pop-item${isPreOrder(g)?' pre':''}" onclick="openPanel('${g.id}')">${esc(g.title)}</div>`).join('')}
-          </div>`
+        ?`<div class="cal-count${hasPre?' has-pre':''}" data-date="${dateStr}">${cellGames.length}</div>`
         :'';
       html+=`<div class="cal-cell${isToday?' today':''}${isPast?' past':''}">
         <div class="cal-dn">${day}</div>${countBadge}
@@ -700,16 +699,41 @@ function renderCalendar(){
     renderTbaList();
   });
 
-  // Wire count badge clicks
+  // Wire count badge clicks — fill the singleton floating popover (a
+  // "portal": it lives outside calMain in the DOM and is position:fixed,
+  // so it's never clipped by the calendar's own overflow/scroll areas)
+  // and place it next to the clicked badge, flipping/clamping as needed
+  // to stay fully on-screen.
+  const floatPop=document.getElementById('calFloatPop');
   main.querySelectorAll('.cal-count').forEach(badge=>{
     badge.addEventListener('click',function(e){
       e.stopPropagation();
       const dateStr=this.dataset.date;
-      const pop=document.getElementById('pop-'+dateStr);
-      main.querySelectorAll('.cal-pop.open').forEach(p=>{if(p!==pop)p.classList.remove('open')});
-      pop.classList.toggle('open');
+      const alreadyOpenHere=floatPop.classList.contains('open')&&floatPop.dataset.date===dateStr;
+      floatPop.classList.remove('open');
+      if(alreadyOpenHere)return;
+      const cellGames=byDate[dateStr]||[];
+      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item${isPreOrder(g)?' pre':''}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')">${esc(g.title)}</div>`).join('');
+      floatPop.dataset.date=dateStr;
+      floatPop.classList.add('open');
+      positionFloatPop(floatPop,this);
     });
   });
+}
+
+function positionFloatPop(pop,anchor){
+  const r=anchor.getBoundingClientRect();
+  const margin=6;
+  pop.style.left=margin+'px';pop.style.top=margin+'px';
+  const pr=pop.getBoundingClientRect();
+  let left=r.left+r.width/2-pr.width/2;
+  if(left<margin)left=margin;
+  if(left+pr.width>window.innerWidth-margin)left=window.innerWidth-pr.width-margin;
+  let top=r.bottom+4;
+  if(top+pr.height>window.innerHeight-margin)top=r.top-pr.height-4;
+  if(top<margin)top=margin;
+  pop.style.left=left+'px';
+  pop.style.top=top+'px';
 }
 
 // Calendar controls

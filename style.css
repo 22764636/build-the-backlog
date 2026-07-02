@@ -780,20 +780,19 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 }
 .cal-count:hover{transform:scale(1.15);box-shadow:0 0 0 3px #02b3fc33}
 .cal-count.has-pre{background:var(--amber)}
-/* popover */
+/* popover — singleton, position:fixed so it can never be clipped by the
+   calendar's own scroll/overflow containers; JS sets top/left per-open */
 .cal-pop{
-  display:none;position:absolute;z-index:400;
+  display:none;position:fixed;z-index:9999;
   background:var(--s1);border:1px solid var(--bd2);border-radius:var(--r);
-  padding:.35rem;min-width:160px;max-width:220px;
+  padding:.35rem;width:max-content;max-width:220px;
   box-shadow:0 6px 20px rgba(0,0,0,.45);
-  top:calc(100% + 4px);left:50%;transform:translateX(-50%);
 }
-.cal-cell:last-child .cal-pop,.cal-cell:nth-last-child(-n+2) .cal-pop{left:auto;right:0;transform:none}
 .cal-pop.open{display:block}
 .cal-pop-item{
   display:block;padding:.28rem .45rem;border-radius:5px;font-size:.72rem;
-  color:var(--t2);cursor:pointer;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;transition:background .1s,color .1s;
+  color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;
+  transition:background .1s,color .1s;
 }
 .cal-pop-item:hover{background:#02b3fc15;color:var(--text)}
 .cal-pop-item.pre{color:var(--amber)}
