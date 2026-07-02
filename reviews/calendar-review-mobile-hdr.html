@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Calendar — Mobile List View</title>
-<link rel="stylesheet" href="style.css">
+<title>Calendar — Mobile Header</title>
+<link rel="stylesheet" href="../style.css">
 <style>
   body{padding:0;margin:0}
   .frame-lbl{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.68rem;letter-spacing:.06em;
@@ -15,7 +15,7 @@
 </head>
 <body>
 
-<div class="frame-lbl">List View (default mobile state, TBA off) — grouped by day</div>
+<div class="frame-lbl">Header (mobile — wraps to 2 rows, arrows hidden)</div>
 <div id="calOv">
   <div style="background:var(--s1);border:1px solid var(--bd2);border-radius:var(--rl);width:100%;margin:0 auto">
     <div id="calHdr" style="border-bottom:1px solid var(--bd)">
@@ -28,30 +28,6 @@
         <div class="cal-hdr-right">
           <button class="fbar-pill cal-tba-toggle" title="Date Unknown games">TBA<span class="fbar-pill-count fpc-dark">4</span></button>
           <button class="hb accent">✕</button>
-        </div>
-      </div>
-    </div>
-    <div style="padding:.6rem .75rem">
-      <div class="cal-list-day">
-        <div class="cal-list-day-hdr">04 Jul 2026</div>
-        <div class="cal-list-item prio-high" onclick="return false">
-          <div class="cal-list-title">Starfall Odyssey</div>
-          <span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>
-        </div>
-      </div>
-      <div class="cal-list-day">
-        <div class="cal-list-day-hdr">09 Jul 2026</div>
-        <div class="cal-list-item prio-medium" onclick="return false">
-          <div class="cal-list-title">Nightfall Protocol: A Very Long Title That Truncates</div>
-        </div>
-      </div>
-      <div class="cal-list-day">
-        <div class="cal-list-day-hdr">18 Jul 2026</div>
-        <div class="cal-list-item prio-low" onclick="return false">
-          <div class="cal-list-title">Rust Vanguard</div>
-        </div>
-        <div class="cal-list-item prio-medium" onclick="return false">
-          <div class="cal-list-title">Glass Meridian</div>
         </div>
       </div>
     </div>
