@@ -131,7 +131,6 @@ button{text-transform:none;letter-spacing:0}
 /* ── COLLECTION MODE ── */
 
 /* Collection card — same base as .gc but different pill bar */
-.gc.col-card .hb2{display:none} /* no hotness bar */
 .col-ps-badge{font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   padding:2px 6px;border-radius:4px;line-height:1.4;cursor:default;position:relative;white-space:nowrap}
 .col-ps-badge .ps-tip{display:none;position:absolute;bottom:calc(100% + 5px);left:50%;
@@ -210,7 +209,7 @@ button{text-transform:none;letter-spacing:0}
 .gc.cancelled{border-color:#cc220033}
 .gc.cancelled .cc,.gc.cancelled .cb,.gc.cancelled .ct,
 .gc.cancelled .cbot,.gc.cancelled .cq,.gc.cancelled .cprice,
-.gc.cancelled .b-unrel-card,.gc.cancelled .hb2,
+.gc.cancelled .b-unrel-card,
 .gc.cancelled .b-hot,.gc.cancelled .b-pre,.gc.cancelled .b-bt,
 .gc.cancelled .b-rm,.gc.cancelled .b-rev,.gc.cancelled .b-prio,
 .gc.cancelled .qb{filter:grayscale(1);opacity:.5}
@@ -238,8 +237,6 @@ button{text-transform:none;letter-spacing:0}
   background:linear-gradient(135deg,var(--s1),var(--base))}
 .cg{position:absolute;inset:0;background:linear-gradient(to top,#031329cc 0%,transparent 60%);pointer-events:none}
 .cc-plats{position:absolute;bottom:.35rem;right:.35rem;display:flex;gap:.2rem;flex-wrap:wrap;justify-content:flex-end;pointer-events:none;z-index:2}
-.hb2{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--s3)}
-.hf{height:100%;background:var(--pink);transition:width .3s}
 
 /* badges */
 .bdg{font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
@@ -294,7 +291,7 @@ button{text-transform:none;letter-spacing:0}
 /* list view */
 .gg.lv .gc{flex-direction:row;align-items:center;border-radius:var(--r)}
 .gg.lv .cc{width:52px;height:36px;aspect-ratio:unset;flex-shrink:0;border-radius:var(--r) 0 0 var(--r)}
-.gg.lv .pb,.gg.lv .cg,.gg.lv .hb2,.gg.lv .cc-plats{display:none}
+.gg.lv .pb,.gg.lv .cg,.gg.lv .cc-plats,.gg.lv .b-hot{display:none}
 .gg.lv .cb{flex-direction:row;align-items:center;padding:.4rem .65rem;gap:.5rem}
 .gg.lv .ct{font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .gg.lv .cbot{margin-top:0;flex-shrink:0;flex-wrap:nowrap}
@@ -381,9 +378,6 @@ button{text-transform:none;letter-spacing:0}
 .pa.s{border-color:#9cff0066;color:var(--green);background:#9cff0011}
 .pa.s:hover{background:#9cff0022}
 .hr2{display:flex;align-items:center;gap:.6rem}
-.hotness-circle{display:block;width:32px;height:32px;flex-shrink:0}
-.hotness-circle-wrap{margin-left:auto;display:inline-flex;align-items:center;gap:.25rem;flex-shrink:0}
-.hotness-circle-num{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.78rem;color:var(--pink);line-height:1;min-width:1.6rem}
 .ht{flex:1;height:5px;background:var(--s3);border-radius:99px;overflow:hidden}
 .htf{height:100%;background:var(--pink);transition:width .3s}
 .hn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1rem;color:var(--pink);min-width:2rem;text-align:right}

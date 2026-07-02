@@ -1264,6 +1264,7 @@ function cardHTML(g){
   } else {
     priceEl=`<span class="cprice" style="color:var(--t3)">—</span>`;
   }
+  const hotBdg=isNR?'':`<span class="bdg b-hot" title="Hotness: ${h}">${h}</span>`;
 
   const ggUrl=g.steamAppId?`https://gg.deals/steam/app/${g.steamAppId}/`:`https://gg.deals/search/?title=${encodeURIComponent(g.title||'')}`;
   const sdbUrl=g.steamAppId?`https://www.steamdb.info/app/${g.steamAppId}/`:`https://www.steamdb.info/search/?q=${encodeURIComponent(g.title||'')}`;
@@ -1307,13 +1308,12 @@ function cardHTML(g){
       <div class="cph" ${phStyle}>🎮</div>${cImg}
       <div class="cg"></div>
       ${ggpOv}
-      <div class="hb2"><div class="hf" style="width:${h}%"></div></div>
     </div>
     <div class="pb">${lBdg}<div class="pb-r">${prioLbl}</div></div>
     <div class="cb">
       <div class="ct">${esc(g.title)}</div>
       <div class="cbot">
-        ${priceEl}
+        ${priceEl}${hotBdg}
         <div class="cq">
           <a href="${stUrl}" class="qb" title="Steam" target="_blank" onclick="event.stopPropagation()">${favImg(FAV_STEAM,'steam')}</a>
           <a href="${ggUrl}" class="qb" title="gg.deals" target="_blank" onclick="event.stopPropagation()">${favImg(FAV_GG,'gg')}</a>
@@ -1392,34 +1392,6 @@ function renderMd(raw){
   let r=out.join('');
   while(r.endsWith('<br>'))r=r.slice(0,-4);
   return r;
-}
-
-function hotnessCircleSVG(h,isNR){
-  const cx=16,cy=16,rO=13,rI=11,size=32,segments=10,gap=10,segAngle=360/segments-gap;
-  function seg(startDeg,angleDeg){
-    if(angleDeg<=0)return'';
-    const laf=angleDeg>180?1:0;
-    const s=(startDeg-90)*Math.PI/180,e=(startDeg-90+angleDeg)*Math.PI/180;
-    const ox1=cx+rO*Math.cos(s),oy1=cy+rO*Math.sin(s);
-    const ox2=cx+rO*Math.cos(e),oy2=cy+rO*Math.sin(e);
-    const ix1=cx+rI*Math.cos(s),iy1=cy+rI*Math.sin(s);
-    const ix2=cx+rI*Math.cos(e),iy2=cy+rI*Math.sin(e);
-    return`M${ox1.toFixed(3)},${oy1.toFixed(3)} A${rO},${rO},0,${laf},1,${ox2.toFixed(3)},${oy2.toFixed(3)} L${ix2.toFixed(3)},${iy2.toFixed(3)} A${rI},${rI},0,${laf},0,${ix1.toFixed(3)},${iy1.toFixed(3)} Z`;
-  }
-  let paths='';
-  if(isNR){
-    for(let i=0;i<segments;i++)
-      paths+=`<path d="${seg(i*36,segAngle)}" fill="none" stroke="var(--amber)" stroke-width="1"/>`;
-    return`<span class="hotness-circle-wrap"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="hotness-circle" title="Not Rated" aria-label="Not Rated">${paths}</svg></span>`;
-  }
-  for(let i=0;i<segments;i++){
-    const fill=Math.min(1,Math.max(0,(h-i*10)/10));
-    paths+=`<path d="${seg(i*36,segAngle)}" fill="none" stroke="#ff00aa30" stroke-width="1"/>`;
-    if(fill>0)
-      paths+=`<path d="${seg(i*36,fill*segAngle)}" fill="var(--pink)" stroke="none"/>`;
-  }
-  const label=`Hotness: ${h}`;
-  return`<span class="hotness-circle-wrap"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="hotness-circle" title="${label}" aria-label="${label}">${paths}</svg><span class="hotness-circle-num">${h}</span></span>`;
 }
 
 function navPanel(dir){
@@ -2401,7 +2373,7 @@ function openPanel(id){
       ${isNR&&g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&!(g.price!=null&&parseFloat(g.price)===0)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
       <span class="bdg" style="background:${prioColor(g.priority)};color:#031329">${prioLabel(g.priority)}</span>
       ${g.type==='dlc'?`<span class="bdg" style="background:#3a1a6e;color:#c4a0ff">DLC</span>`:''}
-      ${hotnessCircleSVG(h,isNR)}
+      ${!isNR?`<span class="bdg b-hot" title="Hotness: ${h}">${h}</span>`:''}
     </div>`;
 
   // Collection box — immediately after hotness (bought games only)
