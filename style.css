@@ -643,7 +643,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .cal-month-label.is-current{color:var(--pink)}
 .cal-tba-wide{flex:1 1 0;min-width:0;border-left:1px solid var(--bd);
   padding:.75rem .85rem;display:flex;flex-direction:column}
-.cal-tba-grid{display:grid;grid-template-columns:1fr 1fr;gap:.3rem}
+.cal-tba-grid{display:grid;grid-template-columns:1fr;gap:.3rem}
 
 /* ── CALENDAR ── */
 #calOv.on{display:flex!important}
@@ -726,6 +726,13 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .cal-tba-chip.prio-medium,.cal-pop-item.prio-medium,.cal-list-item.prio-medium{border-left-color:var(--pink)}
 .cal-tba-chip.prio-low,.cal-pop-item.prio-low,.cal-list-item.prio-low{border-left-color:var(--lime)}
 .cal-tba-toggle.selected{background:var(--blue);border-color:var(--blue);color:#031329}
+.cal-swipe-hint{position:absolute;top:0;bottom:0;width:56px;display:flex;align-items:center;
+  font-size:1.6rem;font-weight:700;color:var(--blue);opacity:0;pointer-events:none;z-index:5}
+.cal-swipe-hint-l{left:0;justify-content:flex-start;padding-left:.4rem;
+  background:linear-gradient(90deg,#02b3fc33,transparent)}
+.cal-swipe-hint-r{right:0;justify-content:flex-end;padding-right:.4rem;
+  background:linear-gradient(-90deg,#02b3fc33,transparent)}
+@media(min-width:641px){.cal-swipe-hint-l,.cal-swipe-hint-r{display:none}}
 @media(max-width:640px){
   #calTba{display:none}
   .cal-arrow{display:none!important}

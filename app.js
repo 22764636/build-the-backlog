@@ -774,24 +774,73 @@ document.addEventListener('click',function(e){
     document.querySelectorAll('.cal-pop.open').forEach(p=>p.classList.remove('open'));
   }
 });
-// Mobile swipe to change month (horizontal swipe > 50px, must dominate vertical)
+// Mobile swipe to change month — live drag-follow + edge hints + slide transition,
+// same mechanic as the card swipe-actions (touchmove tracks the finger, hint fades
+// in with drag progress, threshold commits) so the gesture actually gives feedback.
 (function(){
-  let _csx=null,_csy=null;
+  const THRESHOLD=50;
+  let sx=null,sy=null,live=false;
   const ov=document.getElementById('calOv');
+  function hintEls(){
+    return{l:document.querySelector('.cal-swipe-hint-l'),r:document.querySelector('.cal-swipe-hint-r')};
+  }
   ov.addEventListener('touchstart',e=>{
     if(window.innerWidth>640||calShowTba)return; // TBA panel handles its own swipes
     if(e.target.closest('#calTba'))return;
-    _csx=e.touches[0].clientX;_csy=e.touches[0].clientY;
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;live=false;
   },{passive:true});
+  ov.addEventListener('touchmove',e=>{
+    if(sx===null||window.innerWidth>640)return;
+    const dx=e.touches[0].clientX-sx;
+    const dy=e.touches[0].clientY-sy;
+    if(!live){
+      if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){sx=null;return;}
+      if(Math.abs(dx)<8)return;
+      live=true;
+    }
+    e.preventDefault();
+    const main=document.getElementById('calMain');
+    if(main){main.style.transition='none';main.style.transform=`translateX(${dx}px)`;}
+    const prog=Math.min(Math.abs(dx)/THRESHOLD,1);
+    const{l,r}=hintEls();
+    if(dx>0){if(r)r.style.opacity=0;if(l)l.style.opacity=prog;}
+    else{if(l)l.style.opacity=0;if(r)r.style.opacity=prog;}
+  },{passive:false});
   ov.addEventListener('touchend',e=>{
-    if(_csx===null||window.innerWidth>640)return;
-    const dx=e.changedTouches[0].clientX-_csx;
-    const dy=e.changedTouches[0].clientY-_csy;
-    _csx=null;_csy=null;
-    if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx))return;
+    if(sx===null||window.innerWidth>640){sx=null;return;}
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=e.changedTouches[0].clientY-sy;
+    const wasLive=live;
+    sx=null;live=false;
+    const main=document.getElementById('calMain');
+    const{l,r}=hintEls();
+    if(l){l.style.transition='opacity .18s';l.style.opacity=0;}
+    if(r){r.style.transition='opacity .18s';r.style.opacity=0;}
+    if(!wasLive||Math.abs(dx)<THRESHOLD||Math.abs(dy)>Math.abs(dx)){
+      if(main){main.style.transition='transform .18s ease';main.style.transform='';}
+      return;
+    }
+    const dir=dx<0?1:-1; // 1 = advancing to next month, -1 = back to previous
+    if(main){
+      main.style.transition='transform .16s ease,opacity .16s ease';
+      main.style.transform=`translateX(${-dir*60}px)`;
+      main.style.opacity='0';
+    }
     if(dx<0){calMonth++;if(calMonth>11){calMonth=0;calYear++;}}
     else{calMonth--;if(calMonth<0){calMonth=11;calYear--;}}
-    populateCalSelects();renderCalendar();
+    setTimeout(()=>{
+      populateCalSelects();renderCalendar();
+      if(main){
+        main.style.transition='none';
+        main.style.transform=`translateX(${dir*60}px)`;
+        main.style.opacity='0';
+        requestAnimationFrame(()=>{
+          main.style.transition='transform .18s ease,opacity .18s ease';
+          main.style.transform='';
+          main.style.opacity='1';
+        });
+      }
+    },160);
   },{passive:true});
 })();
 
