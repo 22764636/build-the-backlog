@@ -1,4 +1,4 @@
-const CACHE='btb-v19';
+const CACHE='btb-v20';
 self.addEventListener('install',e=>{
   e.waitUntil(self.skipWaiting());
 });
