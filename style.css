@@ -224,10 +224,12 @@ button{text-transform:none;letter-spacing:0}
 .plat-filter-pill.selected{opacity:1;box-shadow:0 0 0 2px #fff4,inset 0 0 0 1px #fff3}
 .plat-pill-count{margin-left:.3rem;font-size:.5rem;opacity:.8}
 
-/* pill bar */
+/* pill bar — .pb-r is pinned right via margin-left:auto rather than .pb using
+   justify-content:space-between, since space-between collapses to flex-start
+   when the left badge is empty (which it often is) and only one child remains */
 .pb{position:absolute;top:0;left:0;right:0;height:var(--rl);display:flex;align-items:center;
-  justify-content:space-between;padding:0 6px;gap:3px;z-index:2;pointer-events:none}
-.pb-r{display:flex;align-items:center;gap:3px}
+  padding:0 6px;gap:3px;z-index:2;pointer-events:none}
+.pb-r{display:flex;align-items:center;gap:3px;margin-left:auto}
 
 /* cover */
 .cc{width:100%;aspect-ratio:16/9;background:var(--s3);position:relative;overflow:hidden;flex-shrink:0}
