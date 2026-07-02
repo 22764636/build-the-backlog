@@ -1565,8 +1565,28 @@ function renderTicker(){
   const inner=document.getElementById('tickerInner');
   if(!hits.length){ticker.classList.remove('active');return}
   ticker.classList.add('active');
-  inner.innerHTML=hits.map(g=>`<span class="ticker-item" onclick="openPanel('${g.id}')">${g.title}</span>`).join('');
+  const itemsHTML=hits.map(g=>`<span class="ticker-item" onclick="openPanel('${g.id}')">${g.title}</span>`).join('');
+  inner.innerHTML=itemsHTML;
+  inner.classList.remove('marquee');
+  inner.style.animationDuration='';
+  const track=inner.parentElement;
+  // Only scroll if the items actually overflow the bar — a short list just sits still.
+  requestAnimationFrame(()=>{
+    if(inner.scrollWidth>track.clientWidth){
+      inner.innerHTML=itemsHTML+itemsHTML; // duplicated copy → seamless 50%-translate loop
+      const PX_PER_SEC=40;
+      inner.style.animationDuration=Math.max(8,inner.scrollWidth/2/PX_PER_SEC)+'s';
+      inner.classList.add('marquee');
+    }
+  });
 }
+let _tickerResizeT=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(_tickerResizeT);
+  _tickerResizeT=setTimeout(()=>{
+    if(document.getElementById('todayTicker')?.classList.contains('active'))renderTicker();
+  },200);
+});
 
 // ══════════════════════════════════════════
 //  COLLAPSIBLE SECTIONS

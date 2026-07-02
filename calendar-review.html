@@ -61,6 +61,7 @@
   <a href="#tba">TBA List</a>
   <a href="#list">Mobile List View</a>
   <a href="#ticker">Out-Today Ticker</a>
+  <a href="#swipe">Mobile Month Swipe</a>
   <a href="#classes">Full Class Reference</a>
 </div>
 <div class="audit-note">Documentation only — no app code has been changed. Use this to call out what you want adjusted.</div>
@@ -219,21 +220,58 @@
   <div class="sec-desc">Lives above the main header (<code>#todayTicker</code>), shown only when something releases
     today. Fixed pink ribbon label (<code>.ticker-label</code>, solid <code>var(--pink)</code> fill) + a row of
     clickable plain-text items (<code>.ticker-item</code>, no box — closer to a Stat than anything else, except it's
-    clickable, which Stat by definition isn't). No horizontal scroll/marquee animation exists in the code — items
-    just overflow-clip past the visible width, so a day with many releases silently truncates rather than scrolling
-    or wrapping.</div>
+    clickable, which Stat by definition isn't). <code>renderTicker()</code> now measures the item row against the
+    visible bar width after render: if it fits, it just sits still (unchanged from before); if it overflows, the
+    content is duplicated once and animated with a linear <code>translateX(0 → -50%)</code> loop — the duplicate
+    makes the loop seamless (the second copy is pixel-identical to the first, so the wrap-around is invisible).
+    Hovering pauses the scroll so items stay clickable. Re-measured on window resize (debounced).</div>
   <div class="stage">
-    <div class="stage-lbl">Desktop &amp; Mobile — same markup</div>
+    <div class="stage-lbl">Fits — static (no animation, same as before)</div>
     <div id="todayTicker" class="active" style="display:flex;position:relative;border-radius:6px;overflow:hidden">
       <div class="ticker-label">OUT TODAY</div>
       <div class="ticker-track">
         <div class="ticker-inner">
-          <span class="ticker-item">Starfall Odyssey</span>
-          <span class="ticker-item">Rust Vanguard</span>
-          <span class="ticker-item">Nightfall Protocol</span>
+          <span class="ticker-item">Short Game</span>
         </div>
       </div>
     </div>
+  </div>
+  <div class="stage">
+    <div class="stage-lbl">Overflows — marquee engages (live CSS animation, hover to pause)</div>
+    <div id="todayTicker2" class="active" style="display:flex;position:relative;border-radius:6px;overflow:hidden;max-width:480px">
+      <div class="ticker-label">OUT TODAY</div>
+      <div class="ticker-track">
+        <div class="ticker-inner marquee" style="animation-duration:14s">
+          <span class="ticker-item">A Very Long Game Title That Causes Overflow</span>
+          <span class="ticker-item">Another Long Release Title For Testing</span>
+          <span class="ticker-item">Yet One More Title To Force The Marquee</span>
+          <span class="ticker-item">A Very Long Game Title That Causes Overflow</span>
+          <span class="ticker-item">Another Long Release Title For Testing</span>
+          <span class="ticker-item">Yet One More Title To Force The Marquee</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE MONTH SWIPE -->
+<div class="sec" id="swipe">
+  <div class="sec-hdr"><h2>Mobile Month Swipe</h2><span class="sec-tag mob">mobile only</span></div>
+  <div class="sec-desc">Swiping the list view left/right changes the visible month (this always existed — it was
+    just invisible: <code>touchend</code> hard-cut to the new month with no feedback during the gesture). Now
+    <code>#calMain</code> live-follows the finger via <code>translateX</code> on <code>touchmove</code>
+    (same drag-tracking mechanic as the card swipe-actions elsewhere in the app), a chevron hint
+    (<code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code>, blue gradient) fades in on the side you're
+    dragging toward, and on commit (&gt;50px, horizontal-dominant) the current month slides+fades out while the new
+    one slides+fades in from the opposite edge. Below the threshold it just snaps back. Static preview (opacity
+    forced on) since a drag gesture can't be captured in a screenshot:</div>
+  <div class="stage" style="position:relative;overflow:hidden;height:70px">
+    <div style="position:absolute;top:0;bottom:0;right:0;width:56px;display:flex;align-items:center;
+      justify-content:flex-end;padding-right:.4rem;font-size:1.6rem;font-weight:700;color:var(--blue);
+      background:linear-gradient(-90deg,#02b3fc33,transparent)">›</div>
+    <div style="color:var(--t3);font-size:.72rem;padding:1.5rem 1rem">(list view content — preview forces the
+      real <code>.cal-swipe-hint-r</code> styling visible; the actual element is <code>display:none</code> above
+      640px via media query, and normally at 0 opacity until a drag is in progress)</div>
   </div>
 </div>
 
@@ -250,7 +288,8 @@
     <tr><td><code>.cal-grid</code> / <code>.cal-dow</code> / <code>.cal-cell</code> / <code>.cal-dn</code></td><td>Desktop only</td><td>7-col day grid, fixed 46×46px cells</td></tr>
     <tr><td><code>.cal-count</code></td><td>Desktop only</td><td>Day-count circle; blue / amber(<code>.has-pre</code>); opens popover; dead <code>border:2px solid transparent</code> removed</td></tr>
     <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code> / <code>.cal-pop-item-title</code></td><td>Desktop only</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code>; rows now carry the priority left-border + <code>.bdg.b-pre</code> badge</td></tr>
-    <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: sidebar, hidden when empty. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places</td></tr>
+    <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: sidebar, hidden when empty. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places; grid is now 1 column (was 2) so titles stop silently truncating</td></tr>
+    <tr><td><code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code></td><td>Mobile only</td><td>New — blue chevron gradient overlay, opacity driven live by drag distance during month swipe</td></tr>
     <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code>, now shared with <code>.cal-pop-item</code>/<code>.cal-list-item</code></td></tr>
     <tr><td><code>.tba-list-viewport</code> / <code>.tba-list-track</code> / <code>.tba-list-page</code></td><td>Both</td><td>Swipe/drag pagination for TBA list, 20 per page</td></tr>
     <tr><td><code>.tba-pagination</code> / <code>.tba-page-dot</code> / <code>.tba-page-btn</code></td><td>Both</td><td>Dot pager, only rendered when &gt;1 page</td></tr>
@@ -258,6 +297,7 @@
     <tr><td><code>.cal-list-item</code> / <code>.cal-list-title</code></td><td>Mobile only</td><td>Replaces the grid; priority left-border; date column removed (now in the day header)</td></tr>
     <tr><td><code>.bdg.b-pre</code> in <code>.cal-list-item</code>/<code>.cal-pop-item</code></td><td>Mobile + desktop popover</td><td>Reused the existing side-panel badge class/text ("PRE-ORDER") instead of a one-off inline-styled "PRE" span</td></tr>
     <tr><td><code>#todayTicker</code> / <code>.ticker-label</code> / <code>.ticker-track</code> / <code>.ticker-inner</code> / <code>.ticker-item</code></td><td>Both, identical</td><td>No dedicated mobile CSS at all</td></tr>
+    <tr><td><code>.ticker-inner.marquee</code></td><td>Both, identical</td><td>New — only applied when content overflows the bar; content duplicated once for a seamless <code>translateX(-50%)</code> loop; paused on hover</td></tr>
   </table>
 </div>
 
