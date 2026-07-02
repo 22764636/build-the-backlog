@@ -1239,16 +1239,11 @@ function cardHTML(g){
   const cImg=coverUrl?`<img src="${esc(coverUrl)}" alt="${esc(g.title)}" onerror="this.style.display='none';this.previousElementSibling.style.display='flex'">`:'';
   const phStyle=coverUrl?'style="display:none"':'';
 
-  // Left badge — pre-order replaces bought badge
+  // Left badge — cancelled/removed/to-review only; empty otherwise (no default filler badge)
   let lBdg='';
   if(isCancelled(g))             lBdg=`<span class="b-cancelled">CANCELLED</span>`;
-  else if(isPreOrder(g))         lBdg=`<span class="bdg b-pre">PRE-ORDER</span>`;
-  else if(g.status==='bought')   lBdg=`<span class="bdg b-bt">${t('bdgBt')}</span>`;
   else if(g.status==='removed')  lBdg=`<span class="bdg b-rm">${t('bdgRm')}</span>`;
-  else if(isGameUnreleased(g))   lBdg=`<span class="bdg b-unrel">UNRELEASED</span>`;
-  else if(g.price!=null&&parseFloat(g.price)===0) lBdg=`<span class="bdg b-free">FREE</span>`;
   else if(isNR)                  lBdg=`<span class="b-rev">${t('bdgRev')}</span>`;
-  else                           lBdg=`<span class="bdg b-hot">${h}</span>`;
 
   // Priority label badge (right side of pill bar)
   const prioLbl=`<span class="b-prio" style="background:${prioColor(g.priority)}">${prioLabel(g.priority)}</span>`;
@@ -1278,19 +1273,25 @@ function cardHTML(g){
   const gid_s=String(g.id);
   const tip=addedTip(g);
 
-  // GG.deals price overlay (wishlist only, shown when cache has data)
+  // GG.deals price overlay — wishlist games, plus bought games still wanted on Steam
+  // (same eligibility as the live-price fetch job itself)
   let ggpOv='';
-  if(g.status==='wishlist'&&g.steamAppId&&ggPriceCache[g.steamAppId]){
-    const gp=ggPriceCache[g.steamAppId];
-    const r=parseFloat(gp.retail),k=parseFloat(gp.keyshop),hr=parseFloat(gp.histRetail);
-    const retailStr=!isNaN(r)&&r>0?`<span class="ggp-retail">€${r.toFixed(2)}</span>`:`<span></span>`;
-    const keysStr=!isNaN(k)&&k>0?`<span class="ggp-keys">🔑 €${k.toFixed(2)}</span>`:`<span class="ggp-keys" style="opacity:.45">🔑 N/A</span>`;
-    const nearLow=!isNaN(r)&&r>0&&!isNaN(hr)&&hr>0&&r<=hr*1.10;
-    const badgeStr=gp.personalLow
-      ?`<span class="ggp-hist-low">★ High</span>`
-      :nearLow?`<span class="ggp-low">★ Low</span>`
-      :`<span></span>`;
-    if(!isNaN(r)&&r>0||!isNaN(k)&&k>0)ggpOv=`<div class="ggp-ov">${retailStr}${badgeStr}${keysStr}</div>`;
+  const _priceTracked=g.status==='wishlist'||(g.status==='bought'&&g.steamWishlist);
+  if(_priceTracked&&g.steamAppId){
+    if(g.skipGGFetch){
+      ggpOv=`<div class="ggp-ov"><span></span><span class="ggp-notrack">€ Non Tracked</span><span></span></div>`;
+    } else if(ggPriceCache[g.steamAppId]){
+      const gp=ggPriceCache[g.steamAppId];
+      const r=parseFloat(gp.retail),k=parseFloat(gp.keyshop),hr=parseFloat(gp.histRetail);
+      const retailStr=!isNaN(r)&&r>0?`<span class="ggp-retail">€${r.toFixed(2)}</span>`:`<span></span>`;
+      const keysStr=!isNaN(k)&&k>0?`<span class="ggp-keys">🔑 €${k.toFixed(2)}</span>`:`<span class="ggp-keys" style="opacity:.45">🔑 N/A</span>`;
+      const nearLow=!isNaN(r)&&r>0&&!isNaN(hr)&&hr>0&&r<=hr*1.10;
+      const badgeStr=gp.personalLow
+        ?`<span class="ggp-hist-low">★ High</span>`
+        :nearLow?`<span class="ggp-low">★ Low</span>`
+        :`<span></span>`;
+      if(!isNaN(r)&&r>0||!isNaN(k)&&k>0)ggpOv=`<div class="ggp-ov">${retailStr}${badgeStr}${keysStr}</div>`;
+    }
   }
 
   // Remove/Reinstate button: removed→reinstate, bought→disabled, else→remove
@@ -1307,7 +1308,6 @@ function cardHTML(g){
       <div class="cg"></div>
       ${ggpOv}
       <div class="hb2"><div class="hf" style="width:${h}%"></div></div>
-      ${platBadgesHTML(g)}
     </div>
     <div class="pb">${lBdg}<div class="pb-r">${prioLbl}</div></div>
     <div class="cb">
@@ -4398,7 +4398,7 @@ async function runGGDealsFetch(){
   if(!GG_WORKER){showToast('GG.deals worker not configured.');return;}
   const today=todayISO();
   const eligible=games.filter(g=>
-    g.status==='wishlist'&&
+    (g.status==='wishlist'||(g.status==='bought'&&g.steamWishlist))&&
     g.steamAppId&&
     g.releaseDate&&
     /^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate)&&
