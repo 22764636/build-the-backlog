@@ -311,9 +311,9 @@ button{text-transform:none;letter-spacing:0}
 .pcl:hover{background:#02b3fc18;color:var(--blue)}
 .pb2{flex:1;overflow-y:auto;padding:.85rem 1rem 2rem}
 .pt{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.35rem;line-height:1.2;color:var(--text)}
-.pt-row{display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.4rem}
+.pt-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem}
 .pt-row .pt{flex:1}
-.pt-links{display:flex;gap:.25rem;flex-shrink:0;padding-top:.2rem}
+.pt-links{display:flex;gap:.25rem;flex-shrink:0}
 .pt-lnk{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
   border-radius:var(--r);background:var(--base);border:1px solid var(--bd);
   color:var(--t3);text-decoration:none;transition:all .15s;flex-shrink:0}
