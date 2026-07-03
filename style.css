@@ -701,8 +701,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
   display:flex;align-items:flex-start;justify-content:space-between;gap:.4rem;
   padding:.28rem .45rem;border-left:3px solid transparent;border-radius:5px;font-size:.72rem;
   color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;
-  transition:background .1s,color .1s;
+  transition:background .1s,color .1s;margin-bottom:.2rem;
 }
+.cal-pop-item:last-child{margin-bottom:0}
 .cal-pop-item-title{flex:1;min-width:0}
 .cal-pop-item:hover{background:#02b3fc15;color:var(--text)}
 .cal-tba-chip{padding:.2rem .5rem;
