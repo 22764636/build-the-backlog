@@ -1306,9 +1306,6 @@ function cardHTML(g){
   else if(g.status==='removed')  lBdg=`<span class="bdg b-rm">${t('bdgRm')}</span>`;
   else if(isNR)                  lBdg=`<span class="b-rev">${t('bdgRev')}</span>`;
 
-  // Priority label badge (right side of pill bar)
-  const prioLbl=`<span class="b-prio" style="background:${prioColor(g.priority)}">${prioLabel(g.priority)}</span>`;
-
   // Price / date / unreleased display
   let priceEl;
   if(isFutureDate(g.releaseDate)){
@@ -1370,9 +1367,9 @@ function cardHTML(g){
       <div class="cg"></div>
       ${ggpOv}
     </div>
-    <div class="pb">${lBdg}<div class="pb-r">${prioLbl}</div></div>
+    <div class="pb">${lBdg}</div>
     <div class="cb">
-      <div class="ct">${esc(g.title)}</div>
+      <div class="title-row"><span class="title-prio ${prioClass(g.priority)}"></span><div class="ct">${esc(g.title)}</div></div>
       <div class="cbot">
         ${priceEl}${hotBdg}
         <div class="cq">
@@ -2438,6 +2435,7 @@ function openPanel(id){
   const dateD=displayReleaseDate(g);
 
   let b=`<div class="pt-row">
+    <span class="title-prio ${prioClass(g.priority)}"></span>
     <div class="pt">${esc(g.title)}</div>
     <div class="pt-links">
       <a href="${stUrl}" class="pt-lnk" target="_blank" title="Steam">${favImg(FAV_STEAM,'steam')}</a>
@@ -2452,7 +2450,6 @@ function openPanel(id){
       ${g.status==='wishlist'&&!isCancelled(g)&&isGameUnreleased(g)?`<span class="bdg b-unrel">UNRELEASED</span>`:''}
       ${g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&g.price!=null&&parseFloat(g.price)===0?`<span class="bdg b-free">FREE</span>`:''}
       ${isNR&&g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&!(g.price!=null&&parseFloat(g.price)===0)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
-      <span class="bdg" style="background:${prioColor(g.priority)};color:#031329">${prioLabel(g.priority)}</span>
       ${g.type==='dlc'?`<span class="bdg" style="background:#3a1a6e;color:#c4a0ff">DLC</span>`:''}
       ${!isNR?`<span class="bdg b-hot" title="Hotness: ${h}">${h}</span>`:''}
     </div>`;

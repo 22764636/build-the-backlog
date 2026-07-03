@@ -185,7 +185,7 @@ button{text-transform:none;letter-spacing:0}
 .gc.cancelled .cbot,.gc.cancelled .cq,.gc.cancelled .cprice,
 .gc.cancelled .b-unrel-card,
 .gc.cancelled .b-hot,.gc.cancelled .b-pre,.gc.cancelled .b-bt,
-.gc.cancelled .b-rm,.gc.cancelled .b-rev,.gc.cancelled .b-prio,
+.gc.cancelled .b-rm,.gc.cancelled .b-rev,.gc.cancelled .title-prio,
 .gc.cancelled .qb{filter:grayscale(1);opacity:.5}
 .gc.cancelled .b-cancelled{filter:none!important;opacity:1!important}
 .b-cancelled{background:#cc2200;color:#fff;font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;user-select:none;-webkit-user-select:none}
@@ -220,9 +220,13 @@ button{text-transform:none;letter-spacing:0}
 .b-rm{background:var(--s3);color:var(--muted)}
 .b-unrel{background:#f472b6;color:#031329}
 .b-free{background:#ffffff;color:#031329}
-/* priority label badge on card — same badge branding as every other badge */
-.b-prio{font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-  padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;color:#031329}
+/* priority accent — thin colored bar to the left of the title only, same concept as
+   the calendar's border-left accent (.cal-tba-chip.prio-*, .cal-pop-item.prio-*) */
+.title-row{display:flex;align-items:center;gap:.35rem;min-width:0}
+.title-prio{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0;background:transparent}
+.title-prio.prio-high{background:var(--blue)}
+.title-prio.prio-medium{background:var(--pink)}
+.title-prio.prio-low{background:var(--lime)}
 
 /* card body */
 .cb{padding:.5rem .65rem .55rem;flex:1;display:flex;flex-direction:column;gap:.3rem}
