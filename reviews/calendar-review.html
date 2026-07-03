@@ -59,7 +59,7 @@
   <a href="#grid">Month Grid</a>
   <a href="#count">Day Count + Popover</a>
   <a href="#tba">TBA List</a>
-  <a href="#list">Mobile List View</a>
+  <a href="#list">Mobile Month Grid</a>
   <a href="#ticker">Out-Today Ticker</a>
   <a href="#swipe">Mobile Month Swipe</a>
   <a href="#classes">Full Class Reference</a>
@@ -106,11 +106,12 @@
 <!-- MONTH GRID -->
 <div class="sec" id="grid">
   <div class="sec-hdr"><h2>Month Grid</h2><span class="sec-tag desk">desktop only</span></div>
-  <div class="sec-desc">Two months stacked vertically (<code>.cal-2stack &gt; .cal-months-col</code>), each a
-    7-column grid (<code>.cal-grid</code>) of fixed 46×46px cells (<code>.cal-cell</code>). Adjacent-month filler
-    days render dimmed (<code>.other-month</code>, 20% opacity). Today gets a blue cell border + blue day number;
-    past days in the current month fade their day number to 40% opacity. <b>Mobile never shows this — it's replaced
-    entirely by the list view below.</b></div>
+  <div class="sec-desc">Desktop stacks two months vertically (<code>.cal-2stack &gt; .cal-months-col</code>), each a
+    7-column grid (<code>.cal-grid</code>) of fixed 46×46px cells (<code>.cal-cell</code>). Mobile reuses the exact
+    same <code>renderMonthGrid()</code> function for a single month, with fluid <code>1fr</code> columns and
+    <code>aspect-ratio:1</code> cells instead of the fixed 46px — see the Mobile Month Grid section below. Adjacent-month
+    filler days render dimmed (<code>.other-month</code>, 20% opacity). Today gets a blue cell border + blue day
+    number; past days in the current month fade their day number to 40% opacity.</div>
   <div class="stage">
     <div class="stage-lbl">Desktop — July / August 2026 (sample data)</div>
     <div class="stage-cal" style="padding:.5rem .6rem">
@@ -192,23 +193,21 @@
   </div>
 </div>
 
-<!-- MOBILE LIST VIEW -->
+<!-- MOBILE MONTH GRID -->
 <div class="sec" id="list">
-  <div class="sec-hdr"><h2>Mobile List View</h2><span class="sec-tag mob">mobile only</span></div>
-  <div class="sec-desc">Replaces the month grid entirely below 640px. Shows the currently-selected month's dated
-    releases grouped by day (<code>.cal-list-day</code> + <code>.cal-list-day-hdr</code> date header, so a shared
-    date no longer repeats per row), each release a <code>.cal-list-item</code> row carrying the same
-    priority-colored left border as the TBA chip/popover, plus the reused <code>.bdg.b-pre</code> "PRE-ORDER" badge
-    (previously a one-off inline-styled "PRE" badge — now the real badge class, matching what the side panel shows).
-    <b>Also fixed a real bug here:</b> a bought game only got the pre-order badge if it had a future <em>ISO</em>
-    release date — a bought game with a TBA/unknown date fell through and silently showed nothing. Pre-order status
-    is now based on the same "unreleased" check used elsewhere (future date OR non-ISO/TBA text), so it's consistent
-    with the side panel's own PRE-ORDER badge everywhere a bought-but-not-out game shows up.</div>
+  <div class="sec-hdr"><h2>Mobile Month Grid</h2><span class="sec-tag mob">mobile only</span></div>
+  <div class="sec-desc">Originally a flat list grouped by day; replaced entirely with a real single-month grid
+    reusing the exact same <code>renderMonthGrid()</code> function desktop uses, so mobile gets the same
+    day-count bubble + tap-to-open popover interaction instead of a second, different interaction pattern for the
+    same data. <code>.cal-grid</code>/<code>.cal-cell</code> get a mobile override (fluid <code>1fr</code> columns,
+    <code>aspect-ratio:1</code>) since the desktop fixed-46px sizing assumed the 358px sidebar column width.
+    The old list-view code (<code>.cal-list-item</code>/<code>.cal-list-day</code> etc.) has been deleted entirely,
+    not just hidden.</div>
   <div class="stage" style="padding:0">
     <div class="stage-lbl" style="padding:1.1rem 1.1rem 0">Mobile (live iframe)</div>
     <div class="mob-wrap" style="padding:.7rem 0 1.1rem">
       <div style="width:380px;border:1px solid var(--bd2);border-radius:16px;overflow:hidden">
-        <iframe src="calendar-review-mobile-list.html" style="width:100%;height:340px;border:none" scrolling="no"></iframe>
+        <iframe src="calendar-review-mobile-grid.html" style="width:100%;height:480px;border:none" scrolling="no"></iframe>
       </div>
     </div>
   </div>
@@ -284,18 +283,15 @@
     <tr><td><code>.cal-arrow</code></td><td>Desktop only</td><td>Base <code>.hb.accent</code>, hidden entirely on mobile</td></tr>
     <tr><td><code>.cal-month-sel</code> / <code>.cal-year-sel</code></td><td>Both</td><td>Base <code>.ts</code> plain select, no custom dropdown styling</td></tr>
     <tr><td><code>.cal-tba-toggle</code></td><td>Mobile only</td><td>Now <code>.fbar-pill</code> (Filter Pill) with a <code>.fbar-pill-count</code> sub-chip; <code>.selected</code> when panel open; <code>.cal-tba-empty</code> hides it (and the desktop sidebar) when zero TBA games</td></tr>
-    <tr><td><code>.cal-2stack</code> / <code>.cal-months-col</code> / <code>.cal-month-block</code> / <code>.cal-month-label</code></td><td>Desktop only</td><td>Two-month stacked grid wrapper</td></tr>
-    <tr><td><code>.cal-grid</code> / <code>.cal-dow</code> / <code>.cal-cell</code> / <code>.cal-dn</code></td><td>Desktop only</td><td>7-col day grid, fixed 46×46px cells</td></tr>
-    <tr><td><code>.cal-count</code></td><td>Desktop only</td><td>Day-count circle; blue / amber(<code>.has-pre</code>); opens popover; dead <code>border:2px solid transparent</code> removed</td></tr>
-    <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code> / <code>.cal-pop-item-title</code></td><td>Desktop only</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code>; rows now carry the priority left-border + <code>.bdg.b-pre</code> badge</td></tr>
-    <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: sidebar, hidden when empty. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places; grid is now 1 column (was 2) so titles stop silently truncating</td></tr>
-    <tr><td><code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code></td><td>Mobile only</td><td>New — blue chevron gradient overlay, opacity driven live by drag distance during month swipe</td></tr>
-    <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code>, now shared with <code>.cal-pop-item</code>/<code>.cal-list-item</code></td></tr>
-    <tr><td><code>.tba-list-viewport</code> / <code>.tba-list-track</code> / <code>.tba-list-page</code></td><td>Both</td><td>Swipe/drag pagination for TBA list, 20 per page</td></tr>
+    <tr><td><code>.cal-2stack</code> / <code>.cal-months-col</code> / <code>.cal-month-block</code> / <code>.cal-month-label</code></td><td>Both</td><td>Grid wrapper; 2 months stacked on desktop, 1 on mobile (full-width instead of the fixed 358px)</td></tr>
+    <tr><td><code>.cal-grid</code> / <code>.cal-dow</code> / <code>.cal-cell</code> / <code>.cal-dn</code></td><td>Both</td><td>7-col day grid — fixed 46×46px cells on desktop, fluid <code>1fr</code> columns + <code>aspect-ratio:1</code> on mobile</td></tr>
+    <tr><td><code>.cal-count</code></td><td>Both</td><td>Day-count circle; blue / amber(<code>.has-pre</code>); opens popover; dead <code>border:2px solid transparent</code> removed</td></tr>
+    <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code> / <code>.cal-pop-item-title</code></td><td>Both</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code>; rows carry the priority left-border + <code>.bdg.b-pre</code> badge</td></tr>
+    <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: sidebar, hidden when empty. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places; grid is 1 column (was 2) so titles stop silently truncating</td></tr>
+    <tr><td><code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code></td><td>Mobile only</td><td>Blue chevron gradient overlay, opacity driven live by drag distance during month swipe</td></tr>
+    <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code>, shared with <code>.cal-pop-item</code></td></tr>
+    <tr><td><code>.tba-list-viewport</code> / <code>.tba-list-track</code> / <code>.tba-list-page</code></td><td>Both</td><td>Swipe/drag pagination for TBA list; page size is measured from the real rendered row height each render (not a hardcoded count), so every page is exactly what fits with zero clipping</td></tr>
     <tr><td><code>.tba-pagination</code> / <code>.tba-page-dot</code> / <code>.tba-page-btn</code></td><td>Both</td><td>Dot pager, only rendered when &gt;1 page</td></tr>
-    <tr><td><code>.cal-list-day</code> / <code>.cal-list-day-hdr</code></td><td>Mobile only</td><td>New — groups same-day releases under one date header instead of repeating the date per row</td></tr>
-    <tr><td><code>.cal-list-item</code> / <code>.cal-list-title</code></td><td>Mobile only</td><td>Replaces the grid; priority left-border; date column removed (now in the day header)</td></tr>
-    <tr><td><code>.bdg.b-pre</code> in <code>.cal-list-item</code>/<code>.cal-pop-item</code></td><td>Mobile + desktop popover</td><td>Reused the existing side-panel badge class/text ("PRE-ORDER") instead of a one-off inline-styled "PRE" span</td></tr>
     <tr><td><code>#todayTicker</code> / <code>.ticker-label</code> / <code>.ticker-track</code> / <code>.ticker-inner</code> / <code>.ticker-item</code></td><td>Both, identical</td><td>No dedicated mobile CSS at all</td></tr>
     <tr><td><code>.ticker-inner.marquee</code></td><td>Both, identical</td><td>New — only applied when content overflows the bar; content duplicated once for a seamless <code>translateX(-50%)</code> loop; paused on hover</td></tr>
   </table>

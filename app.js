@@ -639,35 +639,8 @@ function renderCalendar(){
     if(hdrNav)hdrNav.style.display='';
   }
 
-  // Mobile: list view for current month only
-  if(isMobile){
-    const monthGames=datedGames
-      .filter(g=>{const d=normaliseDate(g.releaseDate);return d.startsWith(`${calYear}-${String(calMonth+1).padStart(2,'0')}`)})
-      .sort((a,b)=>normaliseDate(a.releaseDate).localeCompare(normaliseDate(b.releaseDate)));
-    if(!monthGames.length){
-      main.innerHTML=`<div style="color:var(--t3);font-size:.8rem;padding:1rem 0">No releases this month.</div>`;
-    } else {
-      const byDay={};
-      monthGames.forEach(g=>{
-        const d=normaliseDate(g.releaseDate);
-        (byDay[d]=byDay[d]||[]).push(g);
-      });
-      main.innerHTML=Object.keys(byDay).map(d=>{
-        const rows=byDay[d].map(g=>`
-          <div class="cal-list-item ${prioClass(g.priority)}" onclick="openPanel('${g.id}')">
-            <div class="cal-list-title">${esc(g.title)}</div>
-            ${isPreOrder(g)?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}
-          </div>`).join('');
-        return `<div class="cal-list-day">
-          <div class="cal-list-day-hdr">${fmtDate(d)}</div>
-          ${rows}
-        </div>`;
-      }).join('');
-    }
-    return;
-  }
-
-  // Desktop: 3-month stacked grid view
+  // Month grid — one month on mobile, two stacked on desktop. Same
+  // renderMonthGrid()/day-count-bubble/popover interaction on both.
   const DAYS=['M','T','W','T','F','S','S'];
   const todayISOs=todayISO();
   const byDate={};
@@ -714,13 +687,15 @@ function renderCalendar(){
     return html;
   }
 
-  // Render 2 months stacked vertically
-  let mo0=calMonth, yr0=calYear;
-  let mo1=calMonth+1, yr1=calYear;
-  if(mo1>11){mo1-=12;yr1++}
   let html='<div class="cal-2stack"><div class="cal-months-col">';
-  html+=renderMonthGrid(yr0,mo0);
-  html+=renderMonthGrid(yr1,mo1);
+  if(isMobile){
+    html+=renderMonthGrid(calYear,calMonth);
+  } else {
+    let mo1=calMonth+1,yr1=calYear;
+    if(mo1>11){mo1-=12;yr1++}
+    html+=renderMonthGrid(calYear,calMonth);
+    html+=renderMonthGrid(yr1,mo1);
+  }
   html+='</div></div>';
   main.innerHTML=html;
 
