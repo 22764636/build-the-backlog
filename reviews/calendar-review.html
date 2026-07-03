@@ -129,9 +129,11 @@
     day's games is a pre-order. No border at rest anymore — the old <code>border:2px solid transparent</code> was
     dead CSS (never overridden anywhere; the hover ring already gives feedback via <code>box-shadow</code>), removed.
     Click opens <code>#calFloatPop.cal-pop</code>, a singleton <code>position:fixed</code> popover listing each game
-    — each row now carries the same priority-colored left border as the TBA sidebar (<code>.prio-high/medium/low</code>)
-    plus a proper <code>.bdg.b-pre</code> "PRE-ORDER" badge for pre-orders, replacing the old plain amber-text
-    treatment, for visual consistency across all three calendar row types. <b>Live demo below — click a bubble.</b>
+    — each row carries the same priority-colored left border as the Undated list (<code>.prio-high/medium/low</code>).
+    Dots and badges have been dropped entirely across the calendar/DLC/Undated surfaces in favor of coloring the
+    game title text itself by status (<code>.st-preorder</code>=amber, <code>.st-owned</code>=green,
+    <code>.st-cancelled</code>=red, <code>.st-removed</code>=dim <code>var(--t3)</code>) — one mechanism instead of
+    three, and no extra width needed per row. <b>Live demo below — click a bubble.</b>
     This is the one calendar element flagged as a deliberate taxonomy exception: it acts like a Chip (standalone, own
     click action) but its shape (perfect circle, number instead of a text label) doesn't match Chip canon, so per
     your call it stays a standalone "counter bubble" pattern rather than being folded in.
@@ -157,11 +159,14 @@
     Each <code>.cal-tba-chip</code> gets a 3px left-border accent from the game's priority (<code>.prio-high</code>=blue,
     <code>.prio-medium</code>=pink, <code>.prio-low</code>=lime) — confirmed: yes, this reuses the exact same 3 hex
     values as the Priority pill/badge but through a different mechanism (border-left, not fill), so it's a soft
-    crossover worth checking when you get to the pill/badge color pass. This same left-border pattern has now been
-    extended to the popover and mobile list rows below, for one consistent "row = priority-colored left edge" visual
-    language across all three calendar list surfaces. Open question: chip titles can still silently truncate
-    (2-column grid + ellipsis, no wrap) — a 1-column layout would fix it but roughly doubles the vertical space
-    needed per page; flagging for a decision rather than changing unilaterally.</div>
+    crossover worth checking when you get to the pill/badge color pass. This same left-border pattern is shared with
+    the popover rows above. The full <code>border:1px solid var(--bd)</code> frame around each chip has been removed
+    — it's now borderless except the left accent, matching the popover/DLC convention and fixing the row spacing
+    mismatch (the border was eating the gap between chips that the popover/DLC rows didn't have). Chip titles are
+    now also colored by status (pre-order=amber, owned=green, cancelled=red, removed=dim) the same as the popover
+    and DLC panel — see the Day-Count + Popover section above for the color list. Open question: chip titles can
+    still silently truncate (2-column grid + ellipsis, no wrap) — a 1-column layout would fix it but roughly doubles
+    the vertical space needed per page; flagging for a decision rather than changing unilaterally.</div>
   <div class="stage">
     <div class="stage-lbl">Desktop — permanent sidebar</div>
     <div class="stage-cal" style="padding:.75rem .85rem;display:flex">
@@ -169,7 +174,7 @@
       <div class="cal-tba-wide" style="max-width:340px">
         <div style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:.6rem;flex-shrink:0">Undated</div>
         <div class="cal-tba-grid">
-          <div class="cal-tba-chip prio-high" title="Voidbreaker — TBA"><span class="cal-tba-chip-title">Voidbreaker</span><span class="cal-tba-chip-sub">TBA</span></div>
+          <div class="cal-tba-chip prio-high" title="Voidbreaker — TBA"><span class="cal-tba-chip-title st-preorder">Voidbreaker</span><span class="cal-tba-chip-sub">TBA</span></div>
           <div class="cal-tba-chip prio-medium" title="Ashen Court — TBA"><span class="cal-tba-chip-title">Ashen Court</span><span class="cal-tba-chip-sub">TBA</span></div>
           <div class="cal-tba-chip prio-low" title="Glass Meridian — TBA"><span class="cal-tba-chip-title">Glass Meridian</span><span class="cal-tba-chip-sub">TBA</span></div>
           <div class="cal-tba-chip prio-medium" title="Echo District — TBA"><span class="cal-tba-chip-title">Echo District</span><span class="cal-tba-chip-sub">TBA</span></div>
@@ -199,8 +204,13 @@
   <div class="sec-desc">Originally a flat list grouped by day; replaced entirely with a real single-month grid
     reusing the exact same <code>renderMonthGrid()</code> function desktop uses, so mobile gets the same
     day-count bubble + tap-to-open popover interaction instead of a second, different interaction pattern for the
-    same data. <code>.cal-grid</code>/<code>.cal-cell</code> get a mobile override (fluid <code>1fr</code> columns,
-    <code>aspect-ratio:1</code>) since the desktop fixed-46px sizing assumed the 358px sidebar column width.
+    same data. <code>.cal-grid</code>/<code>.cal-cell</code> get a mobile override since the desktop fixed-46px
+    sizing assumed the 358px sidebar column width. Column width was originally <code>repeat(7,1fr)</code> +
+    <code>aspect-ratio:1</code> on cells — on real devices this produced a visibly off-center grid (left gap wider
+    than right), confirmed by pixel-measuring user screenshots even though it could not be reproduced in a
+    Chromium/Playwright sandbox at any tested viewport width. Replaced with an explicit
+    <code>repeat(7,calc((100% - 9px)/7))</code> so column width comes from deterministic math instead of the
+    browser's own <code>1fr</code> distribution — awaiting real-device confirmation this resolves it.
     The old list-view code (<code>.cal-list-item</code>/<code>.cal-list-day</code> etc.) has been deleted entirely,
     not just hidden.</div>
   <div class="stage" style="padding:0">
@@ -256,22 +266,15 @@
 <!-- MOBILE MONTH SWIPE -->
 <div class="sec" id="swipe">
   <div class="sec-hdr"><h2>Mobile Month Swipe</h2><span class="sec-tag mob">mobile only</span></div>
-  <div class="sec-desc">Swiping the list view left/right changes the visible month (this always existed — it was
-    just invisible: <code>touchend</code> hard-cut to the new month with no feedback during the gesture). Now
-    <code>#calMain</code> live-follows the finger via <code>translateX</code> on <code>touchmove</code>
-    (same drag-tracking mechanic as the card swipe-actions elsewhere in the app), a chevron hint
-    (<code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code>, blue gradient) fades in on the side you're
-    dragging toward, and on commit (&gt;50px, horizontal-dominant) the current month slides+fades out while the new
-    one slides+fades in from the opposite edge. Below the threshold it just snaps back. Static preview (opacity
-    forced on) since a drag gesture can't be captured in a screenshot:</div>
-  <div class="stage" style="position:relative;overflow:hidden;height:70px">
-    <div style="position:absolute;top:0;bottom:0;right:0;width:56px;display:flex;align-items:center;
-      justify-content:flex-end;padding-right:.4rem;font-size:1.6rem;font-weight:700;color:var(--blue);
-      background:linear-gradient(-90deg,#02b3fc33,transparent)">›</div>
-    <div style="color:var(--t3);font-size:.72rem;padding:1.5rem 1rem">(list view content — preview forces the
-      real <code>.cal-swipe-hint-r</code> styling visible; the actual element is <code>display:none</code> above
-      640px via media query, and normally at 0 opacity until a drag is in progress)</div>
-  </div>
+  <div class="sec-desc">Swiping the month grid left/right changes the visible month. Simplified to match the exact
+    mechanic the Undated list's own carousel already used, per your call to make the two consistent rather than
+    inventing a second swipe feel: <code>#calMain</code> live-follows the finger via <code>translateX</code> on
+    <code>touchmove</code> with no hint overlay and no fade — plain drag-and-follow. On <code>touchend</code>, if the
+    drag committed (&gt;50px, horizontal-dominant) it snaps straight to the next/prev month; otherwise it snaps back
+    to place, both using the same <code>.3s cubic-bezier(.4,0,.2,1)</code> easing as the Undated list. The earlier
+    version (chevron hint fade-in + slide/fade month transition, <code>.16–.18s ease</code>) has been removed —
+    <code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code> are gone from both the CSS and the markup, not
+    just hidden.</div>
 </div>
 
 <!-- FULL CLASS REFERENCE -->
@@ -286,10 +289,10 @@
     <tr><td><code>.cal-2stack</code> / <code>.cal-months-col</code> / <code>.cal-month-block</code> / <code>.cal-month-label</code></td><td>Both</td><td>Grid wrapper; 2 months stacked on desktop, 1 on mobile (full-width instead of the fixed 358px)</td></tr>
     <tr><td><code>.cal-grid</code> / <code>.cal-dow</code> / <code>.cal-cell</code> / <code>.cal-dn</code></td><td>Both</td><td>7-col day grid — fixed 46×46px cells on desktop, fluid <code>1fr</code> columns + <code>aspect-ratio:1</code> on mobile</td></tr>
     <tr><td><code>.cal-count</code></td><td>Both</td><td>Day-count circle; blue / amber(<code>.has-pre</code>); opens popover; dead <code>border:2px solid transparent</code> removed</td></tr>
-    <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code> / <code>.cal-pop-item-title</code></td><td>Both</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code>; rows carry the priority left-border + <code>.bdg.b-pre</code> badge</td></tr>
+    <tr><td><code>.cal-pop</code> / <code>.cal-pop-item</code> / <code>.cal-pop-item-title</code></td><td>Both</td><td>Singleton fixed-position popover triggered by <code>.cal-count</code>; rows carry the priority left-border; title text carries the status-color class instead of a badge</td></tr>
     <tr><td><code>.cal-tba-wide</code> / <code>.cal-tba-grid</code></td><td>Desktop: sidebar, hidden when empty. Mobile: full-width panel toggled by <code>.cal-tba-toggle</code></td><td>Same chip markup both places; grid is 1 column (was 2) so titles stop silently truncating</td></tr>
-    <tr><td><code>.cal-swipe-hint-l</code> / <code>.cal-swipe-hint-r</code></td><td>Mobile only</td><td>Blue chevron gradient overlay, opacity driven live by drag distance during month swipe</td></tr>
-    <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code>, shared with <code>.cal-pop-item</code></td></tr>
+    <tr><td><code>.cal-tba-chip</code> / <code>.cal-tba-chip-title</code> / <code>.cal-tba-chip-sub</code></td><td>Both (inside <code>.cal-tba-wide</code>)</td><td>Priority-colored left border via <code>.prio-high/medium/low</code>, shared with <code>.cal-pop-item</code> and (border-width only) <code>.panel-base-game</code>; outer frame border removed, borderless except the left accent</td></tr>
+    <tr><td><code>.st-owned</code> / <code>.st-preorder</code> / <code>.st-cancelled</code> / <code>.st-removed</code></td><td>Both, plus DLC panel</td><td>Status-color title text, replacing the old DLC dot and popover/TBA pre-order badge: green / amber / red / dim <code>var(--t3)</code>. Cancelled games stay excluded from the calendar grid and Undated list regardless (color only ever shows for DLC panel rows there)</td></tr>
     <tr><td><code>.tba-list-viewport</code> / <code>.tba-list-track</code> / <code>.tba-list-page</code></td><td>Both</td><td>Swipe/drag pagination for TBA list; page size is measured from the real rendered row height each render (not a hardcoded count), so every page is exactly what fits with zero clipping</td></tr>
     <tr><td><code>.tba-pagination</code> / <code>.tba-page-dot</code> / <code>.tba-page-btn</code></td><td>Both</td><td>Dot pager, only rendered when &gt;1 page</td></tr>
     <tr><td><code>#todayTicker</code> / <code>.ticker-label</code> / <code>.ticker-track</code> / <code>.ticker-inner</code> / <code>.ticker-item</code></td><td>Both, identical</td><td>No dedicated mobile CSS at all</td></tr>
@@ -356,7 +359,7 @@ document.getElementById('countDemo').addEventListener('click',e=>{
   pop.classList.remove('open');
   if(already)return;
   const items=SAMPLE[badge.dataset.date]||[];
-  pop.innerHTML=items.map(g=>`<div class="cal-pop-item ${g.prio}"><span class="cal-pop-item-title">${g.t}</span>${g.pre?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}</div>`).join('');
+  pop.innerHTML=items.map(g=>`<div class="cal-pop-item ${g.prio}"><span class="cal-pop-item-title${g.pre?' st-preorder':''}">${g.t}</span></div>`).join('');
   pop.dataset.date=badge.dataset.date;
   const r=badge.getBoundingClientRect();
   pop.style.top=(r.bottom+6)+'px';

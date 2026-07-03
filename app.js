@@ -457,7 +457,7 @@ function populateCalSelects(){
 }
 
 function calendarGames(){
-  return games.filter(g=>g.title&&g.releaseDate&&!isCancelled(g));
+  return games.filter(g=>g.title&&!isCancelled(g));
 }
 
 function renderCalendar(){
@@ -509,7 +509,7 @@ function renderCalendar(){
       const slice=tbaGames.slice(p*TBA_PAGE_SIZE,(p+1)*TBA_PAGE_SIZE);
       pagesHTML+=`<div class="tba-list-page"><div class="cal-tba-grid">${slice.map(g=>{
         const pc=prioClass(g.priority);
-        return`<div class="cal-tba-chip ${pc}" title="${esc(g.title)} — ${esc(g.releaseDate)}" onclick="openPanel('${g.id}')"><span class="cal-tba-chip-title">${esc(g.title)}</span><span class="cal-tba-chip-sub">${esc(g.releaseDate)}</span></div>`;
+        return`<div class="cal-tba-chip ${pc}" title="${esc(g.title)} — ${esc(g.releaseDate||'')}" onclick="openPanel('${g.id}')"><span class="cal-tba-chip-title ${statusTextClass(g)}">${esc(g.title)}</span><span class="cal-tba-chip-sub">${esc(g.releaseDate||'')}</span></div>`;
       }).join('')}</div></div>`;
     }
     track.innerHTML=pagesHTML;
@@ -715,7 +715,7 @@ function renderCalendar(){
       floatPop.classList.remove('open');
       if(alreadyOpenHere)return;
       const cellGames=byDate[dateStr]||[];
-      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item ${prioClass(g.priority)}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')"><span class="cal-pop-item-title">${esc(g.title)}</span>${isPreOrder(g)?'<span class="bdg b-pre" style="flex-shrink:0">PRE-ORDER</span>':''}</div>`).join('');
+      floatPop.innerHTML=cellGames.map(g=>`<div class="cal-pop-item ${prioClass(g.priority)}" onclick="this.closest('.cal-pop').classList.remove('open');openPanel('${g.id}')"><span class="cal-pop-item-title ${statusTextClass(g)}">${esc(g.title)}</span></div>`).join('');
       floatPop.dataset.date=dateStr;
       floatPop.classList.add('open');
       positionFloatPop(floatPop,this);
@@ -763,16 +763,13 @@ document.addEventListener('click',function(e){
     document.querySelectorAll('.cal-pop.open').forEach(p=>p.classList.remove('open'));
   }
 });
-// Mobile swipe to change month — live drag-follow + edge hints + slide transition,
-// same mechanic as the card swipe-actions (touchmove tracks the finger, hint fades
-// in with drag progress, threshold commits) so the gesture actually gives feedback.
+// Mobile swipe to change month — plain drag-follow + snap, same mechanic and
+// easing as the Undated list's own carousel (touchmove tracks the finger, no
+// hint, no fade; release either snaps back or commits to the next/prev month).
 (function(){
   const THRESHOLD=50;
   let sx=null,sy=null,live=false;
   const ov=document.getElementById('calOv');
-  function hintEls(){
-    return{l:document.querySelector('.cal-swipe-hint-l'),r:document.querySelector('.cal-swipe-hint-r')};
-  }
   ov.addEventListener('touchstart',e=>{
     if(window.innerWidth>640||calShowTba)return; // TBA panel handles its own swipes
     if(e.target.closest('#calTba'))return;
@@ -790,10 +787,6 @@ document.addEventListener('click',function(e){
     e.preventDefault();
     const main=document.getElementById('calMain');
     if(main){main.style.transition='none';main.style.transform=`translateX(${dx}px)`;}
-    const prog=Math.min(Math.abs(dx)/THRESHOLD,1);
-    const{l,r}=hintEls();
-    if(dx>0){if(r)r.style.opacity=0;if(l)l.style.opacity=prog;}
-    else{if(l)l.style.opacity=0;if(r)r.style.opacity=prog;}
   },{passive:false});
   ov.addEventListener('touchend',e=>{
     if(sx===null||window.innerWidth>640){sx=null;return;}
@@ -802,34 +795,14 @@ document.addEventListener('click',function(e){
     const wasLive=live;
     sx=null;live=false;
     const main=document.getElementById('calMain');
-    const{l,r}=hintEls();
-    if(l){l.style.transition='opacity .18s';l.style.opacity=0;}
-    if(r){r.style.transition='opacity .18s';r.style.opacity=0;}
     if(!wasLive||Math.abs(dx)<THRESHOLD||Math.abs(dy)>Math.abs(dx)){
-      if(main){main.style.transition='transform .18s ease';main.style.transform='';}
+      if(main){main.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';main.style.transform='';}
       return;
     }
-    const dir=dx<0?1:-1; // 1 = advancing to next month, -1 = back to previous
-    if(main){
-      main.style.transition='transform .16s ease,opacity .16s ease';
-      main.style.transform=`translateX(${-dir*60}px)`;
-      main.style.opacity='0';
-    }
+    if(main){main.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';main.style.transform='';}
     if(dx<0){calMonth++;if(calMonth>11){calMonth=0;calYear++;}}
     else{calMonth--;if(calMonth<0){calMonth=11;calYear--;}}
-    setTimeout(()=>{
-      populateCalSelects();renderCalendar();
-      if(main){
-        main.style.transition='none';
-        main.style.transform=`translateX(${dir*60}px)`;
-        main.style.opacity='0';
-        requestAnimationFrame(()=>{
-          main.style.transition='transform .18s ease,opacity .18s ease';
-          main.style.transform='';
-          main.style.opacity='1';
-        });
-      }
-    },160);
+    populateCalSelects();renderCalendar();
   },{passive:true});
 })();
 
@@ -902,6 +875,13 @@ const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg
 
 function prioColor(p){return p==='high'?'var(--cyan)':p==='low'?'var(--lime)':'var(--magenta)'}
 function prioClass(p){return p==='high'?'prio-high':p==='low'?'prio-low':'prio-medium'}
+// Status color for a game/DLC's title text — replaces separate dots/badges.
+function statusTextClass(g){
+  if(g.status==='cancelled')return'st-cancelled';
+  if(g.status==='removed')return'st-removed';
+  if(g.status==='bought')return isPreOrder(g)?'st-preorder':'st-owned';
+  return'';
+}
 const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#555','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
 function platColor(p){return PLAT_COLORS[p]||'#555'}
 function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':'#031329'}
@@ -970,9 +950,9 @@ function isFutureDate(raw){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(n))return false;
   return n>todayISO();
 }
-// A game is "unreleased" if releaseDate is non-ISO text ("Q3 2026") or a future ISO date
+// A game is "unreleased" if releaseDate is blank, non-ISO text ("Q3 2026"), or a future ISO date
 function isGameUnreleased(g){
-  if(!g.releaseDate)return false;
+  if(!g.releaseDate)return true;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate))return true;
   return isFutureDate(g.releaseDate);
 }
@@ -2585,12 +2565,10 @@ function openPanel(id){
       const dlcCards=gameDlcs.map(d=>{
         const dCover=d.cover||(d.steamAppId?sc(d.steamAppId):'');
         const dThumb=dCover?`<img class="panel-base-thumb" src="${esc(dCover)}" alt="">`:`<div class="panel-base-thumb" style="background:var(--base);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--t3)">🎮</div>`;
-        const dotCls=d.status==='bought'?'owned':d.status==='wishlist'?'wishlisted':'removed';
-        return`<div class="panel-dlc-item panel-base-game" data-did="${esc(d.id)}">
+        return`<div class="panel-dlc-item panel-base-game ${prioClass(d.priority)}" data-did="${esc(d.id)}">
           ${dThumb}
           <div class="panel-base-info">
-            <span class="dlc-dot ${dotCls}" title="${d.status==='bought'?'Owned':d.status==='wishlist'?'Wishlisted':'Removed'}"></span>
-            <span class="panel-base-title">${esc(d.title)}</span>
+            <span class="panel-base-title ${statusTextClass(d)}">${esc(d.title)}</span>
             <span class="panel-base-arrow">›</span>
           </div>
         </div>`;

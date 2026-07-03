@@ -94,10 +94,11 @@ button{text-transform:none;letter-spacing:0}
   border-radius:4px;padding:2px 6px;line-height:1.4;max-width:120px;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;display:inline-block}
 /* ── PANEL DLC GRID ── */
-.panel-dlc-item{cursor:pointer}
+.panel-dlc-item{cursor:pointer;margin-bottom:.2rem}
+.panel-dlc-item:last-child{margin-bottom:0}
 /* Base game / DLC link in side panel */
 .panel-base-game{display:flex;align-items:center;gap:0;padding:0;
-  background:transparent;border:none;border-left:2px solid var(--bd2);border-radius:0;
+  background:transparent;border:none;border-left:3px solid var(--bd2);border-radius:0;
   cursor:pointer;overflow:hidden;transition:border-color .18s}
 .panel-base-game:hover{border-color:var(--blue)}
 .panel-base-thumb{width:64px;height:36px;object-fit:cover;flex-shrink:0;display:block;
@@ -381,11 +382,6 @@ button{text-transform:none;letter-spacing:0}
 .review-score{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.6rem;color:var(--amber);line-height:1}
 .review-score-denom{font-size:.85rem;color:var(--t3);font-weight:400;margin-left:.1rem}
 
-/* DLC status dot */
-.dlc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block;margin-right:.35rem}
-.dlc-dot.owned{background:var(--green)}
-.dlc-dot.wishlisted{background:var(--amber)}
-.dlc-dot.removed{background:var(--t3)}
 
 /* Markdown rendered note text */
 .note-md strong{font-weight:700;color:var(--text)}
@@ -707,23 +703,22 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .cal-pop-item-title{flex:1;min-width:0}
 .cal-pop-item:hover{background:#02b3fc15;color:var(--text)}
 .cal-tba-chip{padding:.2rem .5rem;
-  border:1px solid var(--bd);border-left:3px solid transparent;border-radius:var(--r);margin-bottom:.2rem;
+  border-left:3px solid transparent;border-radius:5px;margin-bottom:.2rem;
   cursor:pointer;transition:border-color .15s,color .15s;display:block;overflow:hidden}
 .cal-tba-chip-title{font-size:.68rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .cal-tba-chip-sub{font-size:.6rem;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .cal-tba-chip:hover .cal-tba-chip-title{color:var(--blue)}
 .cal-tba-chip:hover .cal-tba-chip-sub{color:#02b3fc99}
-.cal-tba-chip.prio-high,.cal-pop-item.prio-high{border-left-color:var(--blue)}
-.cal-tba-chip.prio-medium,.cal-pop-item.prio-medium{border-left-color:var(--pink)}
-.cal-tba-chip.prio-low,.cal-pop-item.prio-low{border-left-color:var(--lime)}
+/* Status color for game/DLC title text — must come after the title rules
+   above so it wins the cascade tie-break (equal specificity, later wins). */
+.st-owned{color:var(--green)}
+.st-preorder{color:var(--amber)}
+.st-cancelled{color:#cc2200}
+.st-removed{color:var(--t3)}
+.cal-tba-chip.prio-high,.cal-pop-item.prio-high,.panel-base-game.prio-high{border-left-color:var(--blue)}
+.cal-tba-chip.prio-medium,.cal-pop-item.prio-medium,.panel-base-game.prio-medium{border-left-color:var(--pink)}
+.cal-tba-chip.prio-low,.cal-pop-item.prio-low,.panel-base-game.prio-low{border-left-color:var(--lime)}
 .cal-tba-toggle{background:var(--blue);border-color:var(--blue);color:#031329}
-.cal-swipe-hint{position:absolute;top:0;bottom:0;width:56px;display:flex;align-items:center;
-  font-size:1.6rem;font-weight:700;color:var(--blue);opacity:0;pointer-events:none;z-index:5}
-.cal-swipe-hint-l{left:0;justify-content:flex-start;padding-left:.4rem;
-  background:linear-gradient(90deg,#02b3fc33,transparent)}
-.cal-swipe-hint-r{right:0;justify-content:flex-end;padding-right:.4rem;
-  background:linear-gradient(-90deg,#02b3fc33,transparent)}
-@media(min-width:641px){.cal-swipe-hint-l,.cal-swipe-hint-r{display:none}}
 @media(max-width:640px){
   #calTba{display:none}
   .cal-arrow{display:none!important}
@@ -736,7 +731,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
   .cal-month-sel{flex:1;min-width:0}
   .cal-hdr-right{order:2;margin-left:auto}
   .cal-months-col{width:100%;flex:1 1 auto}
-  .cal-grid{grid-template-columns:repeat(7,1fr);gap:1.5px}
+  .cal-grid{grid-template-columns:repeat(7,calc((100% - 9px)/7));gap:1.5px}
   .cal-cell{width:auto;height:auto;aspect-ratio:1;padding:.15rem}
 }
 
