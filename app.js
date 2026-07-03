@@ -513,25 +513,26 @@ function renderCalendar(){
       }).join('')}</div></div>`;
     }
     track.innerHTML=pagesHTML;
-    track.style.width=(totalPages*100)+'%';
+    track.style.height=(totalPages*100)+'%';
     track.querySelectorAll('.tba-list-page').forEach(p=>{
-      p.style.width=(100/totalPages)+'%';
-      p.style.minWidth=(100/totalPages)+'%';
+      p.style.height=(100/totalPages)+'%';
+      p.style.minHeight=(100/totalPages)+'%';
     });
-    track.style.transform=`translateX(-${tbaPage*(100/totalPages)}%)`;
+    track.style.transform=`translateY(-${tbaPage*(100/totalPages)}%)`;
   }
   renderTbaList();
 
-  // Wire swipe/drag on TBA viewport
+  // Wire swipe/drag/wheel on TBA viewport — pages stack top to bottom, so
+  // paging moves vertically (swipe/scroll up = next page, down = prev page)
   const viewport=document.getElementById('calTbaViewport');
   if(viewport){
-    let dragStartX=null,isDragging=false,liveOffset=0,dragMoved=false;
+    let dragStartY=null,isDragging=false,liveOffset=0,dragMoved=false;
     function getTotalPages(){return Math.ceil(tbaGames.length/TBA_PAGE_SIZE)}
     function goToPage(p){
       const track=document.getElementById('calTbaTrack');
       const total=getTotalPages();
       tbaPage=Math.max(0,Math.min(total-1,p));
-      if(track){track.classList.remove('no-transition');track.style.transform=`translateX(-${tbaPage*(100/total)}%)`}
+      if(track){track.classList.remove('no-transition');track.style.transform=`translateY(-${tbaPage*(100/total)}%)`}
       renderTbaDots();
     }
     function renderTbaDots(){
@@ -540,7 +541,7 @@ function renderCalendar(){
       if(!pagination||total<=1){if(pagination)pagination.style.display='none';return}
       pagination.style.display='flex';
       const MAX_DOTS=6;
-      let html=`<button class="tba-page-btn" id="tbaDotPrev" ${tbaPage===0?'disabled':''} style="flex-shrink:0">‹</button>`;
+      let html=`<button class="tba-page-btn" id="tbaDotPrev" ${tbaPage===0?'disabled':''} style="flex-shrink:0">▲</button>`;
       if(total<=MAX_DOTS){
         for(let i=0;i<total;i++)html+=`<div class="tba-page-dot${i===tbaPage?' active':''}" data-p="${i}" style="cursor:pointer"></div>`;
       } else {
@@ -550,7 +551,7 @@ function renderCalendar(){
         for(let i=start;i<end;i++)html+=`<div class="tba-page-dot${i===tbaPage?' active':''}" data-p="${i}" style="cursor:pointer"></div>`;
         if(end<total)html+=`<div class="tba-page-dot" style="opacity:.3;cursor:default"></div>`;
       }
-      html+=`<button class="tba-page-btn" id="tbaDotNext" ${tbaPage===total-1?'disabled':''} style="flex-shrink:0">›</button>`;
+      html+=`<button class="tba-page-btn" id="tbaDotNext" ${tbaPage===total-1?'disabled':''} style="flex-shrink:0">▼</button>`;
       pagination.innerHTML=html;
       pagination.querySelectorAll('.tba-page-dot[data-p]').forEach(dot=>{dot.onclick=()=>goToPage(parseInt(dot.dataset.p))});
       const prevBtn=document.getElementById('tbaDotPrev');
@@ -560,51 +561,63 @@ function renderCalendar(){
     }
     viewport.addEventListener('mousedown',e=>{
       if(getTotalPages()<=1)return;
-      dragStartX=e.clientX;isDragging=true;dragMoved=false;liveOffset=0;
+      dragStartY=e.clientY;isDragging=true;dragMoved=false;liveOffset=0;
       const track=document.getElementById('calTbaTrack');if(track)track.classList.add('no-transition');
       e.preventDefault();
     });
     document.addEventListener('mousemove',e=>{
-      if(!isDragging||dragStartX===null)return;
-      liveOffset=e.clientX-dragStartX;
+      if(!isDragging||dragStartY===null)return;
+      liveOffset=e.clientY-dragStartY;
       if(Math.abs(liveOffset)>4){dragMoved=true;viewport.classList.add('dragging')}
       const track=document.getElementById('calTbaTrack');if(!track)return;
       const total=getTotalPages();
-      track.style.transform=`translateX(calc(-${tbaPage*(100/total)}% + ${liveOffset}px))`;
+      track.style.transform=`translateY(calc(-${tbaPage*(100/total)}% + ${liveOffset}px))`;
     });
     document.addEventListener('mouseup',e=>{
       if(!isDragging)return;
       isDragging=false;viewport.classList.remove('dragging');
-      const threshold=viewport.offsetWidth*0.25;
+      const threshold=viewport.offsetHeight*0.25;
       if(liveOffset<-threshold)goToPage(tbaPage+1);
       else if(liveOffset>threshold)goToPage(tbaPage-1);
       else goToPage(tbaPage);
-      dragStartX=null;
+      dragStartY=null;
       if(dragMoved)document.addEventListener('click',e=>e.stopPropagation(),{capture:true,once:true});
       dragMoved=false;
     });
-    let touchStartX=null;
+    let touchStartY=null;
     viewport.addEventListener('touchstart',e=>{
       if(getTotalPages()<=1)return;
-      touchStartX=e.touches[0].clientX;
+      touchStartY=e.touches[0].clientY;
       const track=document.getElementById('calTbaTrack');if(track)track.classList.add('no-transition');
     },{passive:true});
     viewport.addEventListener('touchmove',e=>{
-      if(touchStartX===null)return;
+      if(touchStartY===null)return;
+      e.preventDefault();
       const track=document.getElementById('calTbaTrack');if(!track)return;
-      const dx=e.touches[0].clientX-touchStartX;
+      const dy=e.touches[0].clientY-touchStartY;
       const tot=getTotalPages();
-      track.style.transform=`translateX(calc(-${tbaPage*(100/tot)}% + ${dx}px))`;
-    },{passive:true});
+      track.style.transform=`translateY(calc(-${tbaPage*(100/tot)}% + ${dy}px))`;
+    },{passive:false});
     viewport.addEventListener('touchend',e=>{
-      if(touchStartX===null)return;
-      const dx=e.changedTouches[0].clientX-touchStartX;
-      const threshold=viewport.offsetWidth*0.25;
-      if(dx<-threshold)goToPage(tbaPage+1);
-      else if(dx>threshold)goToPage(tbaPage-1);
+      if(touchStartY===null)return;
+      const dy=e.changedTouches[0].clientY-touchStartY;
+      const threshold=viewport.offsetHeight*0.25;
+      if(dy<-threshold)goToPage(tbaPage+1);
+      else if(dy>threshold)goToPage(tbaPage-1);
       else goToPage(tbaPage);
-      touchStartX=null;
+      touchStartY=null;
     },{passive:true});
+    // Scroll wheel (desktop trackpad/mouse) pages the list — one page per
+    // gesture, debounced so a single wheel event doesn't skip multiple pages
+    let wheelLock=false;
+    viewport.addEventListener('wheel',e=>{
+      if(getTotalPages()<=1||Math.abs(e.deltaY)<2)return;
+      e.preventDefault();
+      if(wheelLock)return;
+      wheelLock=true;
+      goToPage(tbaPage+(e.deltaY>0?1:-1));
+      setTimeout(()=>{wheelLock=false;},350);
+    },{passive:false});
     renderTbaDots();
   }
 
@@ -747,6 +760,22 @@ document.getElementById('calPrev').addEventListener('click',()=>{
 document.getElementById('calNext').addEventListener('click',()=>{
   calMonth++;if(calMonth>11){calMonth=0;calYear++}populateCalSelects();renderCalendar();
 });
+// Desktop: scroll wheel over the month grid transitions between months —
+// one month per gesture, debounced so a single wheel event (or a long
+// trackpad swipe firing many deltaY ticks) doesn't skip several months
+(function(){
+  let wheelLock=false;
+  document.getElementById('calMainWrap').addEventListener('wheel',e=>{
+    if(window.innerWidth<=640||Math.abs(e.deltaY)<2)return;
+    e.preventDefault();
+    if(wheelLock)return;
+    wheelLock=true;
+    if(e.deltaY>0){calMonth++;if(calMonth>11){calMonth=0;calYear++}}
+    else{calMonth--;if(calMonth<0){calMonth=11;calYear--}}
+    populateCalSelects();renderCalendar();
+    setTimeout(()=>{wheelLock=false;},450);
+  },{passive:false});
+})();
 document.getElementById('calMonthSel').addEventListener('change',function(){
   calMonth=parseInt(this.value);renderCalendar();
 });
