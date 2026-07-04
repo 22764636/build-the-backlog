@@ -99,8 +99,8 @@ button{text-transform:none;letter-spacing:0}
 /* Base game / DLC link in side panel */
 .panel-base-game{display:flex;align-items:center;gap:0;padding:0;
   background:transparent;border:none;border-left:3px solid var(--bd2);border-radius:0;
-  cursor:pointer;overflow:hidden;color:var(--t2);transition:border-color .18s,color .15s}
-.panel-base-game:hover{border-color:var(--blue);color:var(--text)}
+  cursor:pointer;overflow:hidden;color:var(--t2);transition:background .15s,color .15s}
+.panel-base-game:hover{background:#02b3fc15;color:var(--text)}
 .panel-base-thumb{width:64px;height:36px;object-fit:cover;flex-shrink:0;display:block;
   background:var(--base);border-radius:4px;margin-left:.4rem}
 .panel-base-info{display:flex;align-items:center;gap:.5rem;padding:.3rem .45rem .3rem .5rem;flex:1;min-width:0}
@@ -709,10 +709,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .cal-pop-item:hover{background:#02b3fc15;color:var(--text)}
 .cal-tba-chip{padding:.2rem .5rem;
   border-left:3px solid transparent;border-radius:5px;margin-bottom:.2rem;
-  cursor:pointer;color:var(--text);transition:border-color .15s,color .15s;display:block;overflow:hidden}
+  cursor:pointer;color:var(--text);transition:background .15s,color .15s;display:block;overflow:hidden}
 .cal-tba-chip-title{font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .cal-tba-chip-sub{font-size:.6rem;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-.cal-tba-chip:hover{color:var(--blue)}
+.cal-tba-chip:hover{background:#02b3fc15;color:var(--blue)}
 .cal-tba-chip:hover .cal-tba-chip-sub{color:#02b3fc99}
 /* Status color for game/DLC title text — must come after the title rules
    above so it wins the cascade tie-break (equal specificity, later wins). */
