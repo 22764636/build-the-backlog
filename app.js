@@ -31,6 +31,7 @@ const S={
   pLinks:'Links',pSteam:'Steam',pGG:'gg.deals',pSDB:'SteamDB',pPriority:'Priority',
   pActions:'Actions',pEdit:'Edit',pMarkBt:'Add to Collection',pMarkWl:'Move to Wishlist',pRemove:'Remove',pReinstate:'Reinstate',
   pReview:'My Review',pSaveRev:'Save review',pRmNote:'Removed — reason:',
+  pLivePrice:'Live Price',
   noGames:'No games here yet.',noHint:'Press + Add game to start!',
   mBt:'Add to Collection',mWl:'Move to Wishlist'
 };
@@ -1293,6 +1294,26 @@ function metaTipHTML(name){
   return`<span class="meta-tip-icon" tabindex="0" data-desc="${esc(m.desc)}">ⓘ</span>`;
 }
 
+// GG.deals live-price tags — shared by the wishlist card overlay and the side
+// panel's Live Price section, so both always stay in sync. Eligibility:
+// wishlist games, plus bought games still wanted on Steam (same as the
+// live-price fetch job itself). Returns null when there's nothing to show.
+function ggPriceTags(g){
+  const tracked=(g.status==='wishlist'||(g.status==='bought'&&g.steamWishlist))&&g.steamAppId;
+  if(!tracked)return null;
+  if(g.skipGGFetch)return{notrack:true};
+  const gp=ggPriceCache[g.steamAppId];
+  if(!gp)return null;
+  const r=parseFloat(gp.retail),k=parseFloat(gp.keyshop),hr=parseFloat(gp.histRetail);
+  const retailOk=!isNaN(r)&&r>0,keysOk=!isNaN(k)&&k>0;
+  if(!retailOk&&!keysOk)return null;
+  const retailStr=retailOk?`<span class="ggp-retail">€${r.toFixed(2)}</span>`:`<span class="ggp-retail" style="opacity:.45">€ N/A</span>`;
+  const keysStr=keysOk?`<span class="ggp-keys">🔑 €${k.toFixed(2)}</span>`:`<span class="ggp-keys" style="opacity:.45">🔑 N/A</span>`;
+  const nearLow=retailOk&&!isNaN(hr)&&hr>0&&r<=hr*1.10;
+  const badgeStr=gp.personalLow?`<span class="ggp-hist-low">★ High</span>`:nearLow?`<span class="ggp-low">★ Low</span>`:'';
+  return{retailStr,keysStr,badgeStr};
+}
+
 function cardHTML(g){
   const isNR=nr(g);
   const h=isNR?0:Math.min(100,Math.max(0,parseInt(g.hotness)||0));
@@ -1332,25 +1353,13 @@ function cardHTML(g){
   const gid_s=String(g.id);
   const tip=addedTip(g);
 
-  // GG.deals price overlay — wishlist games, plus bought games still wanted on Steam
-  // (same eligibility as the live-price fetch job itself)
+  // GG.deals price overlay — see ggPriceTags() for eligibility/data rules
   let ggpOv='';
-  const _priceTracked=g.status==='wishlist'||(g.status==='bought'&&g.steamWishlist);
-  if(_priceTracked&&g.steamAppId){
-    if(g.skipGGFetch){
-      ggpOv=`<div class="ggp-ov"><span></span><span class="ggp-notrack">€ Non Tracked</span><span></span></div>`;
-    } else if(ggPriceCache[g.steamAppId]){
-      const gp=ggPriceCache[g.steamAppId];
-      const r=parseFloat(gp.retail),k=parseFloat(gp.keyshop),hr=parseFloat(gp.histRetail);
-      const retailStr=!isNaN(r)&&r>0?`<span class="ggp-retail">€${r.toFixed(2)}</span>`:`<span></span>`;
-      const keysStr=!isNaN(k)&&k>0?`<span class="ggp-keys">🔑 €${k.toFixed(2)}</span>`:`<span class="ggp-keys" style="opacity:.45">🔑 N/A</span>`;
-      const nearLow=!isNaN(r)&&r>0&&!isNaN(hr)&&hr>0&&r<=hr*1.10;
-      const badgeStr=gp.personalLow
-        ?`<span class="ggp-hist-low">★ High</span>`
-        :nearLow?`<span class="ggp-low">★ Low</span>`
-        :`<span></span>`;
-      if(!isNaN(r)&&r>0||!isNaN(k)&&k>0)ggpOv=`<div class="ggp-ov">${retailStr}${badgeStr}${keysStr}</div>`;
-    }
+  const _tags=ggPriceTags(g);
+  if(_tags){
+    ggpOv=_tags.notrack
+      ?`<div class="ggp-ov"><span></span><span class="ggp-notrack">€ Non Tracked</span><span></span></div>`
+      :`<div class="ggp-ov">${_tags.retailStr}${_tags.badgeStr||'<span></span>'}${_tags.keysStr}</div>`;
   }
 
   // Remove/Reinstate button: removed→reinstate, bought→disabled, else→remove
@@ -2453,6 +2462,16 @@ function openPanel(id){
       ${g.type==='dlc'?`<span class="bdg" style="background:#3a1a6e;color:#c4a0ff">DLC</span>`:''}
       ${!isNR?`<span class="bdg b-hot" title="Hotness: ${h}">${h}</span>`:''}
     </div>`;
+
+  // Live Price — see ggPriceTags() for eligibility/data rules; same badges
+  // as the wishlist card overlay, just laid out as a left-aligned row
+  {
+    const _tags=ggPriceTags(g);
+    if(_tags){
+      const _row=_tags.notrack?`<span class="ggp-notrack">€ Non Tracked</span>`:`${_tags.retailStr}${_tags.badgeStr}${_tags.keysStr}`;
+      b+=`<div class="ps"><div class="psl">${t('pLivePrice')}</div><div class="pv-liveprice">${_row}</div></div>`;
+    }
+  }
 
   // Collection box — immediately after hotness (bought games only)
   if(g.status==='bought'){
