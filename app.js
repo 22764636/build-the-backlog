@@ -3024,6 +3024,12 @@ document.getElementById('riBt').onclick=()=>doReinstate('bought');
 // ══════════════════════════════════════════
 //  CHIP INPUT
 // ══════════════════════════════════════════
+function _focusNextField(el){
+  const scope=el.closest('.modal')||document;
+  const focusables=[...scope.querySelectorAll('input,select,textarea,button')].filter(f=>!f.disabled&&f.type!=='hidden'&&f.offsetParent!==null);
+  const idx=focusables.indexOf(el);
+  if(idx>-1&&idx<focusables.length-1)focusables[idx+1].focus();
+}
 function makeChip(wrapId,inputId,getA,setA,renderCb,labelFn){
   function render(){
     const w=document.getElementById(wrapId),inp=document.getElementById(inputId);
@@ -3038,6 +3044,8 @@ function makeChip(wrapId,inputId,getA,setA,renderCb,labelFn){
   document.getElementById(inputId).addEventListener('keydown',e=>{
     if((e.key==='Enter'||e.key===',')&&e.target.value.trim()){
       e.preventDefault();const a=getA();a.push(e.target.value.trim());setA(a);e.target.value='';render();if(renderCb)renderCb();
+    }else if(e.key==='Enter'){
+      e.preventDefault();_focusNextField(e.target);
     }
     if(e.key==='Backspace'&&!e.target.value&&getA().length){const a=getA();a.pop();setA(a);render();if(renderCb)renderCb()}
   });
