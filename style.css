@@ -241,6 +241,8 @@ button{text-transform:none;letter-spacing:0}
 .ggp-hist-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#ffd700;background:#1a140acc;border-radius:4px;padding:2px 6px;white-space:nowrap}
 .ggp-notrack{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--muted);background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap}
 .gg.lv .ggp-ov{display:none}
+/* side panel — Live Price section: same .ggp-* tags as the card overlay, plain row instead of an absolute-positioned strip */
+.pv-liveprice{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-height:1.1rem}
 #ggFetchBubble{display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:var(--cyan);border:none;cursor:pointer;z-index:400;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.68rem;color:#031329;text-align:center;line-height:1.2;box-shadow:0 2px 16px rgba(2,179,252,.45);animation:ggPulse 1.8s ease-in-out infinite}
 #ggFetchBubble.on{display:flex}
 @keyframes ggPulse{0%,100%{box-shadow:0 2px 16px rgba(2,179,252,.45)}50%{box-shadow:0 2px 24px rgba(2,179,252,.8)}}

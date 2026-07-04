@@ -13,8 +13,6 @@ This app has exactly four categories of small UI elements, and the distinctions 
 
 **Canonical reference:** `reviews/pills-badges-chips-stats-reference.html` — every element in the app, its class, every color value, rendered with the real `style.css`. When in doubt about what to call something or how it should look, that file is the source of truth — read it before guessing.
 
-`.ggp-retail` / `.ggp-keys` / `.ggp-low` / `.ggp-hist-low` / `.ggp-notrack` (the gg.deals live-price overlay on wishlist cards) are **badges**, not "tags" — confirmed against the reference file. "Tag" only shows up as a human-readable *name* for a couple of specific badge instances (`.cich-tag` "read-only game tag", `.col-row-tag` "collection tag") — it does not mean a 5th category.
-
 **Consistency law:** the same badge/pill/chip must render pixel-identically everywhere it appears in the app (same class, same CSS, no per-location size/weight overrides). Position/container/layout may differ by context (mobile vs desktop, overlay vs list row) — the element's own look never forks. If a screen needs the element to look different, that's a sign it's a different element, not a variant.
 
 `reviews/pills-badges-chips-audit.html` and `reviews/pills-badges-chips-stats-preview.html` have been removed — both were superseded by `pills-badges-chips-stats-reference.html` and were kept out of date.
