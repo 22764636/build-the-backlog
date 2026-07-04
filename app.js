@@ -2594,10 +2594,10 @@ function openPanel(id){
       const pCover=parent.cover||(parent.steamAppId?sc(parent.steamAppId):'');
       const pThumb=pCover?`<img class="panel-base-thumb" src="${esc(pCover)}" alt="">`:`<div class="panel-base-thumb" style="background:var(--base);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--t3)">🎮</div>`;
       b+=`<div class="ps"><div class="psl">Base Game</div>
-        <div class="panel-base-game" data-pid="${esc(parent.id)}">
+        <div class="panel-base-game ${prioClass(parent.priority)}" data-pid="${esc(parent.id)}">
           ${pThumb}
           <div class="panel-base-info">
-            <span class="panel-base-title">${esc(parent.title)}</span>
+            <span class="panel-base-title ${statusTextClass(parent)}">${esc(parent.title)}</span>
             <span class="panel-base-arrow">›</span>
           </div>
         </div></div>`;
