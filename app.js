@@ -2308,6 +2308,7 @@ function _pickDdFlip(dd,triggerEl){
   if(!inp)return;
   inp.addEventListener('input',()=>{hid.value=inp.value;updateStoreDd(inp,dd,hid,btcSelPlat);});
   inp.addEventListener('focus',()=>{updateStoreDd(inp,dd,hid,btcSelPlat);});
+  inp.addEventListener('blur',()=>_closeDdOnBlur('btcStoreDd'));
 })();
 // fColStoreInput autocomplete
 (function(){
@@ -2317,6 +2318,7 @@ function _pickDdFlip(dd,triggerEl){
   if(!inp)return;
   inp.addEventListener('input',()=>{hid.value=inp.value;updateStoreDd(inp,dd,hid,_modalColPlat||'Steam');});
   inp.addEventListener('focus',()=>{updateStoreDd(inp,dd,hid,_modalColPlat||'Steam');});
+  inp.addEventListener('blur',()=>_closeDdOnBlur('fColStoreDd'));
 })();
 // btcPlayStatusBtn
 document.addEventListener('click',e=>{
@@ -3030,6 +3032,13 @@ function _focusNextField(el){
   const idx=focusables.indexOf(el);
   if(idx>-1&&idx<focusables.length-1)focusables[idx+1].focus();
 }
+// Closes a focus-triggered suggestion dropdown once its input loses focus for any
+// reason (Tab, programmatic focus change, tapping away on mobile) — not just a
+// document click, which is the only thing the click-outside handlers below catch.
+// Delayed so a click/tap on a .dd-opt inside the dropdown still registers first.
+function _closeDdOnBlur(ddId){
+  setTimeout(()=>{const el=document.getElementById(ddId);if(el)el.classList.remove('on')},200);
+}
 function makeChip(wrapId,inputId,getA,setA,renderCb,labelFn){
   function render(){
     const w=document.getElementById(wrapId),inp=document.getElementById(inputId);
@@ -3071,6 +3080,7 @@ function updateModalColDd(){
 }
 document.getElementById('fColColInput').addEventListener('input',updateModalColDd);
 document.getElementById('fColColInput').addEventListener('focus',updateModalColDd);
+document.getElementById('fColColInput').addEventListener('blur',()=>_closeDdOnBlur('fColColDd'));
 
 function updateBtcColDd(){
   const dd=document.getElementById('btcColDd');
@@ -3087,6 +3097,7 @@ function updateBtcColDd(){
 
 document.getElementById('btcColInput').addEventListener('input',updateBtcColDd);
 document.getElementById('btcColInput').addEventListener('focus',updateBtcColDd);
+document.getElementById('btcColInput').addEventListener('blur',()=>_closeDdOnBlur('btcColDd'));
 
 function updateGenreDd(){
   const dd=document.getElementById('genreDd');
@@ -3102,6 +3113,7 @@ function updateGenreDd(){
 }
 document.getElementById('genreInput').addEventListener('input',updateGenreDd);
 document.getElementById('genreInput').addEventListener('focus',updateGenreDd);
+document.getElementById('genreInput').addEventListener('blur',()=>_closeDdOnBlur('genreDd'));
 
 // ── Tags dropdown (sorted by most-used) ──
 function updateTagsDd(){
@@ -3124,6 +3136,7 @@ function updateTagsDd(){
 }
 document.getElementById('tagsInput').addEventListener('input',updateTagsDd);
 document.getElementById('tagsInput').addEventListener('focus',updateTagsDd);
+document.getElementById('tagsInput').addEventListener('blur',()=>_closeDdOnBlur('tagsDd'));
 document.addEventListener('click',e=>{
   if(!e.target.closest('.genre-wrap')){document.getElementById('genreDd').classList.remove('on');document.getElementById('tagsDd').classList.remove('on');const bdd=document.getElementById('btcColDd');if(bdd)bdd.classList.remove('on');const mdd=document.getElementById('fColColDd');if(mdd)mdd.classList.remove('on');const idd=document.getElementById('colInlineDd');if(idd)idd.classList.remove('on');const bsd=document.getElementById('btcStoreDd');if(bsd)bsd.classList.remove('on');const fsd=document.getElementById('fColStoreDd');if(fsd)fsd.classList.remove('on');}
   if(!e.target.closest('#devGWrap'))document.getElementById('devDd').classList.remove('on');
@@ -3162,8 +3175,10 @@ const renderDev=makeChip('devWrap','fDev',()=>cDev,v=>{cDev=v},updateDevDd);
 const renderPub=makeChip('pubWrap','fPub',()=>cPub,v=>{cPub=v},updatePubDd);
 document.getElementById('fDev').addEventListener('input',updateDevDd);
 document.getElementById('fDev').addEventListener('focus',updateDevDd);
+document.getElementById('fDev').addEventListener('blur',()=>_closeDdOnBlur('devDd'));
 document.getElementById('fPub').addEventListener('input',updatePubDd);
 document.getElementById('fPub').addEventListener('focus',updatePubDd);
+document.getElementById('fPub').addEventListener('blur',()=>_closeDdOnBlur('pubDd'));
 
 // ══════════════════════════════════════════
 //  COVER PREVIEW
@@ -3470,6 +3485,7 @@ document.getElementById('prioBtns').addEventListener('click',e=>{
   }
   inp.addEventListener('input',()=>showDd(inp.value.trim()));
   inp.addEventListener('focus',()=>{if(inp.value.trim())showDd(inp.value.trim())});
+  inp.addEventListener('blur',()=>_closeDdOnBlur('parentDd'));
   document.addEventListener('click',e=>{if(!e.target.closest('#parentAppIdRow'))dd.classList.remove('on')});
 })();
 
