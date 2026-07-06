@@ -71,11 +71,7 @@ button{text-transform:none;letter-spacing:0}
 .sl.collapsed .sl-toggle{transform:rotate(-90deg)}
 .sb-body{overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1)}.batch-sentinel{height:1px;width:100%;grid-column:1/-1;pointer-events:none;visibility:hidden}
 
-/* ── PLAY STATUS QUICK PICKER ── */
-.ps-picker{position:fixed;z-index:400;background:var(--s1);border:1px solid var(--bd2);
-  border-radius:var(--r);padding:.3rem;display:none;flex-direction:column;gap:1px;
-  min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
-.ps-picker.on{display:flex}
+/* ── PLAY STATUS PICKER OPTIONS (used inside .pick-dd, e.g. #fColPsDd/#btcPsDd) ── */
 .ps-pick-opt{padding:5px 8px;font-size:.72rem;cursor:pointer;
   color:var(--text);transition:background .12s;display:flex;align-items:center;gap:.5rem}
 .ps-pick-opt:hover{background:#02b3fc15}
@@ -92,7 +88,7 @@ button{text-transform:none;letter-spacing:0}
 .col-type-badge{font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   background:#1a0a3a;color:#c4a0ff;
   border-radius:4px;padding:2px 6px;line-height:1.4;max-width:120px;overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;display:inline-block}
+  white-space:nowrap;display:inline-block;user-select:none;-webkit-user-select:none}
 /* ── PANEL DLC GRID ── */
 .panel-dlc-item{cursor:pointer;margin-bottom:.2rem}
 .panel-dlc-item:last-child{margin-bottom:0}
@@ -113,7 +109,8 @@ button{text-transform:none;letter-spacing:0}
 
 /* Collection card — same base as .gc but different pill bar */
 .col-ps-badge{font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-  padding:2px 6px;border-radius:4px;line-height:1.4;cursor:default;position:relative;white-space:nowrap}
+  padding:2px 6px;border-radius:4px;line-height:1.4;cursor:default;position:relative;white-space:nowrap;
+  user-select:none;-webkit-user-select:none}
 .col-ps-badge .ps-tip{display:none;position:absolute;bottom:calc(100% + 5px);left:50%;
   transform:translateX(-50%);background:var(--s1);border:1px solid var(--bd2);
   border-radius:var(--r);padding:3px 8px;font-size:.65rem;font-weight:400;
@@ -152,7 +149,7 @@ button{text-transform:none;letter-spacing:0}
 .col-row-tag{font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   padding:2px 6px;line-height:1.4;
   border-radius:4px;background:#1a0a3a;color:#c4a0ff;
-  white-space:nowrap;flex-shrink:0}
+  white-space:nowrap;flex-shrink:0;user-select:none;-webkit-user-select:none}
 .sb-body.expanded{overflow:visible}
 .sb.collapsed .sb-body{max-height:0!important;overflow:hidden}
 .sb{margin-bottom:1rem}
@@ -234,11 +231,11 @@ button{text-transform:none;letter-spacing:0}
 .cbot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.3rem;margin-top:auto}
 .cprice{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.88rem;color:var(--blue);flex-shrink:0}
 .ggp-ov{position:absolute;bottom:3px;left:0;right:0;display:flex;flex-wrap:nowrap;align-items:flex-end;justify-content:space-between;padding:0 .3rem .25rem;z-index:3;pointer-events:none}
-.ggp-retail{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#e0f7ff;background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap}
-.ggp-keys{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--amber);background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap}
-.ggp-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--green);background:#0a1a0acc;border-radius:4px;padding:2px 6px;white-space:nowrap}
-.ggp-hist-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#ffd700;background:#1a140acc;border-radius:4px;padding:2px 6px;white-space:nowrap}
-.ggp-notrack{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--muted);background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap}
+.ggp-retail{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#e0f7ff;background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
+.ggp-keys{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--amber);background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
+.ggp-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--green);background:#0a1a0acc;border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
+.ggp-hist-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#ffd700;background:#1a140acc;border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
+.ggp-notrack{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--muted);background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
 .gg.lv .ggp-ov{display:none}
 /* side panel — Live Price section: same .ggp-* tags as the card overlay, plain row instead of an absolute-positioned strip */
 .pv-liveprice{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-height:1.1rem}
