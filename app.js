@@ -903,7 +903,6 @@ window._phToggle=function(hid,btn,n){const h=document.getElementById(hid);if(!h)
 const isUnreleased=g=>isGameUnreleased(g); // alias
 const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
 
-function prioColor(p){return p==='high'?'var(--cyan)':p==='low'?'var(--lime)':'var(--magenta)'}
 function prioClass(p){return p==='high'?'prio-high':p==='low'?'prio-low':'prio-medium'}
 // Status color for a game/DLC's title text — replaces separate dots/badges.
 function statusTextClass(g){
@@ -4894,7 +4893,7 @@ function _closeAllFloating(){
     games.filter(g=>g.status!=='bought').forEach(g=>{const p=g.priority||'medium';freq[p]=(freq[p]||0)+1;});
     list.innerHTML=`<div class="fbar-pills">${PRIOS.map(({value,label})=>{
       const sel=fPrios.has(value);
-      return`<button class="b-plat fbar-pill${sel?' selected':''}" data-val="${value}" style="background:${prioColor(value)};color:#031329">${label}<span class="fbar-pill-count fpc-dark">${freq[value]||0}</span></button>`;
+      return`<button class="b-plat fbar-pill ${prioClass(value)}${sel?' selected':''}" data-val="${value}" title="${label}" aria-label="${label} priority"><span class="fbar-pill-count fpc-dark">${freq[value]||0}</span></button>`;
     }).join('')}</div>`;
     list.querySelectorAll('.fbar-pill').forEach(el=>{
       el.addEventListener('click',()=>{
