@@ -1015,6 +1015,21 @@ const FAV_STEAM='https://store.steampowered.com/favicon.ico';
 const FAV_GG='https://gg.deals/favicon.ico';
 const FAV_SDB="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231b2838'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='16' fill='%2366c0f4'%3EDB%3C/text%3E%3C/svg%3E";
 function favImg(src,alt){return`<img src="${src}" alt="${alt}" width="13" height="13" onerror="this.style.opacity='.3'">`}
+function shareIcon(){return`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10V2M8 2L5 5M8 2l3 3"/><path d="M2 9v3.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V9"/></svg>`}
+// Share a game's store link — there's no shareable URL for a backlog entry itself
+// (data lives in localStorage/the user's private Sheet), so this shares wherever the
+// game can actually be found: g.storeLink if the user set one, else the Steam page,
+// same fallback chain openPanel() already uses to build its own store link icon.
+async function shareGame(id){
+  const g=games.find(x=>String(x.id)===String(id));if(!g)return;
+  const url=g.storeLink||(g.steamAppId?`https://store.steampowered.com/app/${g.steamAppId}/`:`https://store.steampowered.com/search/?term=${encodeURIComponent(g.title||'')}`);
+  if(navigator.share){
+    try{await navigator.share({title:g.title||'Game',url})}catch(e){/* user cancelled — no-op */}
+    return;
+  }
+  try{await navigator.clipboard.writeText(url);showToast('Link copied to clipboard')}
+  catch(e){showToast('Could not copy link')}
+}
 
 // ══════════════════════════════════════════
 //  TOAST
@@ -2386,6 +2401,7 @@ function openPanel(id){
       <a href="${stUrl}" class="pt-lnk" target="_blank" title="Steam">${favImg(FAV_STEAM,'steam')}</a>
       <a href="${ggUrl}" class="pt-lnk" target="_blank" title="gg.deals">${favImg(FAV_GG,'gg')}</a>
       <a href="${sdbUrl}" class="pt-lnk" target="_blank" title="SteamDB">${favImg(FAV_SDB,'sdb')}</a>
+      <button type="button" class="pt-lnk" onclick="shareGame('${esc(g.id)}')" title="Share">${shareIcon()}</button>
     </div>
   </div>
   <div class="pm">

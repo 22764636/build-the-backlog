@@ -325,7 +325,8 @@ button{text-transform:none;letter-spacing:0}
 .pt-links{display:flex;gap:.25rem;flex-shrink:0}
 .pt-lnk{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
   border-radius:var(--r);background:var(--base);border:1px solid var(--bd);
-  color:var(--t3);text-decoration:none;transition:all .15s;flex-shrink:0}
+  color:var(--t3);text-decoration:none;transition:all .15s;flex-shrink:0;cursor:pointer;
+  font-family:inherit}
 .pt-lnk:hover{border-color:var(--blue);color:var(--blue)}
 .pt-lnk img{width:14px;height:14px;object-fit:contain;display:block}
 .pm{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.65rem;align-items:center}
