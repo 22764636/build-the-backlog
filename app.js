@@ -891,8 +891,8 @@ let hrMinVal=0,hrMaxVal=100;
 
 let cGenres=[],cTags=[],cStars=0;
 let fGenres=new Set(),fTags=new Set(),fPrios=new Set();
-let fGenreLogic='or',fTagLogic='or';
-let cfGenres=new Set(),cfGenreLogic='or',cfPlats=new Set(),cfPlatExclusive=false;
+let fGenreLogic='or',fTagLogic='or',fPrioMode='upto';
+let cfGenres=new Set(),cfGenreLogic='or',cfPlats=new Set(),cfPlatMode='any';
 
 // ══════════════════════════════════════════
 //  HELPERS
@@ -904,6 +904,19 @@ const isUnreleased=g=>isGameUnreleased(g); // alias
 const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
 
 function prioClass(p){return p==='high'?'prio-high':p==='low'?'prio-low':'prio-medium'}
+// Advances the priority filter pill to its next cycle state. UP TO is cumulative
+// (low -> low+medium -> everything/no filter -> repeat); EXACT isolates one tier
+// at a time (low -> medium -> high -> repeat). Any state that doesn't match one of
+// the mode's canonical stops (e.g. leftover from a shared URL, or a chip removed
+// individually) just lands on the mode's first stop rather than guessing further.
+function cyclePrioFilter(){
+  const states=fPrioMode==='exact'?[['low'],['medium'],['high']]:[[],['low'],['low','medium']];
+  const key=arr=>[...arr].sort().join(',');
+  const curKey=key(fPrios);
+  const idx=states.findIndex(s=>key(s)===curKey);
+  const next=idx===-1?states[0]:states[(idx+1)%states.length];
+  fPrios=new Set(next);
+}
 // Status color for a game/DLC's title text — replaces separate dots/badges.
 function statusTextClass(g){
   if(g.status==='cancelled')return'st-cancelled';
@@ -1100,9 +1113,11 @@ function collectionFiltered(){
     }
     if(cfPlats.size>0){
       const owned=ownedPlatforms(g);
-      if(cfPlatExclusive){
+      if(cfPlatMode==='only'){
         const selPlat=[...cfPlats][0];
         if(!owned.includes(selPlat)||owned.length!==1)return false;
+      } else if(cfPlatMode==='all'){
+        if(![...cfPlats].every(p=>owned.includes(p)))return false;
       } else {
         if(!owned.some(p=>cfPlats.has(p)))return false;
       }
@@ -3404,13 +3419,17 @@ document.getElementById('fStore').addEventListener('blur',()=>{
 // ══════════════════════════════════════════
 function _setPriority(v){
   document.getElementById('fPriority').value=v;
-  document.querySelectorAll('#prioBtns .prio-btn').forEach(b=>{
-    b.classList.toggle('prio-btn-on',b.dataset.v===v);
-  });
+  const btn=document.getElementById('prioBtn');
+  const lbl=prioLabel(v);
+  btn.className=`prio-btn ${prioClass(v)}`;
+  btn.title=lbl;btn.setAttribute('aria-label',lbl+' priority');
 }
-document.getElementById('prioBtns').addEventListener('click',e=>{
-  const btn=e.target.closest('.prio-btn');
-  if(btn)_setPriority(btn.dataset.v);
+// One pill instead of three buttons — click advances Low/Medium/High in order,
+// wrapping around (matches the read-only cumulative fill: high = fully lit).
+document.getElementById('prioBtn').addEventListener('click',()=>{
+  const order=['low','medium','high'];
+  const idx=order.indexOf(document.getElementById('fPriority').value);
+  _setPriority(order[(idx+1+order.length)%order.length]);
 });
 
 
@@ -3933,7 +3952,7 @@ function saveHash(){
     if(cs&&cs.value&&cs.value!=='steamcol')p.set('csort',cs.value);
     if(cfGenres.size){p.set('cg',[...cfGenres].join('|'));if(cfGenreLogic!=='or')p.set('cgl',cfGenreLogic);}
     if(cfPlayStatus.size)p.set('cps',[...cfPlayStatus].join('|'));
-    if(cfPlats.size){p.set('cp',[...cfPlats].join('|'));if(cfPlatExclusive)p.set('cpe','1');}
+    if(cfPlats.size){p.set('cp',[...cfPlats].join('|'));if(cfPlatMode!=='any')p.set('cpm',cfPlatMode);}
     if(cfSteamCol.size){p.set('cc',[...cfSteamCol].join('|'));if(cfSteamColLogic!=='or')p.set('ccl',cfSteamColLogic);}
   } else {
     const ss=document.getElementById('sortSel');
@@ -3980,7 +3999,8 @@ function restoreFromHash(){
     if(p.has('cgl'))cfGenreLogic=p.get('cgl');
     if(p.has('cps'))cfPlayStatus=new Set(p.get('cps').split('|').filter(Boolean));
     if(p.has('cp'))cfPlats=new Set(p.get('cp').split('|').filter(Boolean));
-    if(p.has('cpe'))cfPlatExclusive=true;
+    if(p.has('cpm'))cfPlatMode=p.get('cpm');
+    else if(p.has('cpe'))cfPlatMode='only'; // back-compat with links shared before the any/all/only switch
     if(p.has('cc'))cfSteamCol=new Set(p.get('cc').split('|').filter(Boolean));
     if(p.has('ccl'))cfSteamColLogic=p.get('ccl');
     if(appMode==='collection')setAppMode('collection');
@@ -4902,24 +4922,47 @@ function _closeAllFloating(){
   document.getElementById('fbar-tags-clear').onclick=()=>{fTags=new Set();renderAll();syncFbarBadges();refreshFbarTags();};
 
   // ── Wire priority (wishlist) ──
+  // One pill, cycled by clicking, instead of three independent toggles — see
+  // cyclePrioFilter() for the UP TO (cumulative) vs EXACT (isolate one tier) logic.
   function refreshFbarPrio(){
     const list=document.getElementById('fbar-prio-list');if(!list)return;
-    const PRIOS=[{value:'high',label:'High'},{value:'medium',label:'Medium'},{value:'low',label:'Low'}];
     const freq={high:0,medium:0,low:0};
     games.filter(g=>g.status!=='bought').forEach(g=>{const p=g.priority||'medium';freq[p]=(freq[p]||0)+1;});
-    list.innerHTML=`<div class="fbar-pills">${PRIOS.map(({value,label})=>{
-      const sel=fPrios.has(value);
-      return`<button class="b-plat fbar-pill ${prioClass(value)}${sel?' selected':''}" data-val="${value}" title="${label}" aria-label="${label} priority"><span class="fbar-pill-count fpc-dark">${freq[value]||0}</span></button>`;
-    }).join('')}</div>`;
-    list.querySelectorAll('.fbar-pill').forEach(el=>{
-      el.addEventListener('click',()=>{
-        const v=el.dataset.val;
-        fPrios.has(v)?fPrios.delete(v):fPrios.add(v);
-        renderAll();syncFbarBadges();refreshFbarPrio();
-      });
+    const total=freq.high+freq.medium+freq.low;
+    let cls,count,label;
+    if(fPrioMode==='exact'){
+      const v=fPrios.has('high')?'high':fPrios.has('medium')?'medium':'low';
+      cls=v==='low'?'prio-low':v==='medium'?'prio-only-medium':'prio-only-high';
+      count=freq[v]||0;label=prioLabel(v);
+    } else if(fPrios.size===0){
+      cls='prio-high';count=total;label='All';
+    } else if(fPrios.has('medium')){
+      cls='prio-medium';count=(freq.low||0)+(freq.medium||0);label='Low + Medium';
+    } else {
+      cls='prio-low';count=freq.low||0;label='Low';
+    }
+    list.innerHTML=`<div class="fbar-pills">
+      <button class="fbar-pill fbar-pill-prio ${cls}" id="fbar-prio-pill" title="${label}" aria-label="Priority filter: ${label}"><span class="fbar-pill-count fpc-dark">${count}</span></button>
+    </div>`;
+    document.getElementById('fbar-prio-pill').addEventListener('click',()=>{
+      cyclePrioFilter();
+      renderAll();syncFbarBadges();refreshFbarPrio();
     });
+    // UP TO / EXACT mode toggle
+    const modeEl=document.getElementById('fbar-prio-mode');
+    if(modeEl){
+      modeEl.querySelectorAll('.fbar-logic-btn').forEach(b=>{
+        b.classList.toggle('on',b.dataset.m===fPrioMode);
+        b.onclick=()=>{
+          fPrioMode=b.dataset.m;
+          fPrios=fPrioMode==='exact'?new Set(['low']):new Set();
+          modeEl.querySelectorAll('.fbar-logic-btn').forEach(x=>x.classList.toggle('on',x.dataset.m===fPrioMode));
+          renderAll();syncFbarBadges();refreshFbarPrio();
+        };
+      });
+    }
   }
-  document.getElementById('fbar-prio-clear').onclick=()=>{fPrios=new Set();renderAll();syncFbarBadges();refreshFbarPrio();};
+  document.getElementById('fbar-prio-clear').onclick=()=>{fPrios=fPrioMode==='exact'?new Set(['low']):new Set();renderAll();syncFbarBadges();refreshFbarPrio();};
 
   // ── Wire collection genre ──
   function refreshFbarCGenre(){
@@ -4973,23 +5016,23 @@ function _closeAllFloating(){
     list.querySelectorAll('.fbar-pill').forEach(el=>{
       el.addEventListener('click',()=>{
         const v=el.dataset.val;
-        if(cfPlatExclusive){
-          if(cfPlats.has(v)){cfPlats=new Set();}else{cfPlats=new Set([v]);}
+        if(cfPlatMode==='only'){
+          if(cfPlats.has(v)&&cfPlats.size===1){cfPlats=new Set();}else{cfPlats=new Set([v]);}
         } else {
           cfPlats.has(v)?cfPlats.delete(v):cfPlats.add(v);
         }
         renderCollection();syncFbarBadges();refreshFbarCPlat();
       });
     });
-    // Exclusive toggle
-    const exclEl=document.getElementById('fbar-cplat-excl');
-    if(exclEl){
-      exclEl.querySelectorAll('.fbar-logic-btn').forEach(b=>{
-        b.classList.toggle('on',b.dataset.m===(cfPlatExclusive?'excl':'any'));
+    // ANY / ALL / ONLY mode toggle
+    const modeEl=document.getElementById('fbar-cplat-mode');
+    if(modeEl){
+      modeEl.querySelectorAll('.fbar-logic-btn').forEach(b=>{
+        b.classList.toggle('on',b.dataset.m===cfPlatMode);
         b.onclick=()=>{
-          cfPlatExclusive=b.dataset.m==='excl';
-          if(cfPlatExclusive&&cfPlats.size>1)cfPlats=new Set([[...cfPlats][0]]);
-          exclEl.querySelectorAll('.fbar-logic-btn').forEach(x=>x.classList.toggle('on',x.dataset.m===(cfPlatExclusive?'excl':'any')));
+          cfPlatMode=b.dataset.m;
+          if(cfPlatMode==='only'&&cfPlats.size>1)cfPlats=new Set([[...cfPlats][0]]);
+          modeEl.querySelectorAll('.fbar-logic-btn').forEach(x=>x.classList.toggle('on',x.dataset.m===cfPlatMode));
           renderCollection();syncFbarBadges();refreshFbarCPlat();
         };
       });
