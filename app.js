@@ -892,7 +892,7 @@ let hrMinVal=0,hrMaxVal=100;
 let cGenres=[],cTags=[],cStars=0;
 let fGenres=new Set(),fTags=new Set(),fPrios=new Set();
 let fGenreLogic='or',fTagLogic='or',fPrioMode='upto';
-let cfGenres=new Set(),cfGenreLogic='or',cfPlats=new Set(),cfPlatMode='any';
+let cfGenres=new Set(),cfGenreLogic='or',cfPlats=new Set(),cfPlatLogic='or',cfPlatClosed=false;
 
 // ══════════════════════════════════════════
 //  HELPERS
@@ -1113,14 +1113,14 @@ function collectionFiltered(){
     }
     if(cfPlats.size>0){
       const owned=ownedPlatforms(g);
-      if(cfPlatMode==='only'){
-        const selPlat=[...cfPlats][0];
-        if(!owned.includes(selPlat)||owned.length!==1)return false;
-      } else if(cfPlatMode==='all'){
-        if(![...cfPlats].every(p=>owned.includes(p)))return false;
-      } else {
-        if(!owned.some(p=>cfPlats.has(p)))return false;
-      }
+      // OR/AND picks the base match (own at least one selected vs own every selected);
+      // "closed" then additionally requires owned to have nothing outside the
+      // selected set — e.g. OR+closed = "A or B, and nowhere else", AND+closed =
+      // "exactly A and B, no more, no less" (a single platform + closed reproduces
+      // the old single-platform-exclusive ONLY behavior as a special case).
+      const baseMatch=cfPlatLogic==='and'?[...cfPlats].every(p=>owned.includes(p)):owned.some(p=>cfPlats.has(p));
+      if(!baseMatch)return false;
+      if(cfPlatClosed&&!owned.every(p=>cfPlats.has(p)))return false;
     }
     return true;
   });
@@ -3984,7 +3984,7 @@ function saveHash(){
     if(cs&&cs.value&&cs.value!=='steamcol')p.set('csort',cs.value);
     if(cfGenres.size){p.set('cg',[...cfGenres].join('|'));if(cfGenreLogic!=='or')p.set('cgl',cfGenreLogic);}
     if(cfPlayStatus.size)p.set('cps',[...cfPlayStatus].join('|'));
-    if(cfPlats.size){p.set('cp',[...cfPlats].join('|'));if(cfPlatMode!=='any')p.set('cpm',cfPlatMode);}
+    if(cfPlats.size){p.set('cp',[...cfPlats].join('|'));if(cfPlatLogic!=='or')p.set('cpl',cfPlatLogic);if(cfPlatClosed)p.set('cpc','1');}
     if(cfSteamCol.size){p.set('cc',[...cfSteamCol].join('|'));if(cfSteamColLogic!=='or')p.set('ccl',cfSteamColLogic);}
   } else {
     const ss=document.getElementById('sortSel');
@@ -4031,8 +4031,11 @@ function restoreFromHash(){
     if(p.has('cgl'))cfGenreLogic=p.get('cgl');
     if(p.has('cps'))cfPlayStatus=new Set(p.get('cps').split('|').filter(Boolean));
     if(p.has('cp'))cfPlats=new Set(p.get('cp').split('|').filter(Boolean));
-    if(p.has('cpm'))cfPlatMode=p.get('cpm');
-    else if(p.has('cpe'))cfPlatMode='only'; // back-compat with links shared before the any/all/only switch
+    if(p.has('cpl'))cfPlatLogic=p.get('cpl');
+    if(p.has('cpc'))cfPlatClosed=true;
+    // back-compat with links shared before the OR/AND + open/closed switch
+    else if(p.has('cpm')){const m=p.get('cpm');cfPlatLogic=m==='all'?'and':'or';cfPlatClosed=m==='only';}
+    else if(p.has('cpe')){cfPlatLogic='and';cfPlatClosed=true;}
     if(p.has('cc'))cfSteamCol=new Set(p.get('cc').split('|').filter(Boolean));
     if(p.has('ccl'))cfSteamColLogic=p.get('ccl');
     if(appMode==='collection')setAppMode('collection');
@@ -4994,7 +4997,7 @@ function _closeAllFloating(){
       });
     }
   }
-  document.getElementById('fbar-prio-clear').onclick=()=>{fPrios=fPrioMode==='exact'?new Set(['low']):new Set();renderAll();syncFbarBadges();refreshFbarPrio();};
+  document.getElementById('fbar-prio-clear').onclick=()=>{fPrioMode='upto';fPrios=new Set();renderAll();syncFbarBadges();refreshFbarPrio();};
 
   // ── Wire collection genre ──
   function refreshFbarCGenre(){
@@ -5048,23 +5051,30 @@ function _closeAllFloating(){
     list.querySelectorAll('.fbar-pill').forEach(el=>{
       el.addEventListener('click',()=>{
         const v=el.dataset.val;
-        if(cfPlatMode==='only'){
-          if(cfPlats.has(v)&&cfPlats.size===1){cfPlats=new Set();}else{cfPlats=new Set([v]);}
-        } else {
-          cfPlats.has(v)?cfPlats.delete(v):cfPlats.add(v);
-        }
+        cfPlats.has(v)?cfPlats.delete(v):cfPlats.add(v);
         renderCollection();syncFbarBadges();refreshFbarCPlat();
       });
     });
-    // ANY / ALL / ONLY mode toggle
-    const modeEl=document.getElementById('fbar-cplat-mode');
-    if(modeEl){
-      modeEl.querySelectorAll('.fbar-logic-btn').forEach(b=>{
-        b.classList.toggle('on',b.dataset.m===cfPlatMode);
+    // OR/AND picks the base match; OPEN/EXACT independently restricts to the
+    // selected set having nothing extra — see the predicate for the full matrix.
+    const logicEl=document.getElementById('fbar-cplat-logic');
+    if(logicEl){
+      logicEl.querySelectorAll('.fbar-logic-btn').forEach(b=>{
+        b.classList.toggle('on',b.dataset.l===cfPlatLogic);
         b.onclick=()=>{
-          cfPlatMode=b.dataset.m;
-          if(cfPlatMode==='only'&&cfPlats.size>1)cfPlats=new Set([[...cfPlats][0]]);
-          modeEl.querySelectorAll('.fbar-logic-btn').forEach(x=>x.classList.toggle('on',x.dataset.m===cfPlatMode));
+          cfPlatLogic=b.dataset.l;
+          logicEl.querySelectorAll('.fbar-logic-btn').forEach(x=>x.classList.toggle('on',x.dataset.l===cfPlatLogic));
+          renderCollection();syncFbarBadges();refreshFbarCPlat();
+        };
+      });
+    }
+    const closedEl=document.getElementById('fbar-cplat-closed');
+    if(closedEl){
+      closedEl.querySelectorAll('.fbar-logic-btn').forEach(b=>{
+        b.classList.toggle('on',(b.dataset.c==='exact')===cfPlatClosed);
+        b.onclick=()=>{
+          cfPlatClosed=b.dataset.c==='exact';
+          closedEl.querySelectorAll('.fbar-logic-btn').forEach(x=>x.classList.toggle('on',(x.dataset.c==='exact')===cfPlatClosed));
           renderCollection();syncFbarBadges();refreshFbarCPlat();
         };
       });
