@@ -71,11 +71,7 @@ button{text-transform:none;letter-spacing:0}
 .sl.collapsed .sl-toggle{transform:rotate(-90deg)}
 .sb-body{overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1)}.batch-sentinel{height:1px;width:100%;grid-column:1/-1;pointer-events:none;visibility:hidden}
 
-/* ── PLAY STATUS QUICK PICKER ── */
-.ps-picker{position:fixed;z-index:400;background:var(--s1);border:1px solid var(--bd2);
-  border-radius:var(--r);padding:.3rem;display:none;flex-direction:column;gap:1px;
-  min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
-.ps-picker.on{display:flex}
+/* ── PLAY STATUS PICKER OPTIONS (used inside .pick-dd, e.g. #fColPsDd/#btcPsDd) ── */
 .ps-pick-opt{padding:5px 8px;font-size:.72rem;cursor:pointer;
   color:var(--text);transition:background .12s;display:flex;align-items:center;gap:.5rem}
 .ps-pick-opt:hover{background:#02b3fc15}

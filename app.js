@@ -1490,7 +1490,7 @@ function colCardHTML(g){
   const gid_s=String(g.id);
   const ps=g.playStatus||'Unplayed';
   const psM=PS_META[ps]||{code:'UP',cls:'ps-UP'};
-  const psBadgeCard=`<span class="col-ps-badge ${psM.cls} ps-card-badge" data-id="${gid_s}" title="Click to change status">${psM.code}<span class="ps-tip">${esc(ps)}</span></span>`;
+  const psBadgeCard=`<span class="col-ps-badge ${psM.cls}">${psM.code}<span class="ps-tip">${esc(ps)}</span></span>`;
   const _purchases=gamePurchases(g);
   const _filtCostRaw=cfPlats.size>0?gameFilteredCost(g,cfPlats):gameTotalCost(g);
   const _filtCost=_filtCostRaw===null?null:_filtCostRaw;
@@ -1662,8 +1662,6 @@ function makeSentinel(){
 function bindNewCards(container,count){
   const all=container.querySelectorAll(':scope>.gc');
   const start=Math.max(0,all.length-count);
-  // Bind ps picker badges FIRST so stopPropagation fires before card click
-  bindPsPickerCards(container);
   for(let i=start;i<all.length;i++){
     const c=all[i];
     c.addEventListener('click',()=>openPanel(c.dataset.id));
@@ -2183,51 +2181,6 @@ function _anchorBelow(popup, anchor, gap){
     :Math.max(margin,r.top-ph-gap)+'px';
 }
 
-// ── PLAY STATUS QUICK PICKER (item 7) ────────────────────────────────────────
-// Single shared picker element — positioned near the clicked badge
-let _psPicker=null;
-function getOrCreatePicker(){
-  if(_psPicker)return _psPicker;
-  const el=document.createElement('div');
-  el.id='psQuickPicker';el.className='ps-picker';
-  document.body.appendChild(el);
-  _psPicker=el;
-  document.addEventListener('click',e=>{
-    if(!e.target.closest('#psQuickPicker')&&!e.target.closest('.ps-card-badge'))
-      el.classList.remove('on');
-  });
-  return el;
-}
-
-function openPsPicker(badge,gameId){
-  const picker=getOrCreatePicker();
-  const g=games.find(x=>x.id===gameId);if(!g)return;
-  const cur=g.playStatus||'Unplayed';
-  const statuses=Object.keys(PS_META);
-  picker.innerHTML=statuses.map(s=>{
-    const m=PS_META[s];
-    return'<div class="ps-pick-opt'+(s===cur?' active':'')+'" data-s="'+esc(s)+'">'+
-      '<span class="col-ps-badge '+m.cls+'" style="flex-shrink:0">'+m.code+'</span>'+
-      '<span class="ps-pick-label">'+esc(s)+'</span>'+
-    '</div>';
-  }).join('');
-  picker.querySelectorAll('.ps-pick-opt').forEach(opt=>{
-    opt.addEventListener('click',e=>{
-      e.stopPropagation();
-      const g2=games.find(x=>x.id===gameId);if(!g2)return;
-      g2.playStatus=opt.dataset.s;
-      // Keep purchases[0] in sync so the change persists on next load
-      const _p0=gamePurchases(g2)[0];if(_p0)_p0.playStatus=opt.dataset.s;
-      save(gameId);dispatchRender();if(openId===gameId)openPanel(gameId);
-      picker.classList.remove('on');
-    });
-  });
-  const rect=badge.getBoundingClientRect();
-  picker.style.left=Math.min(rect.left,window.innerWidth-200)+'px';
-  picker.classList.add('on');
-  _anchorBelow(picker,badge,4);
-}
-
 // Modal play status fancy picker
 function _syncModalPsBtn(val){
   const btn=document.getElementById('fColPlayStatusBtn');if(!btn)return;
@@ -2332,22 +2285,6 @@ document.addEventListener('click',e=>{
     document.querySelectorAll('.pick-dd.on').forEach(el=>{el.classList.remove('on');});
 });
 
-// Wire picker on rendered cards (called from bindNewCards)
-function bindPsPickerCards(container,start){
-  const badges=container.querySelectorAll('.ps-card-badge');
-  // Only bind badges that haven't been bound yet (data-ps-bound not set)
-  badges.forEach(badge=>{
-    if(badge.dataset.psBound)return;
-    badge.dataset.psBound='1';
-    // Use capture phase so this fires BEFORE the card's bubble-phase click
-    badge.addEventListener('click',e=>{
-      e.stopPropagation();
-      e.preventDefault();
-      openPsPicker(badge,badge.dataset.id);
-    },true);
-  });
-}
-
 function _rawCloseCollectionModal(){
   document.getElementById('btcov').classList.remove('on');
   const bdd=document.getElementById('btcColDd');if(bdd)bdd.classList.remove('on');
@@ -2419,8 +2356,6 @@ function _buildPlatTabContent(g,plat){
 
   return`${purchaseSection}${twoCol}`;
 }
-
-function wirePlatTabContent(g,plat){}
 
 function openPanel(id){
   const sid=String(id);
@@ -2722,7 +2657,6 @@ function openPanel(id){
     const _gForPanel=g;
     const _ordPPurchases=[...gamePurchases(_gForPanel)].sort((a,b)=>PLATFORM_ORDER.indexOf(a.platform)-PLATFORM_ORDER.indexOf(b.platform));
     const _firstPlatPanel=_ordPPurchases[0]?_ordPPurchases[0].platform:'Steam';
-    wirePlatTabContent(_gForPanel,_firstPlatPanel);
     _platTabsEl.querySelectorAll('.plat-tab').forEach(tab=>{
       tab.addEventListener('click',()=>{
         const plat=tab.dataset.plat;
@@ -2734,7 +2668,7 @@ function openPanel(id){
           t.style.borderColor=active?'transparent':'';
         });
         const content=document.getElementById('platTabContent');
-        if(content){content.innerHTML=_buildPlatTabContent(_gForPanel,plat);wirePlatTabContent(_gForPanel,plat);}
+        if(content){content.innerHTML=_buildPlatTabContent(_gForPanel,plat);}
       });
     });
   }
@@ -4781,7 +4715,6 @@ function _openSharePicker(url){
 //  CLOSE FLOATING PICKERS ON SCROLL
 // ══════════════════════════════════════════
 function _closeAllFloating(){
-  document.querySelectorAll('.ps-picker.on').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('.fpop.open').forEach(el=>el.classList.remove('open'));
   document.querySelectorAll('.pick-dd.on').forEach(el=>el.classList.remove('on'));
 }
