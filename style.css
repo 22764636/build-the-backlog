@@ -435,23 +435,23 @@ button{text-transform:none;letter-spacing:0}
 .mb2.c{border-color:var(--bd);color:var(--t2)}
 .mb2.c:hover{background:rgba(255,255,255,.05);border-color:var(--t2);color:var(--text)}
 
-/* priority toggle buttons — each always shows its own 15/5/25/5/50 proportional fill
-   (there's no per-level hue or label left to distinguish them by otherwise); the
-   selected one is marked with a border ring instead of a color swap */
-.prio-btns{display:flex;gap:.4rem}
-.prio-btn{width:46px;height:22px;padding:0;border-radius:20px;border:1.5px solid transparent;
+/* priority picker — one pill instead of three buttons; clicking cycles the value
+   (see the #prioBtn handler in app.js), and the fill is the same cumulative
+   15/5/25/5/50 meter used for the read-only priority indicators elsewhere, so a
+   game set to "high" here looks identical to "high" everywhere else it's shown */
+.prio-btns{display:flex}
+.prio-btn{width:110px;height:22px;padding:0;border-radius:20px;border:1.5px solid var(--bd);
   cursor:pointer;transition:border-color .15s}
 .prio-btn:hover{border-color:var(--bd2)}
-.prio-btn.prio-btn-on{border-color:var(--text)}
-.prio-btn[data-v="low"]{background:linear-gradient(to right,
+.prio-btn.prio-low{background:linear-gradient(to right,
   var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
   var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
   var(--prio-track) 50%,var(--prio-track) 100%)}
-.prio-btn[data-v="medium"]{background:linear-gradient(to right,
+.prio-btn.prio-medium{background:linear-gradient(to right,
   var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
   var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
   var(--prio-track) 50%,var(--prio-track) 100%)}
-.prio-btn[data-v="high"]{background:linear-gradient(to right,
+.prio-btn.prio-high{background:linear-gradient(to right,
   var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
   var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
   var(--prio-fill) 50%,var(--prio-fill) 100%)}
@@ -1041,21 +1041,35 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .fbar-pill-count.fpc-dark{background:rgba(3,19,41,.55);color:#fff}
 .fbar-pill-count.fpc-light{background:rgba(255,255,255,.6);color:#031329}
 
-/* priority filter pill — no label left to carry (level reads from fill amount),
-   so it needs an explicit width for the 15/5/25/5/50 fill to stay legible;
-   opacity dimming (inherited from .fbar-pill above) still does the selection job */
-.fbar-pill.prio-low,.fbar-pill.prio-medium,.fbar-pill.prio-high{min-width:60px;padding:.25rem .5rem}
-.fbar-pill.prio-low{background:linear-gradient(to right,
+/* priority filter — one pill spanning the full row (not three side by side), cycled
+   by clicking (see cyclePrioFilter() in app.js). Full width means segment 1 gets far
+   more than the pill's own corner radius in pixel-width, so the fill doesn't get
+   swallowed by the rounded cap the way three cramped 60px pills did. Count is
+   pinned to the right via flex, independent of how much of the bar is filled. */
+.fbar-pill-prio{display:flex;align-items:center;justify-content:flex-end;width:100%;
+  padding:.4rem .6rem;opacity:1}
+.fbar-pill-prio.prio-low{background:linear-gradient(to right,
   var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
   var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
   var(--prio-track) 50%,var(--prio-track) 100%)}
-.fbar-pill.prio-medium{background:linear-gradient(to right,
+.fbar-pill-prio.prio-medium{background:linear-gradient(to right,
   var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
   var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
   var(--prio-track) 50%,var(--prio-track) 100%)}
-.fbar-pill.prio-high{background:linear-gradient(to right,
+.fbar-pill-prio.prio-high{background:linear-gradient(to right,
   var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
   var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-fill) 50%,var(--prio-fill) 100%)}
+/* EXACT mode isolates exactly one tier — "only low" looks identical to the
+   cumulative .prio-low above, but medium/high need their own segment lit alone,
+   not everything up to it, so they get their own rules */
+.fbar-pill-prio.prio-only-medium{background:linear-gradient(to right,
+  var(--prio-track) 0%,var(--prio-track) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.fbar-pill-prio.prio-only-high{background:linear-gradient(to right,
+  var(--prio-track) 0%,var(--prio-track) 15%, transparent 15%,transparent 20%,
+  var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
   var(--prio-fill) 50%,var(--prio-fill) 100%)}
 
 /* Sidebar footer */
