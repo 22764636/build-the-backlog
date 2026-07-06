@@ -912,9 +912,9 @@ function statusTextClass(g){
   if(g.status==='bought')return isPreOrder(g)?'st-preorder':'st-owned';
   return'';
 }
-const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#555','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
-function platColor(p){return PLAT_COLORS[p]||'#555'}
-function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':'#031329'}
+const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#3a352c','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
+function platColor(p){return PLAT_COLORS[p]||'#3a352c'}
+function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':p==='Other PC'?'#b5a98c':!PLAT_COLORS[p]?'#b5a98c':'#031329'}
 function platBadgesHTML(g){
   if(g.status!=='bought')return'';
   const ps=ownedPlatforms(g);
@@ -2393,9 +2393,8 @@ function openPanel(id){
       ${isPreOrder(g)?`<span class="bdg b-pre">PRE-ORDER</span>`:g.status==='bought'?`<span class="bdg b-bt">${t('bdgBt')}</span>`:''}
       ${g.status==='removed'?`<span class="bdg b-rm">${t('bdgRm')}</span>`:''}
       ${isCancelled(g)?`<span class="b-cancelled">CANCELLED</span>`:''}
-      ${g.status==='wishlist'&&!isCancelled(g)&&isGameUnreleased(g)?`<span class="bdg b-unrel">UNRELEASED</span>`:''}
       ${g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&g.price!=null&&parseFloat(g.price)===0?`<span class="bdg b-free">FREE</span>`:''}
-      ${isNR&&g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&!(g.price!=null&&parseFloat(g.price)===0)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
+      ${isNR&&g.status==='wishlist'&&!isCancelled(g)&&!(g.price!=null&&parseFloat(g.price)===0)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
       ${g.type==='dlc'?`<span class="bdg" style="background:#3a1a6e;color:#c4a0ff">DLC</span>`:''}
       ${!isNR?`<span class="bdg b-hot" title="Hotness: ${h}">${h}</span>`:''}
     </div>`;
