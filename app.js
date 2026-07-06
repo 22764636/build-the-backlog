@@ -903,7 +903,6 @@ window._phToggle=function(hid,btn,n){const h=document.getElementById(hid);if(!h)
 const isUnreleased=g=>isGameUnreleased(g); // alias
 const sc=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
 
-function prioColor(p){return p==='high'?'var(--cyan)':p==='low'?'var(--lime)':'var(--magenta)'}
 function prioClass(p){return p==='high'?'prio-high':p==='low'?'prio-low':'prio-medium'}
 // Status color for a game/DLC's title text — replaces separate dots/badges.
 function statusTextClass(g){
@@ -912,9 +911,9 @@ function statusTextClass(g){
   if(g.status==='bought')return isPreOrder(g)?'st-preorder':'st-owned';
   return'';
 }
-const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#555','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
-function platColor(p){return PLAT_COLORS[p]||'#555'}
-function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':'#031329'}
+const PLAT_COLORS={'Steam':'#66c0f4','Epic Games':'#101014','GOG':'#9b4dca','Other PC':'#3a352c','PS':'#003791','Xbox':'#107c10','Nintendo':'#e4000f'};
+function platColor(p){return PLAT_COLORS[p]||'#3a352c'}
+function platTextColor(p){return p==='Epic Games'?'#fff':p==='GOG'?'#fff':p==='PS'?'#fff':p==='Xbox'?'#fff':p==='Nintendo'?'#fff':p==='Other PC'?'#b5a98c':!PLAT_COLORS[p]?'#b5a98c':'#031329'}
 function platBadgesHTML(g){
   if(g.status!=='bought')return'';
   const ps=ownedPlatforms(g);
@@ -1016,6 +1015,21 @@ const FAV_STEAM='https://store.steampowered.com/favicon.ico';
 const FAV_GG='https://gg.deals/favicon.ico';
 const FAV_SDB="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231b2838'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='16' fill='%2366c0f4'%3EDB%3C/text%3E%3C/svg%3E";
 function favImg(src,alt){return`<img src="${src}" alt="${alt}" width="13" height="13" onerror="this.style.opacity='.3'">`}
+function shareIcon(){return`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10V2M8 2L5 5M8 2l3 3"/><path d="M2 9v3.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V9"/></svg>`}
+// Share a game's store link — there's no shareable URL for a backlog entry itself
+// (data lives in localStorage/the user's private Sheet), so this shares wherever the
+// game can actually be found: g.storeLink if the user set one, else the Steam page,
+// same fallback chain openPanel() already uses to build its own store link icon.
+async function shareGame(id){
+  const g=games.find(x=>String(x.id)===String(id));if(!g)return;
+  const url=g.storeLink||(g.steamAppId?`https://store.steampowered.com/app/${g.steamAppId}/`:`https://store.steampowered.com/search/?term=${encodeURIComponent(g.title||'')}`);
+  if(navigator.share){
+    try{await navigator.share({title:g.title||'Game',url})}catch(e){/* user cancelled — no-op */}
+    return;
+  }
+  try{await navigator.clipboard.writeText(url);showToast('Link copied to clipboard')}
+  catch(e){showToast('Could not copy link')}
+}
 
 // ══════════════════════════════════════════
 //  TOAST
@@ -2387,15 +2401,15 @@ function openPanel(id){
       <a href="${stUrl}" class="pt-lnk" target="_blank" title="Steam">${favImg(FAV_STEAM,'steam')}</a>
       <a href="${ggUrl}" class="pt-lnk" target="_blank" title="gg.deals">${favImg(FAV_GG,'gg')}</a>
       <a href="${sdbUrl}" class="pt-lnk" target="_blank" title="SteamDB">${favImg(FAV_SDB,'sdb')}</a>
+      <button type="button" class="pt-lnk" onclick="shareGame('${esc(g.id)}')" title="Share">${shareIcon()}</button>
     </div>
   </div>
   <div class="pm">
       ${isPreOrder(g)?`<span class="bdg b-pre">PRE-ORDER</span>`:g.status==='bought'?`<span class="bdg b-bt">${t('bdgBt')}</span>`:''}
       ${g.status==='removed'?`<span class="bdg b-rm">${t('bdgRm')}</span>`:''}
       ${isCancelled(g)?`<span class="b-cancelled">CANCELLED</span>`:''}
-      ${g.status==='wishlist'&&!isCancelled(g)&&isGameUnreleased(g)?`<span class="bdg b-unrel">UNRELEASED</span>`:''}
       ${g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&g.price!=null&&parseFloat(g.price)===0?`<span class="bdg b-free">FREE</span>`:''}
-      ${isNR&&g.status==='wishlist'&&!isCancelled(g)&&!isGameUnreleased(g)&&!(g.price!=null&&parseFloat(g.price)===0)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
+      ${isNR&&g.status==='wishlist'&&!isCancelled(g)&&!(g.price!=null&&parseFloat(g.price)===0)?`<span class="b-rev">${t('bdgRev')}</span>`:''}
       ${g.type==='dlc'?`<span class="bdg" style="background:#3a1a6e;color:#c4a0ff">DLC</span>`:''}
       ${!isNR?`<span class="bdg b-hot" title="Hotness: ${h}">${h}</span>`:''}
     </div>`;
@@ -4895,7 +4909,7 @@ function _closeAllFloating(){
     games.filter(g=>g.status!=='bought').forEach(g=>{const p=g.priority||'medium';freq[p]=(freq[p]||0)+1;});
     list.innerHTML=`<div class="fbar-pills">${PRIOS.map(({value,label})=>{
       const sel=fPrios.has(value);
-      return`<button class="b-plat fbar-pill${sel?' selected':''}" data-val="${value}" style="background:${prioColor(value)};color:#031329">${label}<span class="fbar-pill-count fpc-dark">${freq[value]||0}</span></button>`;
+      return`<button class="b-plat fbar-pill ${prioClass(value)}${sel?' selected':''}" data-val="${value}" title="${label}" aria-label="${label} priority"><span class="fbar-pill-count fpc-dark">${freq[value]||0}</span></button>`;
     }).join('')}</div>`;
     list.querySelectorAll('.fbar-pill').forEach(el=>{
       el.addEventListener('click',()=>{

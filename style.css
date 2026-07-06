@@ -6,6 +6,7 @@
   --text:#e8f4ff;--t2:#8aabcc;--t3:#4a6280;
   --bd:#14528f44;--bd2:#02b3fc44;
   --pw:600px;--hh:60px;--r:10px;--rl:16px;
+  --prio-fill:#c4a0ff;--prio-track:#241b3a;
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -93,8 +94,8 @@ button{text-transform:none;letter-spacing:0}
 .panel-dlc-item{cursor:pointer;margin-bottom:.2rem}
 .panel-dlc-item:last-child{margin-bottom:0}
 /* Base game / DLC link in side panel */
-.panel-base-game{display:flex;align-items:center;gap:0;padding:0;
-  background:transparent;border:none;border-left:3px solid var(--bd2);border-radius:0;
+.panel-base-game{display:flex;align-items:center;gap:0;padding:0;position:relative;
+  background:transparent;border:none;border-left:3px solid transparent;border-radius:0;
   cursor:pointer;overflow:hidden;transition:background .15s}
 .panel-base-game:hover{background:#02b3fc15}
 .panel-base-thumb{width:64px;height:36px;object-fit:cover;flex-shrink:0;display:block;
@@ -117,8 +118,8 @@ button{text-transform:none;letter-spacing:0}
   white-space:nowrap;pointer-events:none;z-index:200;color:var(--text);letter-spacing:0;text-transform:none}
 .col-ps-badge:hover .ps-tip{display:block}
 /* play status modal selector button — same selector-pill branding (shape/type) as
-   type-btn/prio-btn/etc. It has no "unselected" look (always shows the current value
-   filled), which is why its border stays transparent like a selected priority pill does. */
+   type-btn/prio-btn/etc. It has no "unselected" look — always shows the current
+   value filled, so its border stays transparent rather than showing an outline state. */
 .ps-modal-btn{padding:.25rem .65rem;border-radius:20px;border:1.5px solid transparent;cursor:pointer;
   font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
   font-family:'Rajdhani',sans-serif;transition:all .15s;align-self:flex-start}
@@ -211,18 +212,28 @@ button{text-transform:none;letter-spacing:0}
 .b-rev{background:var(--amber);color:#031329;font-size:.56rem;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;
   user-select:none;-webkit-user-select:none}
-.b-bt{background:var(--green);color:#031329}
+.b-bt{background:#0a3a38;color:#3ecfc4}
 .b-pre{background:var(--amber);color:#031329}
 .b-rm{background:var(--s3);color:var(--muted)}
 .b-unrel{background:#f472b6;color:#031329}
 .b-free{background:#ffffff;color:#031329}
-/* priority accent — thin colored bar to the left of the title only, same concept as
-   the calendar's border-left accent (.cal-tba-chip.prio-*, .cal-pop-item.prio-*) */
+/* priority accent — thin bar to the left of the title, filled bottom-to-top in three
+   proportional tiers (15% low / 25% medium / 50% high) instead of a flat per-level color;
+   same concept as the calendar's border-left accent (.cal-tba-chip.prio-*, .cal-pop-item.prio-*) */
 .title-row{display:flex;align-items:center;gap:.35rem;min-width:0}
-.title-prio{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0;background:transparent}
-.title-prio.prio-high{background:var(--blue)}
-.title-prio.prio-medium{background:var(--pink)}
-.title-prio.prio-low{background:var(--lime)}
+.title-prio{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0;background:var(--prio-track)}
+.title-prio.prio-low{background:linear-gradient(to top,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.title-prio.prio-medium{background:linear-gradient(to top,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.title-prio.prio-high{background:linear-gradient(to top,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-fill) 50%,var(--prio-fill) 100%)}
 
 /* card body */
 .cb{padding:.5rem .65rem .55rem;flex:1;display:flex;flex-direction:column;gap:.3rem}
@@ -314,7 +325,8 @@ button{text-transform:none;letter-spacing:0}
 .pt-links{display:flex;gap:.25rem;flex-shrink:0}
 .pt-lnk{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
   border-radius:var(--r);background:var(--base);border:1px solid var(--bd);
-  color:var(--t3);text-decoration:none;transition:all .15s;flex-shrink:0}
+  color:var(--t3);text-decoration:none;transition:all .15s;flex-shrink:0;cursor:pointer;
+  font-family:inherit}
 .pt-lnk:hover{border-color:var(--blue);color:var(--blue)}
 .pt-lnk img{width:14px;height:14px;object-fit:contain;display:block}
 .pm{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.65rem;align-items:center}
@@ -331,8 +343,7 @@ button{text-transform:none;letter-spacing:0}
   background:transparent;color:var(--t2);cursor:pointer;font-size:.7rem;font-weight:700;
   text-transform:uppercase;letter-spacing:.04em;transition:all .15s;font-family:'Rajdhani',sans-serif}
 .type-btn:hover{border-color:var(--blue);color:var(--text)}
-#fTypeGame.on{background:var(--blue);border-color:transparent;color:#031329;font-weight:700}
-#fTypeDlc.on{background:#c4a0ff;border-color:transparent;color:#1a0a3a;font-weight:700}
+#fTypeGame.on,#fTypeDlc.on{background:var(--s3);border-color:transparent;color:var(--text);font-weight:700}
 .pac{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem}
 .pa{flex:1;min-width:100px;background:var(--base);border:1px solid var(--bd);color:var(--t3);
   border-radius:5px;padding:.4rem .6rem;font-size:.72rem;font-weight:500;cursor:pointer;
@@ -424,15 +435,26 @@ button{text-transform:none;letter-spacing:0}
 .mb2.c{border-color:var(--bd);color:var(--t2)}
 .mb2.c:hover{background:rgba(255,255,255,.05);border-color:var(--t2);color:var(--text)}
 
-/* priority toggle buttons */
-.prio-btns{display:flex;gap:.35rem}
-.prio-btn{padding:.25rem .65rem;border-radius:20px;border:1.5px solid var(--bd);
-  background:transparent;color:var(--t2);font-size:.7rem;font-weight:700;cursor:pointer;
-  transition:all .15s;font-family:'Rajdhani',sans-serif;letter-spacing:.04em;text-transform:uppercase}
-.prio-btn:hover{border-color:var(--blue);color:var(--text)}
-.prio-btn[data-v="high"].prio-btn-on{background:var(--cyan);border-color:transparent;color:#031329}
-.prio-btn[data-v="medium"].prio-btn-on{background:var(--magenta);border-color:transparent;color:#031329}
-.prio-btn[data-v="low"].prio-btn-on{background:var(--lime);border-color:transparent;color:#031329}
+/* priority toggle buttons — each always shows its own 15/5/25/5/50 proportional fill
+   (there's no per-level hue or label left to distinguish them by otherwise); the
+   selected one is marked with a border ring instead of a color swap */
+.prio-btns{display:flex;gap:.4rem}
+.prio-btn{width:46px;height:22px;padding:0;border-radius:20px;border:1.5px solid transparent;
+  cursor:pointer;transition:border-color .15s}
+.prio-btn:hover{border-color:var(--bd2)}
+.prio-btn.prio-btn-on{border-color:var(--text)}
+.prio-btn[data-v="low"]{background:linear-gradient(to right,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.prio-btn[data-v="medium"]{background:linear-gradient(to right,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.prio-btn[data-v="high"]{background:linear-gradient(to right,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-fill) 50%,var(--prio-fill) 100%)}
 
 /* chip input — same visual height as a standard .fr input */
 .ciw{display:flex;flex-wrap:wrap;gap:.25rem;align-items:center;background:var(--base);
@@ -498,8 +520,7 @@ button{text-transform:none;letter-spacing:0}
 .fetch-tog{display:flex;gap:.35rem}
 .fetch-btn{padding:.25rem .65rem;border-radius:20px;border:1.5px solid var(--bd);background:transparent;color:var(--t2);cursor:pointer;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;transition:all .15s;font-family:'Rajdhani',sans-serif;white-space:nowrap;flex:1;text-align:center}
 .fetch-btn:hover{border-color:var(--blue);color:var(--text)}
-.fetch-btn.inc.on{background:var(--green);border-color:transparent;color:#031329}
-.fetch-btn.skip.on{background:var(--pink);border-color:transparent;color:#031329}
+.fetch-btn.inc.on,.fetch-btn.skip.on{background:var(--s3);border-color:transparent;color:var(--text)}
 /* Hamburger menu export/import two-column row */
 .hmi-row2{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--bd)}
 .hmi-row2 .hmi{border-top:none}
@@ -696,7 +717,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 }
 .cal-pop.open{display:block}
 .cal-pop-item{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:.4rem;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:.4rem;position:relative;
   padding:.28rem .45rem;border-left:3px solid transparent;border-radius:5px;font-size:.72rem;
   color:var(--t2);cursor:pointer;white-space:normal;word-break:break-word;
   transition:background .1s,color .1s;margin-bottom:.2rem;
@@ -704,7 +725,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .cal-pop-item:last-child{margin-bottom:0}
 .cal-pop-item-title{flex:1;min-width:0;color:var(--t2)}
 .cal-pop-item:hover{background:#02b3fc15}
-.cal-tba-chip{padding:.2rem .5rem;
+.cal-tba-chip{padding:.2rem .5rem;position:relative;
   border-left:3px solid transparent;border-radius:5px;margin-bottom:.2rem;
   cursor:pointer;transition:background .15s;display:block;overflow:hidden}
 .cal-tba-chip-title{font-size:.68rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
@@ -717,9 +738,23 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .st-preorder{color:var(--amber)}
 .st-cancelled{color:#cc2200}
 .st-removed{color:var(--t3)}
-.cal-tba-chip.prio-high,.cal-pop-item.prio-high,.panel-base-game.prio-high{border-left-color:var(--blue)}
-.cal-tba-chip.prio-medium,.cal-pop-item.prio-medium,.panel-base-game.prio-medium{border-left-color:var(--pink)}
-.cal-tba-chip.prio-low,.cal-pop-item.prio-low,.panel-base-game.prio-low{border-left-color:var(--lime)}
+/* the border-left above stays a transparent spacer — a flat border-color can't do a
+   proportional fill, so the actual accent is this ::before, pinned over that same
+   3px strip and filled bottom-to-top exactly like .title-prio */
+.cal-tba-chip::before,.cal-pop-item::before,.panel-base-game::before{
+  content:'';position:absolute;left:0;top:2px;bottom:2px;width:3px;border-radius:2px}
+.cal-tba-chip.prio-low::before,.cal-pop-item.prio-low::before,.panel-base-game.prio-low::before{background:linear-gradient(to top,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.cal-tba-chip.prio-medium::before,.cal-pop-item.prio-medium::before,.panel-base-game.prio-medium::before{background:linear-gradient(to top,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.cal-tba-chip.prio-high::before,.cal-pop-item.prio-high::before,.panel-base-game.prio-high::before{background:linear-gradient(to top,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-fill) 50%,var(--prio-fill) 100%)}
 .cal-tba-toggle{background:var(--blue);border-color:var(--blue);color:#031329}
 @media(max-width:640px){
   #calTba{display:none}
@@ -1005,6 +1040,23 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 .fbar-pill-count{margin-left:.35rem;padding:1px 6px;border-radius:99px;font-weight:700;font-size:.85em;display:inline-block}
 .fbar-pill-count.fpc-dark{background:rgba(3,19,41,.55);color:#fff}
 .fbar-pill-count.fpc-light{background:rgba(255,255,255,.6);color:#031329}
+
+/* priority filter pill — no label left to carry (level reads from fill amount),
+   so it needs an explicit width for the 15/5/25/5/50 fill to stay legible;
+   opacity dimming (inherited from .fbar-pill above) still does the selection job */
+.fbar-pill.prio-low,.fbar-pill.prio-medium,.fbar-pill.prio-high{min-width:60px;padding:.25rem .5rem}
+.fbar-pill.prio-low{background:linear-gradient(to right,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-track) 20%,var(--prio-track) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.fbar-pill.prio-medium{background:linear-gradient(to right,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-track) 50%,var(--prio-track) 100%)}
+.fbar-pill.prio-high{background:linear-gradient(to right,
+  var(--prio-fill) 0%,var(--prio-fill) 15%, transparent 15%,transparent 20%,
+  var(--prio-fill) 20%,var(--prio-fill) 45%, transparent 45%,transparent 50%,
+  var(--prio-fill) 50%,var(--prio-fill) 100%)}
 
 /* Sidebar footer */
 .fbar-footer{padding:0;border-top:1px solid var(--bd);flex-shrink:0}
