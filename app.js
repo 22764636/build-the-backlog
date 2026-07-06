@@ -1681,6 +1681,28 @@ function renderNextBatch(sb,state){
   }
 }
 
+// A full re-render only paints each section's first batch, so on its own it would
+// snap back to a much shorter page and lose however many extra batches the user had
+// scrolled to load. These wrap renderAll()/renderCollection(): capture #content's
+// scroll position before the rebuild, then force-render however many more batches
+// are needed to reach that same depth again before restoring it.
+function _captureScroll(){
+  const content=document.getElementById('content');
+  return content?content.scrollTop:0;
+}
+function _restoreScroll(prevTop){
+  const content=document.getElementById('content');
+  if(!content||!prevTop)return;
+  const target=prevTop+content.clientHeight;
+  for(const[sb,state]of sectionState){
+    while(state.rendered<state.cards.length&&content.scrollHeight<target){
+      renderNextBatch(sb,state);
+    }
+    if(content.scrollHeight>=target)break;
+  }
+  content.scrollTop=prevTop;
+}
+
 function makeSentinel(){
   const s=document.createElement('div');
   s.className='batch-sentinel';
@@ -1830,6 +1852,11 @@ function renderCollectionStats(list){
 // cvm removed — collection uses shared vm variable
 
 function renderCollection(){
+  const _prevScroll=_captureScroll();
+  _renderCollectionInner();
+  _restoreScroll(_prevScroll);
+}
+function _renderCollectionInner(){
   const gc=document.getElementById('gc');
   const list=collectionFiltered();
   renderCollectionStats(list);
@@ -1937,6 +1964,11 @@ function renderCollection(){
 }
 
 function renderAll(){
+  const _prevScroll=_captureScroll();
+  _renderAllInner();
+  _restoreScroll(_prevScroll);
+}
+function _renderAllInner(){
   renderTicker();
   const gc=document.getElementById('gc');
   const grp=document.getElementById('groupSel').value;
