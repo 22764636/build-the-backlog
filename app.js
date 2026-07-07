@@ -4635,7 +4635,7 @@ document.addEventListener('keydown',function(e){
       if(!/^\d{4}-\d{2}$/.test(ym))return;
       byMonth[ym]=(byMonth[ym]||0)+r.cost;
     });
-    const months=Object.keys(byMonth).sort();
+    const months=Object.keys(byMonth).sort().reverse();
     const monthMax=Math.max(...months.map(ym=>byMonth[ym]),0.01);
     const trendHtml=months.map(ym=>`
       <div class="ss-trend-col" title="${monthLabel(ym)}: ${fmtEur(byMonth[ym])}">
