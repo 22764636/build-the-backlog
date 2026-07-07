@@ -594,9 +594,13 @@ button{text-transform:none;letter-spacing:0}
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
 .ss-hbar-val{font-size:.72rem;color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap}
 
-/* Vertical trend chart — spend by month */
-.ss-trend{display:flex;align-items:flex-end;gap:.5rem;height:120px;overflow-x:auto;
-  padding:0 .1rem .2rem;scrollbar-width:thin}
+/* Vertical trend chart — spend by month.
+   Bottom padding is a dedicated gutter for the horizontal scrollbar — on
+   overlay-scrollbar platforms (macOS/mobile) the bar floats over content
+   instead of reserving its own space, so without this gap it sits on top
+   of the month labels instead of below them. */
+.ss-trend{display:flex;align-items:flex-end;gap:.5rem;height:136px;overflow-x:auto;
+  padding:0 .1rem 16px;scrollbar-width:thin}
 .ss-trend-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
   flex-shrink:0;width:34px;height:100%;gap:.3rem}
 .ss-trend-bar{width:16px;min-height:2px;border-radius:3px 3px 0 0;background:var(--blue);
