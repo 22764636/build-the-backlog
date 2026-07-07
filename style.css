@@ -452,6 +452,7 @@ button{text-transform:none;letter-spacing:0}
 .prio-btns{display:flex}
 .prio-btn{width:110px;height:22px;padding:0;border-radius:20px;border:1.5px solid var(--bd);
   cursor:pointer;transition:border-color .15s;overflow:hidden;display:flex;gap:2px;
+  background:transparent;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .prio-btn:hover{border-color:var(--bd2)}
 .prio-btn .pm-seg{background:var(--prio-track)}
@@ -512,9 +513,16 @@ button{text-transform:none;letter-spacing:0}
 /* overlay wrapper: just relative positioning, tba row hides/shows */
 .date-overlay-wrap{position:relative}
 /* Type + [ParentAppId when DLC] + Priority row — flex so hidden middle item collapses */
-.fg3-mid-stretch{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.6rem}
-.fg3-mid-stretch > .fr{flex-shrink:0;margin-bottom:0}
-.fg3-mid-stretch > #parentAppIdRow{flex:1;min-width:0;margin-bottom:0}
+/* Base Game's input is the tallest control in this row (standard .fr input height,
+   shared with every other text field in the form — it can't shrink without those
+   going inconsistent too). Type/Priority's pills stay their normal pill size (they
+   have their own app-wide spec) but the row now stretches every column to Base
+   Game's height and centers each pill within its own column's leftover space,
+   rather than leaving them pinned to the top looking short. */
+.fg3-mid-stretch{display:flex;gap:.6rem;align-items:stretch;margin-bottom:.6rem}
+.fg3-mid-stretch > .fr{flex-shrink:0;margin-bottom:0;display:flex;flex-direction:column}
+.fg3-mid-stretch > #parentAppIdRow{flex:1;min-width:0;margin-bottom:0;display:flex;flex-direction:column}
+.fg3-mid-stretch .type-tog,.fg3-mid-stretch .prio-btns{flex:1;display:flex;align-items:center}
 .fg2 > .fr,.fg3 > .fr,.fg4 > .fr{margin-bottom:0}
 @media(max-width:560px){
   .fg3-mid-stretch{flex-wrap:wrap}
@@ -1056,7 +1064,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
    .prio-btn above for why: a gradient's hard color stop can pick up a rounded
    edge of its own on some engines, a plain rectangle can't. */
 .fbar-pill-prio{position:relative;overflow:hidden;display:flex;align-items:center;
-  justify-content:flex-end;width:100%;padding:.4rem .6rem;opacity:1}
+  justify-content:flex-end;width:100%;padding:.4rem .6rem;opacity:1;background:transparent}
 .fbar-pill-prio .pm-bar{position:absolute;inset:0;display:flex;gap:2px}
 .fbar-pill-prio .pm-seg{background:var(--prio-track)}
 .fbar-pill-prio .pm-s1{flex:15 0 0}
