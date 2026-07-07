@@ -4463,10 +4463,17 @@ document.addEventListener('keydown',function(e){
   const closeBtn=document.getElementById('ssClose');
   const platEl=document.getElementById('ssPlatPills');
   const storeEl=document.getElementById('ssStorePills');
+  const storeToggle=document.getElementById('ssStoreToggle');
+  const storeBody=document.getElementById('ssStoreBody');
   const fromEl=document.getElementById('ssDateFrom');
   const toEl=document.getElementById('ssDateTo');
   const statsEl=document.getElementById('ssStats');
   const bodyEl=document.getElementById('ssBody');
+
+  storeToggle.addEventListener('click',()=>{
+    const open=storeToggle.classList.toggle('open');
+    storeBody.style.display=open?'':'none';
+  });
 
   let ssPlats=new Set();
   let ssStores=new Set();
@@ -4536,7 +4543,7 @@ document.addEventListener('keydown',function(e){
     const stores=Object.keys(storeFreq).sort((a,b)=>storeFreq[b]-storeFreq[a]);
     storeEl.innerHTML=stores.length?stores.map(s=>{
       const sel=ssStores.has(s);
-      return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--blue);color:#031329">${esc(s)}<span class="fbar-pill-count fpc-dark">${storeFreq[s]}</span></button>`;
+      return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--indigo);color:#fff">${esc(s)}<span class="fbar-pill-count fpc-light">${storeFreq[s]}</span></button>`;
     }).join(''):`<div style="color:var(--t3);font-size:.75rem">No purchases yet</div>`;
     storeEl.querySelectorAll('.fbar-pill').forEach(el=>{
       el.addEventListener('click',()=>{

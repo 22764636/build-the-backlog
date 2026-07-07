@@ -1,7 +1,7 @@
 :root{
   --base:#031329;--s1:#0d1e33;--s3:#353e46;
   --cbg:#0d1e33;--cbr:#14528f55;
-  --blue:#02b3fc;--pink:#ff00aa;--green:#9cff00;--amber:#f7cd26;--muted:#b3b3b3;
+  --blue:#02b3fc;--pink:#ff00aa;--green:#9cff00;--amber:#f7cd26;--muted:#b3b3b3;--indigo:#6552e0;
   --cyan:#02b3fc;--magenta:#ff00aa;--lime:#9cff00;
   --text:#e8f4ff;--t2:#8aabcc;--t3:#4a6280;
   --bd:#14528f44;--bd2:#02b3fc44;
@@ -560,10 +560,17 @@ button{text-transform:none;letter-spacing:0}
 .b-delisted{background:#cc6600;color:#fff;font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;user-select:none;-webkit-user-select:none}
 
 /* SPEND STATS */
+/* Reserve the vertical scrollbar's track so it never overlaps the bar-chart
+   labels/values sitting at the modal's right edge once content grows tall
+   enough to scroll (platform/store/date breakdowns can get long). */
+#ssov .modal-body{scrollbar-gutter:stable}
 .ss-filters{display:flex;flex-wrap:wrap;gap:.7rem 1.1rem;align-items:flex-end;
   padding-bottom:.8rem;margin-bottom:.8rem;border-bottom:1px solid var(--bd)}
 .ss-filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0}
 .ss-filter-group label{font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.ss-store-hdr{padding:0;gap:.3rem;width:auto}
+.ss-store-hdr .fbar-sec-title{font-size:.63rem;font-weight:600;letter-spacing:.08em;color:var(--t3);flex:none}
+.ss-store-body{padding:.4rem 0 0}
 .ss-date-range{display:flex;align-items:center;gap:.4rem}
 .ss-date-range input{background:var(--base);border:1px solid var(--bd);border-radius:var(--r);
   padding:.35rem .5rem;color:var(--text);font-size:.75rem;outline:none;font-family:'Inter',sans-serif;
