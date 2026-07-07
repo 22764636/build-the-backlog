@@ -2913,6 +2913,7 @@ window.addEventListener('popstate',function(){
   if(preorderConfirmOv&&preorderConfirmOv.classList.contains('on')){preorderConfirmOv.classList.remove('on');_preorderPendingId=null;return;}
   if(window._rdcIsOpen&&window._rdcIsOpen()){if(window._rdcTryClose&&!window._rdcTryClose())history.pushState({rdcovOpen:true},'','');return;}
   if(window._plcIsOpen&&window._plcIsOpen()){if(window._plcTryClose&&!window._plcTryClose())history.pushState({plcovOpen:true},'','');return;}
+  if(window._ssIsOpen&&window._ssIsOpen()){window._ssTryClose&&window._ssTryClose();return;}
   const fbar=document.getElementById('fbar');
   if(fbar&&fbar.classList.contains('on')){window._rawCloseFbar&&window._rawCloseFbar();return;}
   if(document.getElementById('panel').classList.contains('on')){
@@ -4214,6 +4215,7 @@ function doImport(){
   document.getElementById('dhDatesBtn').addEventListener('click',dh(()=>runReleaseDateCheck()));
   document.getElementById('dhPriceBtn').addEventListener('click',dh(()=>runGGDealsFetch()));
   document.getElementById('dhSteamPriceBtn').addEventListener('click',dh(()=>runPriceLookup()));
+  document.getElementById('dhSpendBtn').addEventListener('click',dh(()=>openSpendStats()));
   document.getElementById('dhExpBtn').addEventListener('click',dh(doExport));
   document.getElementById('dhImpBtn').addEventListener('click',dh(doImport));
 })();
@@ -4450,6 +4452,181 @@ document.addEventListener('keydown',function(e){
     if(found)dispatchRender();
   }
   window.runPriceLookup=run;
+})();
+
+// ══════════════════════════════════════════
+//  SPEND STATS
+// ══════════════════════════════════════════
+(function(){
+  const ov=document.getElementById('ssov');
+  if(!ov)return;
+  const closeBtn=document.getElementById('ssClose');
+  const platEl=document.getElementById('ssPlatPills');
+  const storeEl=document.getElementById('ssStorePills');
+  const fromEl=document.getElementById('ssDateFrom');
+  const toEl=document.getElementById('ssDateTo');
+  const statsEl=document.getElementById('ssStats');
+  const bodyEl=document.getElementById('ssBody');
+
+  let ssPlats=new Set();
+  let ssStores=new Set();
+
+  function _closeSs(){
+    ov.classList.remove('on');
+    if(history.state&&history.state.ssovOpen)history.replaceState(null,'','');
+  }
+  window._ssTryClose=function(){_closeSs();return true;};
+  window._ssIsOpen=()=>ov.classList.contains('on');
+  closeBtn.onclick=_closeSs;
+  ov.addEventListener('click',e=>{if(e.target===ov)_closeSs();});
+
+  // All money actually spent on owned games — one entry per platform purchase.
+  function purchaseRecords(){
+    const out=[];
+    games.filter(g=>g.status==='bought').forEach(g=>{
+      gamePurchases(g).forEach(p=>{
+        out.push({
+          game:g,
+          platform:p.platform||'',
+          store:p.store||'',
+          cost:parseFloat(p.cost)||0,
+          date:normaliseDate(p.purchaseDate)
+        });
+      });
+    });
+    return out;
+  }
+
+  function filteredRecords(){
+    return purchaseRecords().filter(r=>{
+      if(ssPlats.size&&!ssPlats.has(r.platform))return false;
+      if(ssStores.size&&!ssStores.has(r.store))return false;
+      if(fromEl.value&&(!r.date||r.date<fromEl.value))return false;
+      if(toEl.value&&(!r.date||r.date>toEl.value))return false;
+      return true;
+    });
+  }
+
+  function monthLabel(ym){
+    const[y,m]=ym.split('-');
+    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return`${names[parseInt(m,10)-1]} '${y.slice(2)}`;
+  }
+
+  function renderFilters(){
+    const all=purchaseRecords();
+    const platFreq={};
+    all.forEach(r=>{if(r.platform)platFreq[r.platform]=(platFreq[r.platform]||0)+1;});
+    const plats=PLATFORM_ORDER.filter(p=>platFreq[p]).concat(Object.keys(platFreq).filter(p=>!PLATFORM_ORDER.includes(p)));
+    platEl.innerHTML=plats.length?plats.map(p=>{
+      const sel=ssPlats.has(p);
+      const cntCls=platTextColor(p)==='#fff'?'fpc-light':'fpc-dark';
+      return`<button class="b-plat fbar-pill${sel?' selected':''}" data-val="${esc(p)}" style="background:${platColor(p)};color:${platTextColor(p)}">${esc(p)}<span class="fbar-pill-count ${cntCls}">${platFreq[p]}</span></button>`;
+    }).join(''):`<div style="color:var(--t3);font-size:.75rem">No purchases yet</div>`;
+    platEl.querySelectorAll('.fbar-pill').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const v=el.dataset.val;
+        ssPlats.has(v)?ssPlats.delete(v):ssPlats.add(v);
+        render();
+      });
+    });
+
+    const storeFreq={};
+    all.forEach(r=>{if(r.store)storeFreq[r.store]=(storeFreq[r.store]||0)+1;});
+    const stores=Object.keys(storeFreq).sort((a,b)=>storeFreq[b]-storeFreq[a]);
+    storeEl.innerHTML=stores.length?stores.map(s=>{
+      const sel=ssStores.has(s);
+      return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--blue);color:#031329">${esc(s)}<span class="fbar-pill-count fpc-dark">${storeFreq[s]}</span></button>`;
+    }).join(''):`<div style="color:var(--t3);font-size:.75rem">No purchases yet</div>`;
+    storeEl.querySelectorAll('.fbar-pill').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const v=el.dataset.val;
+        ssStores.has(v)?ssStores.delete(v):ssStores.add(v);
+        render();
+      });
+    });
+  }
+
+  function render(){
+    renderFilters();
+    const recs=filteredRecords();
+    const totalSpend=recs.reduce((s,r)=>s+r.cost,0);
+    const gameIds=new Set(recs.map(r=>r.game.id));
+    const avg=gameIds.size?totalSpend/gameIds.size:0;
+
+    statsEl.innerHTML=`
+      <span class="chip"><b>${fmtEur(totalSpend)}</b><span>total spend</span></span>
+      <span class="chip"><b>${gameIds.size}</b><span>games</span></span>
+      <span class="chip"><b>${recs.length}</b><span>purchases</span></span>
+      <span class="chip"><b>${fmtEur(avg)}</b><span>avg/game</span></span>
+    `;
+
+    if(!recs.length){
+      bodyEl.innerHTML=`<div class="ss-empty">No purchases match these filters.</div>`;
+      return;
+    }
+
+    // By platform
+    const byPlat={};
+    recs.forEach(r=>{const k=r.platform||'—';byPlat[k]=(byPlat[k]||0)+r.cost;});
+    const platRows=Object.keys(byPlat).sort((a,b)=>byPlat[b]-byPlat[a]);
+    const platMax=Math.max(...platRows.map(k=>byPlat[k]),0.01);
+    const platHtml=platRows.map(k=>`
+      <div class="ss-hbar-row">
+        <div class="ss-hbar-label">${esc(k)}</div>
+        <div class="ss-hbar-track"><div class="ss-hbar-fill" style="width:${(byPlat[k]/platMax*100).toFixed(1)}%;background:${platColor(k)}"></div></div>
+        <div class="ss-hbar-val">${fmtEur(byPlat[k])}</div>
+      </div>`).join('');
+
+    // By month
+    const byMonth={};
+    recs.forEach(r=>{
+      if(!r.date)return;
+      const ym=r.date.slice(0,7);
+      if(!/^\d{4}-\d{2}$/.test(ym))return;
+      byMonth[ym]=(byMonth[ym]||0)+r.cost;
+    });
+    const months=Object.keys(byMonth).sort();
+    const monthMax=Math.max(...months.map(ym=>byMonth[ym]),0.01);
+    const trendHtml=months.map(ym=>`
+      <div class="ss-trend-col" title="${monthLabel(ym)}: ${fmtEur(byMonth[ym])}">
+        <div class="ss-trend-val">${fmtEur(byMonth[ym])}</div>
+        <div class="ss-trend-bar" style="height:${Math.max(byMonth[ym]/monthMax*100,2)}%"></div>
+        <div class="ss-trend-label">${monthLabel(ym)}</div>
+      </div>`).join('');
+    const undatedNote=recs.some(r=>!r.date)
+      ?`<div style="color:var(--t3);font-size:.68rem;margin-top:.4rem">${recs.filter(r=>!r.date).length} purchase(s) without a date excluded from the trend chart.</div>`
+      :'';
+
+    bodyEl.innerHTML=`
+      <div class="ss-section-title">Spend by platform</div>
+      <div class="ss-hbars">${platHtml}</div>
+      <div class="ss-section-title">Spend by month</div>
+      ${months.length
+        ?`<div class="ss-trend">${trendHtml}</div>`
+        :`<div class="ss-empty">No dated purchases to chart.</div>`}
+      ${undatedNote}
+    `;
+  }
+
+  document.getElementById('ssClearFilters').onclick=()=>{
+    ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';render();
+  };
+  fromEl.addEventListener('change',render);
+  toEl.addEventListener('change',render);
+
+  function open(){
+    ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';
+    ov.classList.add('on');
+    history.pushState({ssovOpen:true},'','');
+    render();
+  }
+
+  window.openSpendStats=open;
+  document.getElementById('hmSpendBtn').onclick=()=>{
+    document.getElementById('hmenu').classList.remove('on');
+    open();
+  };
 })();
 
 // ══════════════════════════════════════════
