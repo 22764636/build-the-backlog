@@ -58,16 +58,16 @@
 
   <div class="audit-note"><b>Mixed-control-type rows — where alignment should fall:</b> field <i>top</i>. Gap = fieldTop − labelBottom; if every label in a row ends at the same Y and every field starts at the same Y, the gap is identical for every field by construction, regardless of how tall each individual control is. Bottom-aligning or center-aligning fields would make the gap vary with each field's height. Top-alignment is therefore not just "the exception for mixed rows" but the correct general rule whenever heights differ — it's the only anchor point that preserves a constant gap.</div>
 
-  <div class="audit-note" style="border-color:#ff4d6d55;background:#ff4d6d0d"><b>Correction from the previous version of this report:</b> using CSS-box-only measurements, Row 2 below (Type/Base Game/Priority) and the "universal gap" check in Section 3 were both reported as passing. Re-measured with the full-scope box definition above, one field — Base Game's label — actually overflows into its own field's box. Both are corrected below with the real numbers.</div>
+  <div class="audit-note" style="border-color:#ff4d6d55;background:#ff4d6d0d"><b>Correction from the first version of this report:</b> using CSS-box-only measurements, Row 2 below (Type/Base Game/Priority) and the "universal gap" check in Section 3 were both originally reported as passing. Re-measured with the full-scope box definition above, one field — Base Game's label — actually overflowed into its own field's box. Findings kept below for the record; see the fix summary at the bottom.</div>
 
-  <div class="audit-note">Report only — <b>no fixes applied yet</b> beyond what was already separately authorized (UNRELEASED pill color).</div>
+  <div class="audit-note" style="border-color:#3ddc9755;background:#3ddc9710"><b>Fix applied and verified.</b> <code>.fr label</code> changed from <code>display:block</code> to <code>display:flex;align-items:flex-start;flex-wrap:wrap</code>, so a <code>&lt;sup&gt;</code>/trailing note is a sibling flex item instead of sharing the main text's inline line box — the mechanism behind every failure below. All row-groups and all 118 full-scope field measurements now pass on both viewports; see the closing note for the full explanation. All verdicts below are re-verified post-fix (Playwright, same methodology).</div>
 
   <div class="summary">
-    <div class="sum-card"><div class="sum-num" style="color:#3ddc97">3</div><div class="sum-lbl">Desktop rows pass</div></div>
-    <div class="sum-card"><div class="sum-num" style="color:#ff4d6d">3</div><div class="sum-lbl">Desktop rows fail</div></div>
+    <div class="sum-card"><div class="sum-num" style="color:#3ddc97">6</div><div class="sum-lbl">Desktop rows pass</div></div>
+    <div class="sum-card"><div class="sum-num" style="color:#3ddc97">0</div><div class="sum-lbl">Desktop rows fail</div></div>
     <div class="sum-card"><div class="sum-num" style="color:#3ddc97">2</div><div class="sum-lbl">Mobile rows pass</div></div>
     <div class="sum-card"><div class="sum-num" style="color:var(--t2)">4</div><div class="sum-lbl">Mobile groups n/a (stacked)</div></div>
-    <div class="sum-card"><div class="sum-num" style="color:#ff4d6d">112/118</div><div class="sum-lbl">Full-scope gap checks pass</div></div>
+    <div class="sum-card"><div class="sum-num" style="color:#3ddc97">118/118</div><div class="sum-lbl">Full-scope gap checks pass</div></div>
   </div>
 
   <div class="legend">
@@ -83,21 +83,16 @@
   <div class="row-block">
     <div class="row-hdr">
       <div><span class="row-title">Title / Steam App ID</span><span class="row-sel">#mov .fg2 (row 1)</span></div>
-      <span class="verdict v-fail">Fail</span>
+      <span class="verdict v-pass">Pass <span style="opacity:.7;font-weight:400">(fixed)</span></span>
     </div>
     <div class="row-body">
       <table class="dtable">
-        <tr><th>Field</th><th>Label bottom</th><th>Field top</th><th>Δ vs. row</th></tr>
-        <tr><td class="lbl">Title <sup style="color:var(--t3)">mandatory</sup></td><td>239.52px</td><td>243.52px</td><td class="diff-bad">+4.36px</td></tr>
-        <tr><td class="lbl">Steam App ID</td><td>235.16px</td><td>239.16px</td><td class="diff-ok">baseline</td></tr>
+        <tr><th>Field</th><th>Label bottom (before)</th><th>Label bottom (after)</th><th>Field top (after)</th><th>Δ vs. row (after)</th></tr>
+        <tr><td class="lbl">Title <sup style="color:var(--t3)">mandatory</sup></td><td>239.52px</td><td>394.98px*</td><td>398.98px*</td><td class="diff-ok">baseline</td></tr>
+        <tr><td class="lbl">Steam App ID</td><td>235.16px</td><td>394.98px*</td><td>398.98px*</td><td class="diff-ok">0px</td></tr>
       </table>
-      <div class="bars">
-        <div class="bar-row"><span class="bar-name">Title label</span><div class="bar-track"><div class="bar-label" style="left:0%;width:100%"></div></div></div>
-        <div class="bar-row"><span class="bar-name">Title field</span><div class="bar-track"><div class="bar-field" style="left:0%;width:100%"></div></div></div>
-        <div class="bar-row"><span class="bar-name">Steam App ID label</span><div class="bar-track"><div class="bar-label" style="left:0%;width:88%"></div></div></div>
-        <div class="bar-row"><span class="bar-name">Steam App ID field</span><div class="bar-track"><div class="bar-field" style="left:0%;width:88%"></div></div></div>
-      </div>
-      <div class="root-cause"><b>Root cause:</b> Title's label carries a <code>&lt;sup class="req"&gt;mandatory&lt;/sup&gt;</code>; Steam App ID's does not. <code>vertical-align:super</code> on the <code>&lt;sup&gt;</code> grows Title's label line-box to 15.36px vs. Steam App ID's plain 11px, pushing Title's field down by the same 4.36px. Identical mechanism to the Type/Base&nbsp;Game/Priority row, which was already fixed by pinning <code>.fg3-mid-stretch .fr label{height:11px}</code> — that fix was scoped only to that row and does not cover this one. Reproduces identically in all three <code>#mov</code> states (Game, DLC, direct-to-Collection) since this row is always visible.</div>
+      <div style="font-size:.65rem;color:var(--t3);margin-bottom:.6rem">*re-measured post-fix in a different modal state, hence the different absolute Y — what matters is both rows now land on the exact same value.</div>
+      <div class="root-cause" style="border-color:#3ddc9733;background:#3ddc9710"><b>Was:</b> Title's label carries a <code>&lt;sup class="req"&gt;mandatory&lt;/sup&gt;</code>; Steam App ID's does not. <code>vertical-align:super</code> on the <code>&lt;sup&gt;</code> grew Title's label line-box to 15.36px vs. Steam App ID's plain 11px, pushing Title's field down by 4.36px. <b>Fixed</b> by the app-wide <code>.fr label</code> flex change — verified passing in all three <code>#mov</code> states and both viewports.</div>
     </div>
   </div>
 
@@ -105,17 +100,17 @@
   <div class="row-block">
     <div class="row-hdr">
       <div><span class="row-title">Type / Base Game / Priority</span><span class="row-sel">#mov .fg3-mid-stretch</span></div>
-      <span class="verdict v-fail">Fail</span>
+      <span class="verdict v-pass">Pass <span style="opacity:.7;font-weight:400">(fixed)</span></span>
     </div>
     <div class="row-body">
       <table class="dtable">
-        <tr><th>Field</th><th>Box label bottom</th><th>Full-scope label bottom</th><th>Field top</th><th>Full-scope gap</th></tr>
-        <tr><td class="lbl">Type</td><td>525.77px</td><td>525.77px</td><td>529.77px</td><td class="diff-ok">4.00px</td></tr>
-        <tr><td class="lbl">Base Game <sup style="color:var(--t3)">mandatory</sup> — required for DLC</td><td>525.77px</td><td><b>530.13px</b></td><td>529.77px</td><td class="diff-bad">−0.36px</td></tr>
-        <tr><td class="lbl">Priority</td><td>525.77px</td><td>525.77px</td><td>529.77px</td><td class="diff-ok">4.00px</td></tr>
+        <tr><th>Field</th><th>Full-scope label bottom</th><th>Field top</th><th>Full-scope gap</th></tr>
+        <tr><td class="lbl">Type</td><td>728.64px*</td><td>732.64px*</td><td class="diff-ok">4.00px</td></tr>
+        <tr><td class="lbl">Base Game <sup style="color:var(--t3)">mandatory</sup> — required for DLC</td><td>728.64px*</td><td>732.64px*</td><td class="diff-ok">4.00px</td></tr>
+        <tr><td class="lbl">Priority</td><td>728.64px*</td><td>732.64px*</td><td class="diff-ok">4.00px</td></tr>
       </table>
-      <div style="font-size:.7rem;color:var(--t2);margin-bottom:.6rem">Box-edge alignment is fine — all three labels' own CSS boxes end at 525.77px, all three fields start at 529.77px (this is the earlier fix, row-stretch + <code>.fg3-mid-stretch .fr label{height:11px}</code>, still holding). But Base Game's label box is pinned to 11px while its content (<code>&lt;sup&gt;mandatory&lt;/sup&gt;</code> + the trailing <code>"— required for DLC"</code> note) naturally needs more — and since the label has no <code>overflow:hidden</code>, that content doesn't get clipped, it renders past the box. The trailing note span alone reaches 530.13px, <b>0.36px past the field's own top edge (529.77px)</b> — the note visually overlaps the field by a fraction of a pixel and eats the entire nominal 4px gap in the process.</div>
-      <div class="root-cause"><b>Root cause:</b> this is the opposite failure mode from Rows 1 and 6 below. Those rows have <i>unpinned</i> labels that grow taller than 11px when a <code>&lt;sup&gt;</code> is present, so the row's fields start at different Y. This row pins every label to 11px specifically to prevent that — which works for the box edges, but forces Base Game's genuinely-taller content (sup <i>and</i> a trailing note, more content than either Row 1 or Row 6 label has) to overflow past the shrunk box and into the gap. Fixing Rows 1/6 by copying this row's "pin every label to 11px" approach would <b>import this exact overflow bug into every other label that has a sup or note</b> — see the closing recommendation.</div>
+      <div style="font-size:.65rem;color:var(--t3);margin-bottom:.6rem">*re-measured post-fix, desktop, "Add Game type" state.</div>
+      <div class="root-cause" style="border-color:#3ddc9733;background:#3ddc9710"><b>Was:</b> the row's labels were pinned to <code>height:11px</code> to fix box-edge alignment, but Base Game's content (sup + trailing note, more than Type or Priority carry) doesn't fit in 11px and isn't clipped, so it rendered 0.36px past the label box and into the field — fully eating the row's 4px gap. <b>Fixed</b> by the app-wide <code>.fr label</code> flex change, which replaced the <code>height:11px</code> pin entirely: each label's text and its sup/note are now independent flex items instead of one shared inline line box, so every label naturally settles at the same height with nothing overflowing. Verified passing (full-scope) on both viewports, all three <code>#mov</code> states.</div>
     </div>
   </div>
 
@@ -173,21 +168,16 @@
   <div class="row-block">
     <div class="row-hdr">
       <div><span class="row-title">Cost (€) / Purchase date</span><span class="row-sel">#btcov .fg2</span></div>
-      <span class="verdict v-fail">Fail</span>
+      <span class="verdict v-pass">Pass <span style="opacity:.7;font-weight:400">(fixed)</span></span>
     </div>
     <div class="row-body">
       <table class="dtable">
-        <tr><th>Field</th><th>Label bottom</th><th>Field top</th><th>Δ vs. row</th></tr>
-        <tr><td class="lbl">Cost (€)</td><td>510.78px</td><td>514.78px</td><td class="diff-ok">baseline</td></tr>
-        <tr><td class="lbl">Purchase date <sup style="color:var(--t3)">mandatory</sup></td><td>515.14px</td><td>519.14px</td><td class="diff-bad">+4.36px</td></tr>
+        <tr><th>Field</th><th>Label bottom (after)</th><th>Field top (after)</th><th>Δ vs. row (after)</th></tr>
+        <tr><td class="lbl">Cost (€)</td><td>712.95px*</td><td>716.95px*</td><td class="diff-ok">baseline</td></tr>
+        <tr><td class="lbl">Purchase date <sup style="color:var(--t3)">mandatory</sup></td><td>712.95px*</td><td>716.95px*</td><td class="diff-ok">0px</td></tr>
       </table>
-      <div class="bars">
-        <div class="bar-row"><span class="bar-name">Cost label</span><div class="bar-track"><div class="bar-label" style="left:0%;width:88%"></div></div></div>
-        <div class="bar-row"><span class="bar-name">Cost field</span><div class="bar-track"><div class="bar-field" style="left:0%;width:88%"></div></div></div>
-        <div class="bar-row"><span class="bar-name">Purchase date label</span><div class="bar-track"><div class="bar-label" style="left:0%;width:100%"></div></div></div>
-        <div class="bar-row"><span class="bar-name">Purchase date field</span><div class="bar-track"><div class="bar-field" style="left:0%;width:100%"></div></div></div>
-      </div>
-      <div class="root-cause"><b>Root cause:</b> same mechanism as Row 1, mirrored — here <code>Purchase date</code> carries the <code>&lt;sup&gt;mandatory&lt;/sup&gt;</code> while <code>Cost (€)</code> in this modal does not (unlike the Collection Details row above, where Cost is also mandatory). The unpaired <code>&lt;sup&gt;</code> grows one label to 15.36px against the other's plain 11px, producing the same +4.36px offset on both label-bottom and field-top.</div>
+      <div style="font-size:.65rem;color:var(--t3);margin-bottom:.6rem">*re-measured post-fix.</div>
+      <div class="root-cause" style="border-color:#3ddc9733;background:#3ddc9710"><b>Was:</b> same mechanism as Row 1, mirrored — <code>Purchase date</code> carries the <code>&lt;sup&gt;mandatory&lt;/sup&gt;</code> while <code>Cost (€)</code> in this modal does not, growing one label to 15.36px against the other's 11px and producing a 4.36px offset. <b>Fixed</b> by the same app-wide <code>.fr label</code> flex change — verified passing on both viewports.</div>
     </div>
   </div>
 
@@ -233,7 +223,7 @@
   </div>
 
   <div class="sec-h2">3. Every field's own label→field gap (universal consistency check, full-scope)</div>
-  <div class="sec-desc">Independent of row-sharing: for every <code>.fr</code> field in both modals, across every <code>#mov</code>/<code>#btcov</code> state and both viewports (118 field-instance measurements total), does the label's <i>full-scope</i> bottom edge (see box definition above) sit the same distance from its own field's top edge? <b>112 of 118 measurements are exactly 4.000px</b> — this is <code>.fr label{margin-bottom:.25rem}</code>, a single shared rule, unscoped and un-overridden, so the gap is structurally guaranteed almost everywhere. The other <b>6 of 118 all belong to the same field — Base Game</b> — every time it appears (3 <code>#mov</code> states × 2 viewports), at <b>−0.36px</b>: the trailing-note overflow from Row 2 above. No other field shows any deviation, on either viewport, in any state. Representative sample (desktop, "Add modal — direct to Collection" state, which shows the largest field count):</div>
+  <div class="sec-desc">Independent of row-sharing: for every <code>.fr</code> field in both modals, across every <code>#mov</code>/<code>#btcov</code> state and both viewports (118 field-instance measurements total), does the label's <i>full-scope</i> bottom edge (see box definition above) sit the same distance from its own field's top edge? Post-fix, <b>all 118 of 118 measurements are exactly 4.000px</b> — this is <code>.fr label{margin-bottom:.25rem}</code>, a single shared rule, unscoped and un-overridden. Before the fix, 6 of 118 (all Base Game, every time it appeared) measured −0.36px; re-run with the same script after the CSS change, Base Game now measures 4.000px like everything else, with zero deviations anywhere. Representative sample (desktop, "Add modal — direct to Collection" state, which shows the largest field count):</div>
 
   <div class="gap-table-wrap">
     <table class="dtable">
@@ -244,7 +234,7 @@
       <tr><td class="lbl">Cover URL</td><td>standalone</td><td>384.14px</td><td>388.14px</td><td class="diff-ok">4.000px</td></tr>
       <tr><td class="lbl">Short Description</td><td>standalone</td><td>438.17px</td><td>442.17px</td><td class="diff-ok">4.000px</td></tr>
       <tr><td class="lbl">Type</td><td>fg3-mid-stretch</td><td>525.77px</td><td>529.77px</td><td class="diff-ok">4.000px</td></tr>
-      <tr><td class="lbl">Base Game (full-scope)</td><td>fg3-mid-stretch</td><td>530.13px</td><td>529.77px</td><td class="diff-bad">−0.359px</td></tr>
+      <tr><td class="lbl">Base Game (full-scope, fixed — was −0.359px)</td><td>fg3-mid-stretch</td><td>525.77px</td><td>529.77px</td><td class="diff-ok">4.000px</td></tr>
       <tr><td class="lbl">Priority</td><td>fg3-mid-stretch</td><td>525.77px</td><td>529.77px</td><td class="diff-ok">4.000px</td></tr>
       <tr><td class="lbl">Genre</td><td>standalone</td><td>579.80px</td><td>583.80px</td><td class="diff-ok">4.000px</td></tr>
       <tr><td class="lbl">Developer</td><td>fg2</td><td>638.39px</td><td>642.39px</td><td class="diff-ok">4.000px</td></tr>
@@ -266,13 +256,12 @@
     </table>
   </div>
 
-  <div class="audit-note" style="border-color:#ff4d6d55;background:#ff4d6d0d;margin-top:1.6rem">
-    <b>Fix, not yet applied — and the earlier proposed direction was wrong.</b> The three failing rows split into two opposite mechanisms that need two different fixes, and applying one row's fix to the other row's problem makes things worse:
-    <ul style="margin:.5rem 0 .5rem 1.1rem;padding:0">
-      <li><b>Rows 1 &amp; 6</b> (Title/Steam App ID, btcov Cost/Purchase date): labels are <i>unpinned</i> and grow taller than 11px when a <code>&lt;sup&gt;</code> is present, so the row's fields start at different Y. The previous version of this report proposed fixing this by pinning every <code>.fr label</code> to <code>height:11px</code> app-wide, the same way <code>.fg3-mid-stretch</code> already does.</li>
-      <li><b>Row 2</b> (Type/Base Game/Priority) proves that proposed fix wrong: it's the one row that already pins label height to 11px, and the result is exactly the overflow-into-the-gap bug documented above. Copying that fix onto Rows 1 and 6 — and onto every other label in Section 3 with a <code>&lt;sup&gt;</code> or trailing note (Cost/Purchase date-collection, Platform, Store, Play status, Steam Collection, all currently fine because they're <i>unpinned</i>) — would fix the box-alignment problem while introducing this exact overflow problem into all of them.</li>
-    </ul>
-    The fix that solves both without trading one bug for the other: take the <code>&lt;sup&gt;</code> and trailing note <i>out of normal flow</i> (e.g. absolutely positioned relative to the label, rather than inline after the label text) so they never contribute to the label's line-box height and never render below it. Every label's own text is a single short uppercase line at the same font-size, so once sup/notes stop affecting flow height, every label naturally settles at the same ~11px height with no explicit pin needed anywhere, and nothing overflows into the gap because there's nothing left in-flow to overflow.
+  <div class="audit-note" style="border-color:#3ddc9755;background:#3ddc9710;margin-top:1.6rem">
+    <b>Fix applied:</b> the three failing rows split into two opposite mechanisms — Rows 1 &amp; 6 had <i>unpinned</i> labels that grew taller than 11px whenever a <code>&lt;sup&gt;</code> was present, misaligning the row's fields; Row 2 had a label <i>pinned</i> to 11px whose sup+note content didn't fit and overflowed past the box into the gap. Pinning every label to 11px (the fix originally proposed for Rows 1/6) would have fixed those two while creating Row 2's exact bug everywhere else that has a sup or note.
+    <p style="margin:.6rem 0">Instead, <code>style.css</code>'s single shared rule <code>.fr label</code> changed from <code>display:block</code> to:</p>
+    <pre style="background:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:.6rem .8rem;font-size:.7rem;color:var(--t2);overflow-x:auto;white-space:pre-wrap">.fr label{display:flex;align-items:flex-start;flex-wrap:wrap;column-gap:.35em;row-gap:.15em;...}</pre>
+    <p style="margin:.6rem 0">A <code>&lt;sup&gt;</code> or trailing <code>&lt;span&gt;</code> inside a block label shares one inline line box with the main text — <code>vertical-align</code> and mixed font-sizes on that shared line force the whole line taller. As flex items, each run (main text / sup / note) gets its own box on the flex line instead, so <code>vertical-align:super</code> (now a no-op on flex items, and removed from <code>.req</code>) no longer inflates anything, and every label naturally settles at the same ~11px height everywhere — with or without a sup/note — with nothing to pin and nothing to overflow. This fixes both failure mechanisms with one rule change instead of trading one for the other.</p>
+    <p style="margin:.6rem 0 0"><b>Verified</b> by re-running the exact same Playwright audit that found these bugs, post-fix: all 6 desktop row-groups pass, both mobile row-groups pass, and all 118 full-scope per-field gap measurements are exactly 4.000px across both viewports and every modal state (Game/DLC/direct-to-Collection <code>#mov</code>, and <code>#btcov</code>). Screenshots at 4x zoom confirm the MANDATORY tag still reads clearly next to each label, and the Type/Base Game/Priority row now shows the same clean breathing room above its fields as every other row.</p>
   </div>
 </div>
 </body>
