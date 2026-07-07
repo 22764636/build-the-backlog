@@ -547,9 +547,9 @@ button{text-transform:none;letter-spacing:0}
 .tba-btn.on{background:#f472b6;border-color:transparent;color:#031329}
 
 /* overlays */
-#riov,#rmov,#btcov,#rdcov,#plcov,#wlovConfirm,#preorderConfirm,#ggFetchOv{display:none;position:fixed;inset:0;background:rgba(3,19,41,.8);backdrop-filter:blur(4px);
+#riov,#rmov,#btcov,#rdcov,#plcov,#wlovConfirm,#preorderConfirm,#ggFetchOv,#ssov{display:none;position:fixed;inset:0;background:rgba(3,19,41,.8);backdrop-filter:blur(4px);
   z-index:300;align-items:center;justify-content:center;padding:1rem}
-#riov.on,#rmov.on,#btcov.on,#rdcov.on,#plcov.on,#wlovConfirm.on,#preorderConfirm.on,#ggFetchOv.on{display:flex}
+#riov.on,#rmov.on,#btcov.on,#rdcov.on,#plcov.on,#wlovConfirm.on,#preorderConfirm.on,#ggFetchOv.on,#ssov.on{display:flex}
 #rdcLog,#plcLog{max-height:300px;overflow-y:auto;font-size:.72rem;font-family:monospace;line-height:1.7;background:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:.5rem .7rem}
 #rdcLog .rdc-ok{color:var(--green)}
 #rdcLog .rdc-skip{color:var(--t3)}
@@ -558,6 +558,50 @@ button{text-transform:none;letter-spacing:0}
 #plcLog .plc-skip{color:var(--t3)}
 #plcLog .plc-err{color:var(--pink)}
 .b-delisted{background:#cc6600;color:#fff;font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;user-select:none;-webkit-user-select:none}
+
+/* SPEND STATS */
+.ss-filters{display:flex;flex-wrap:wrap;gap:.7rem 1.1rem;align-items:flex-end;
+  padding-bottom:.8rem;margin-bottom:.8rem;border-bottom:1px solid var(--bd)}
+.ss-filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.ss-filter-group label{font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.ss-date-range{display:flex;align-items:center;gap:.4rem}
+.ss-date-range input{background:var(--base);border:1px solid var(--bd);border-radius:var(--r);
+  padding:.35rem .5rem;color:var(--text);font-size:.75rem;outline:none;font-family:'Inter',sans-serif;
+  color-scheme:dark}
+.ss-date-sep{font-size:.7rem;color:var(--t3)}
+.ss-clear{background:none;border:none;color:var(--pink);font-size:.68rem;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0;margin-left:auto}
+.ss-clear:hover{text-decoration:underline}
+.ss-stats{display:flex;gap:.9rem;flex-wrap:wrap;padding:.2rem 0 1rem}
+.ss-section-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.85rem;
+  color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin:1rem 0 .5rem}
+.ss-section-title:first-child{margin-top:0}
+.ss-empty{color:var(--t3);font-size:.8rem;padding:1rem 0}
+
+/* Horizontal bars — spend by platform/store */
+.ss-hbars{display:flex;flex-direction:column;gap:.4rem}
+.ss-hbar-row{display:grid;grid-template-columns:88px 1fr auto;align-items:center;gap:.6rem}
+.ss-hbar-label{font-size:.7rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-hbar-track{background:var(--base);border-radius:99px;height:10px;overflow:hidden}
+.ss-hbar-fill{height:100%;border-radius:99px;min-width:3px;transition:width .2s;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.ss-hbar-val{font-size:.72rem;color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Vertical trend chart — spend by month */
+.ss-trend{display:flex;align-items:flex-end;gap:.5rem;height:120px;overflow-x:auto;
+  padding:0 .1rem .2rem;scrollbar-width:thin}
+.ss-trend-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  flex-shrink:0;width:34px;height:100%;gap:.3rem}
+.ss-trend-bar{width:16px;min-height:2px;border-radius:3px 3px 0 0;background:var(--blue);
+  transition:height .2s}
+.ss-trend-val{font-size:.6rem;color:var(--t3);white-space:nowrap}
+.ss-trend-label{font-size:.6rem;color:var(--t3);white-space:nowrap;text-align:center}
+
+@media (max-width:560px){
+  .ss-filters{gap:.6rem .9rem}
+  .ss-clear{margin-left:0;flex-basis:100%}
+  .ss-hbar-row{grid-template-columns:64px 1fr auto;gap:.4rem}
+}
 
 
 /* notes system */
