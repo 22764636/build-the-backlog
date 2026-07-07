@@ -4977,7 +4977,10 @@ function _closeAllFloating(){
       cls='prio-low';count=freq.low||0;label='Low';
     }
     list.innerHTML=`<div class="fbar-pills">
-      <button class="fbar-pill fbar-pill-prio ${cls}" id="fbar-prio-pill" title="${label}" aria-label="Priority filter: ${label}"><span class="fbar-pill-count fpc-dark">${count}</span></button>
+      <button class="fbar-pill fbar-pill-prio ${cls}" id="fbar-prio-pill" title="${label}" aria-label="Priority filter: ${label}">
+        <span class="pm-bar"><span class="pm-seg pm-s1"></span><span class="pm-seg pm-s2"></span><span class="pm-seg pm-s3"></span></span>
+        <span class="fbar-pill-count fpc-dark">${count}</span>
+      </button>
     </div>`;
     document.getElementById('fbar-prio-pill').addEventListener('click',()=>{
       cyclePrioFilter();
