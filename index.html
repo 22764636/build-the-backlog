@@ -362,20 +362,30 @@
 <div id="ggFetchOv">
   <div class="modal" style="max-width:380px">
     <div class="modal-body">
-      <div class="mt">Fetching Live Prices</div>
-      <div style="margin:.8rem 0 .5rem">
-        <div style="font-size:.85rem;color:var(--t2);margin-bottom:.4rem" id="ggFetchProgress">Preparing…</div>
-        <div style="height:6px;background:var(--s2);border-radius:3px;overflow:hidden">
-          <div id="ggFetchBar" style="height:100%;background:var(--cyan);width:0%;transition:width .4s"></div>
+      <div id="ggFetchMain">
+        <div class="mt">Fetching Live Prices</div>
+        <div style="margin:.8rem 0 .5rem">
+          <div style="font-size:.85rem;color:var(--t2);margin-bottom:.4rem" id="ggFetchProgress">Preparing…</div>
+          <div style="height:6px;background:var(--s2);border-radius:3px;overflow:hidden">
+            <div id="ggFetchBar" style="height:100%;background:var(--cyan);width:0%;transition:width .4s"></div>
+          </div>
         </div>
+        <div style="font-size:.82rem;color:var(--amber);min-height:1.2em" id="ggFetchStatus"></div>
+        <div id="ggFetchList" style="margin-top:.55rem;max-height:110px;overflow-y:auto;font-size:.74rem;color:var(--t3);line-height:1.7"></div>
       </div>
-      <div style="font-size:.82rem;color:var(--amber);min-height:1.2em" id="ggFetchStatus"></div>
-      <div id="ggFetchList" style="margin-top:.55rem;max-height:110px;overflow-y:auto;font-size:.74rem;color:var(--t3);line-height:1.7"></div>
+      <div id="ggFetchConfirm" style="display:none">
+        <div class="mt" style="color:var(--pink)">Stop Fetching Prices?</div>
+        <div style="font-size:.85rem;color:var(--t2);margin:.7rem 0 0">Still fetching. Stop now, or let it keep running in the background.</div>
+      </div>
     </div>
-    <div class="ma">
+    <div class="ma" id="ggFetchMainBar">
       <button class="mb2" id="ggFetchClose" style="display:none">Close</button>
       <button class="mb2" id="ggFetchHide">Hide</button>
       <button class="mb2" id="ggFetchCancel">Cancel</button>
+    </div>
+    <div class="ma" id="ggFetchConfirmBar" style="display:none">
+      <button class="mb2" id="ggFetchConfirmContinue">Continue</button>
+      <button class="mb2 d" id="ggFetchConfirmStop">Stop</button>
     </div>
   </div>
 </div>
@@ -386,15 +396,29 @@
 <div id="rdcov">
   <div class="modal" style="max-width:520px">
     <div class="modal-body">
+    <div id="rdcMain">
     <div class="mt" style="color:var(--blue)">↻ Release Date Check</div>
     <div id="rdcSummary" style="font-size:.82rem;color:var(--t2);margin-bottom:.7rem;min-height:1.1em"></div>
     <div id="rdcLog"></div>
+    </div>
+    <div id="rdcConfirm" style="display:none">
+      <div class="mt" style="color:var(--pink)">Stop Release Date Check?</div>
+      <div style="font-size:.85rem;color:var(--t2);margin:.7rem 0 0">Still checking. Stop now, or let it keep running in the background.</div>
+    </div>
     </div><!-- /.modal-body -->
-    <div class="ma">
-      <button class="mb2" id="rdcClose">Close</button>
+    <div class="ma" id="rdcMainBar">
+      <button class="mb2" id="rdcClose" style="display:none">Close</button>
+      <button class="mb2" id="rdcHide">Hide</button>
+      <button class="mb2" id="rdcCancel">Cancel</button>
+    </div>
+    <div class="ma" id="rdcConfirmBar" style="display:none">
+      <button class="mb2" id="rdcConfirmContinue">Continue</button>
+      <button class="mb2 d" id="rdcConfirmStop">Stop</button>
     </div>
   </div>
 </div>
+<!-- RELEASE DATE CHECK FLOATING BUBBLE (shown when modal is hidden) -->
+<button id="rdcBubble" aria-label="Release date check in progress"></button>
 
 <!-- SPEND STATS MODAL -->
 <div id="ssov">

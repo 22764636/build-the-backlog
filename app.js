@@ -2938,7 +2938,8 @@ window.addEventListener('popstate',function(){
   if(calOv&&calOv.style.display!=='none'){_rawCloseCalendar();return;}
   const ggFetchOv=document.getElementById('ggFetchOv');
   if(ggFetchOv&&(ggFetchOv.classList.contains('on')||_ggFetchHidden)){
-    if(_ggFetchHidden){_showGgFetchModal();}else{_closeGgFetchModal();}
+    if(_ggFetchHidden){_showGgFetchModal();return;}
+    if(window._ggFetchTryClose&&!window._ggFetchTryClose())history.pushState({ggFetchOpen:true},'','');
     return;
   }
 });
@@ -4281,28 +4282,64 @@ document.addEventListener('keydown',function(e){
   const ov=document.getElementById('rdcov');
   const summary=document.getElementById('rdcSummary');
   const log=document.getElementById('rdcLog');
+  const mainView=document.getElementById('rdcMain');
+  const mainBar=document.getElementById('rdcMainBar');
+  const confirmBar=document.getElementById('rdcConfirmBar');
+  const confirmView=document.getElementById('rdcConfirm');
   const closeBtn=document.getElementById('rdcClose');
+  const hideBtn=document.getElementById('rdcHide');
+  const cancelBtn=document.getElementById('rdcCancel');
+  const confirmContinueBtn=document.getElementById('rdcConfirmContinue');
+  const confirmStopBtn=document.getElementById('rdcConfirmStop');
+  const bubble=document.getElementById('rdcBubble');
 
-  let _rdcRunning=false,_rdcAborted=false;
+  let _rdcRunning=false,_rdcAborted=false,_rdcHidden=false;
 
+  function _showConfirm(){
+    confirmView.style.display='';
+    mainView.style.display='none';
+    mainBar.style.display='none';
+    confirmBar.style.display='flex';
+  }
+  function _hideConfirm(){
+    confirmView.style.display='none';
+    mainView.style.display='';
+    mainBar.style.display='flex';
+    confirmBar.style.display='none';
+  }
   function _closeRdc(){
     ov.classList.remove('on');
-    _rdcRunning=false;_rdcAborted=false;
-    closeBtn.textContent='Close';
+    bubble.classList.remove('on');
+    _rdcRunning=false;_rdcAborted=false;_rdcHidden=false;
+    _hideConfirm();
+    closeBtn.style.display='none';hideBtn.style.display='';cancelBtn.style.display='';
     if(history.state&&history.state.rdcovOpen)history.replaceState(null,'','');
   }
   function _rdcTryClose(){
-    if(_rdcRunning){
-      if(!confirm('Stop the release date check?'))return false;
-      _rdcAborted=true;
-    }
+    if(_rdcRunning){_showConfirm();return false}
     _closeRdc();
     return true;
   }
-  closeBtn.onclick=()=>_rdcTryClose();
+  function _hideRdc(){
+    _rdcHidden=true;
+    ov.classList.remove('on');
+    bubble.classList.add('on');
+  }
+  function _showRdc(){
+    _rdcHidden=false;
+    bubble.classList.remove('on');
+    ov.classList.add('on');
+    history.pushState({rdcovOpen:true},'','');
+  }
+  closeBtn.onclick=()=>_closeRdc();
+  hideBtn.onclick=()=>_hideRdc();
+  cancelBtn.onclick=()=>_rdcTryClose();
+  confirmContinueBtn.onclick=()=>_hideConfirm();
+  confirmStopBtn.onclick=()=>{_rdcAborted=true;_hideConfirm();};
+  bubble.onclick=()=>_showRdc();
   ov.addEventListener('click',e=>{if(e.target===ov)_rdcTryClose();});
   window._rdcTryClose=_rdcTryClose;
-  window._rdcIsOpen=()=>ov.classList.contains('on');
+  window._rdcIsOpen=()=>ov.classList.contains('on')||_rdcHidden;
 
   function rdcLog(msg,cls){
     const d=document.createElement('div');
@@ -4331,8 +4368,10 @@ document.addEventListener('keydown',function(e){
     history.pushState({rdcovOpen:true},'','');
     log.innerHTML='';
     summary.textContent=`Checking ${targets.length} game${targets.length>1?'s':''}…`;
-    _rdcRunning=true;_rdcAborted=false;
-    closeBtn.textContent='Cancel';
+    _rdcRunning=true;_rdcAborted=false;_rdcHidden=false;
+    _hideConfirm();
+    closeBtn.style.display='none';hideBtn.style.display='';cancelBtn.style.display='';
+    bubble.textContent=`0\n/${targets.length}`;
 
     let updated=0,unchanged=0,failed=0;
 
@@ -4340,6 +4379,7 @@ document.addEventListener('keydown',function(e){
       if(_rdcAborted)break;
       const g=targets[i];
       summary.textContent=`${i+1}/${targets.length} — ${g.title}`;
+      bubble.textContent=`${i+1}\n/${targets.length}`;
 
       try{
         const res=await fetch(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
@@ -4372,12 +4412,14 @@ document.addEventListener('keydown',function(e){
     }
 
     _rdcRunning=false;
-    closeBtn.textContent='Close';
+    _hideConfirm();
+    closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
     if(_rdcAborted){
       summary.textContent=`Stopped — ${updated} updated, ${unchanged} unchanged${failed?`, ${failed} failed`:''}`;
     }else{
       summary.textContent=`Done — ${updated} updated, ${unchanged} unchanged${failed?`, ${failed} failed`:''}`;
     }
+    if(_rdcHidden){bubble.textContent='Done';}
     if(updated)dispatchRender();
   }
 
@@ -4641,6 +4683,25 @@ document.addEventListener('keydown',function(e){
 // ══════════════════════════════════════════
 let _ggFetchCancelled=false;
 let _ggFetchHidden=false;
+let _ggFetchRunning=false;
+
+function _showGgConfirm(){
+  document.getElementById('ggFetchConfirm').style.display='';
+  document.getElementById('ggFetchMain').style.display='none';
+  document.getElementById('ggFetchMainBar').style.display='none';
+  document.getElementById('ggFetchConfirmBar').style.display='flex';
+}
+function _hideGgConfirm(){
+  document.getElementById('ggFetchConfirm').style.display='none';
+  document.getElementById('ggFetchMain').style.display='';
+  document.getElementById('ggFetchMainBar').style.display='flex';
+  document.getElementById('ggFetchConfirmBar').style.display='none';
+}
+function _ggFetchTryClose(){
+  if(_ggFetchRunning){_showGgConfirm();return false}
+  _closeGgFetchModal();
+  return true;
+}
 
 async function loadSavedPrices(){
   if(!SHEET_URL)return;
@@ -4693,6 +4754,7 @@ async function runGGDealsFetch(){
   let fetched=0;
   _ggFetchCancelled=false;
   _ggFetchHidden=false;
+  _ggFetchRunning=true;
 
   const ov=document.getElementById('ggFetchOv');
   const progressEl=document.getElementById('ggFetchProgress');
@@ -4712,12 +4774,15 @@ async function runGGDealsFetch(){
     if(status!==undefined)statusEl.textContent=status;
   }
 
+  _hideGgConfirm();
   closeBtn.style.display='none';
   hideBtn.style.display='';
   cancelBtn.style.display='';
   cancelBtn.textContent='Cancel';
-  cancelBtn.onclick=()=>{_ggFetchCancelled=true;};
+  cancelBtn.onclick=()=>_ggFetchTryClose();
   hideBtn.onclick=_hideGgFetchModal;
+  document.getElementById('ggFetchConfirmContinue').onclick=()=>_hideGgConfirm();
+  document.getElementById('ggFetchConfirmStop').onclick=()=>{_ggFetchCancelled=true;_hideGgConfirm();};
   listEl.innerHTML='';
   ov.classList.add('on');
   history.pushState({ggFetchOpen:true},'','');
@@ -4769,6 +4834,7 @@ async function runGGDealsFetch(){
     }catch(err){
       setProgress(`Error: ${err.message}`);
       console.error('BTB GG.deals error:',err);
+      _ggFetchRunning=false;_hideGgConfirm();
       closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
       closeBtn.onclick=_closeGgFetchModal;
       return;
@@ -4792,6 +4858,7 @@ async function runGGDealsFetch(){
     barEl.style.width='100%';
     statusEl.textContent='All done!';
   }
+  _ggFetchRunning=false;_hideGgConfirm();
   closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
   closeBtn.onclick=_closeGgFetchModal;
   // If hidden, show done state in bubble then restore modal
@@ -4817,12 +4884,16 @@ function _showGgFetchModal(){
 function _closeGgFetchModal(){
   _ggFetchCancelled=true;
   _ggFetchHidden=false;
+  _ggFetchRunning=false;
+  _hideGgConfirm();
   document.getElementById('ggFetchOv').classList.remove('on');
   document.getElementById('ggFetchBubble').classList.remove('on');
   if(history.state&&history.state.ggFetchOpen)history.replaceState(null,'','');
 }
-document.getElementById('ggFetchOv').addEventListener('click',e=>{if(e.target===document.getElementById('ggFetchOv'))_closeGgFetchModal();});
+document.getElementById('ggFetchOv').addEventListener('click',e=>{if(e.target===document.getElementById('ggFetchOv'))_ggFetchTryClose();});
 document.getElementById('ggFetchBubble').onclick=_showGgFetchModal;
+window._ggFetchTryClose=_ggFetchTryClose;
+window._ggFetchIsOpen=()=>document.getElementById('ggFetchOv').classList.contains('on')||_ggFetchHidden;
 
 document.getElementById('hmPriceBtn').onclick=()=>{
   document.getElementById('hmenu').classList.remove('on');
