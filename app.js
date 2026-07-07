@@ -4505,16 +4505,35 @@ document.addEventListener('keydown',function(e){
   const closeBtn=document.getElementById('ssClose');
   const platEl=document.getElementById('ssPlatPills');
   const storeEl=document.getElementById('ssStorePills');
+  const storeSec=document.getElementById('ssStoreSec');
   const storeToggle=document.getElementById('ssStoreToggle');
   const storeBody=document.getElementById('ssStoreBody');
+  const storeCount=document.getElementById('ssStoreCount');
   const fromEl=document.getElementById('ssDateFrom');
   const toEl=document.getElementById('ssDateTo');
   const statsEl=document.getElementById('ssStats');
   const bodyEl=document.getElementById('ssBody');
 
+  // Same expand/collapse mechanics as the main list's .sb/.sl sections
+  // (see _toggleOneSb in app.js) — smooth max-height transition, chevron
+  // rotates via the shared .sl.collapsed .sl-toggle rule.
   storeToggle.addEventListener('click',()=>{
-    const open=storeToggle.classList.toggle('open');
-    storeBody.style.display=open?'':'none';
+    const collapsing=!storeSec.classList.contains('collapsed');
+    if(collapsing){
+      storeBody.style.maxHeight=storeBody.scrollHeight+'px';
+      requestAnimationFrame(()=>{
+        storeBody.style.maxHeight='0';
+        storeSec.classList.add('collapsed');
+        storeToggle.classList.add('collapsed');
+      });
+    }else{
+      storeSec.classList.remove('collapsed');
+      storeToggle.classList.remove('collapsed');
+      storeBody.style.maxHeight=storeBody.scrollHeight+'px';
+      storeBody.addEventListener('transitionend',()=>{
+        if(!storeSec.classList.contains('collapsed'))storeBody.style.maxHeight='none';
+      },{once:true});
+    }
   });
 
   let ssPlats=new Set();
@@ -4583,6 +4602,7 @@ document.addEventListener('keydown',function(e){
     const storeFreq={};
     all.forEach(r=>{if(r.store)storeFreq[r.store]=(storeFreq[r.store]||0)+1;});
     const stores=Object.keys(storeFreq).sort((a,b)=>storeFreq[b]-storeFreq[a]);
+    storeCount.textContent=stores.length;
     storeEl.innerHTML=stores.length?stores.map(s=>{
       const sel=ssStores.has(s);
       return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--indigo);color:#fff">${esc(s)}<span class="fbar-pill-count fpc-light">${storeFreq[s]}</span></button>`;
