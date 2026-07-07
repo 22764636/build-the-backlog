@@ -427,28 +427,33 @@
     <div class="mt" style="color:var(--blue)">💶 Spend Stats</div>
 
     <div class="ss-filters">
-      <div class="ss-filter-group">
-        <label>Platform</label>
-        <div class="fbar-pills" id="ssPlatPills"></div>
-      </div>
-      <div class="ss-filter-group">
-        <label>Purchase date</label>
-        <div class="ss-date-range">
-          <input type="date" id="ssDateFrom" autocomplete="off">
-          <span class="ss-date-sep">to</span>
-          <input type="date" id="ssDateTo" autocomplete="off">
+      <div class="ss-filters-row">
+        <div class="ss-filter-group">
+          <label>Platform</label>
+          <div class="fbar-pills" id="ssPlatPills"></div>
+        </div>
+        <div class="ss-filter-group">
+          <label>Purchase date</label>
+          <div class="ss-date-range">
+            <input type="date" id="ssDateFrom" autocomplete="off">
+            <span class="ss-date-sep">to</span>
+            <input type="date" id="ssDateTo" autocomplete="off">
+          </div>
         </div>
       </div>
-      <div class="ss-filter-group">
-        <button class="fbar-sec-hdr ss-store-hdr" id="ssStoreToggle" type="button">
-          <span class="fbar-sec-title">Store</span>
-          <span class="fbar-sec-arrow">▾</span>
-        </button>
-        <div class="fbar-sec-body ss-store-body" id="ssStoreBody" style="display:none">
+      <div class="sb ss-store-sec collapsed" id="ssStoreSec">
+        <div class="sl collapsed" id="ssStoreToggle">
+          Store
+          <span class="sl-count" id="ssStoreCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
+          <span class="sl-toggle">▾</span>
+        </div>
+        <div class="sb-body" id="ssStoreBody" style="max-height:0">
           <div class="fbar-pills" id="ssStorePills"></div>
         </div>
       </div>
-      <button class="ss-clear" id="ssClearFilters">Clear filters</button>
+      <div class="ss-clear-row">
+        <button class="ss-clear" id="ssClearFilters">Clear filters</button>
+      </div>
     </div>
 
     <div id="ssStats" class="ss-stats"></div>

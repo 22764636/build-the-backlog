@@ -564,20 +564,26 @@ button{text-transform:none;letter-spacing:0}
    labels/values sitting at the modal's right edge once content grows tall
    enough to scroll (platform/store/date breakdowns can get long). */
 #ssov .modal-body{scrollbar-gutter:stable}
-.ss-filters{display:flex;flex-wrap:wrap;gap:.7rem 1.1rem;align-items:flex-end;
+.ss-filters{display:flex;flex-direction:column;gap:.7rem;
   padding-bottom:.8rem;margin-bottom:.8rem;border-bottom:1px solid var(--bd)}
+.ss-filters-row{display:flex;flex-wrap:wrap;gap:.7rem 1.1rem;align-items:flex-end}
 .ss-filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0}
 .ss-filter-group label{font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
-.ss-store-hdr{padding:0;gap:.3rem;width:auto}
-.ss-store-hdr .fbar-sec-title{font-size:.63rem;font-weight:600;letter-spacing:.08em;color:var(--t3);flex:none}
-.ss-store-body{padding:.4rem 0 0}
+/* Store reuses the exact .sb/.sl/.sb-body section-header component from the
+   main game-list groupings (see makeSection() in app.js) for visual and
+   interaction parity — same typography, trailing rule, and chevron. Always
+   its own row (never shares a row with Platform/Purchase date), and .sb's
+   own margin-bottom is redundant with .ss-filters' gap, so it's zeroed. */
+.ss-store-sec{margin-bottom:0}
+.ss-store-sec .sb-body{padding-top:.4rem}
 .ss-date-range{display:flex;align-items:center;gap:.4rem}
 .ss-date-range input{background:var(--base);border:1px solid var(--bd);border-radius:var(--r);
   padding:.35rem .5rem;color:var(--text);font-size:.75rem;outline:none;font-family:'Inter',sans-serif;
   color-scheme:dark}
 .ss-date-sep{font-size:.7rem;color:var(--t3)}
+.ss-clear-row{display:flex;justify-content:flex-end}
 .ss-clear{background:none;border:none;color:var(--pink);font-size:.68rem;font-weight:600;
-  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0;margin-left:auto}
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0}
 .ss-clear:hover{text-decoration:underline}
 .ss-stats{display:flex;gap:.9rem;flex-wrap:wrap;padding:.2rem 0 1rem}
 .ss-section-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.85rem;
@@ -609,8 +615,8 @@ button{text-transform:none;letter-spacing:0}
 .ss-trend-label{font-size:.6rem;color:var(--t3);white-space:nowrap;text-align:center}
 
 @media (max-width:560px){
-  .ss-filters{gap:.6rem .9rem}
-  .ss-clear{margin-left:0;flex-basis:100%}
+  .ss-filters{gap:.6rem}
+  .ss-filters-row{gap:.6rem .9rem}
   .ss-hbar-row{grid-template-columns:64px 1fr auto;gap:.4rem}
 }
 
