@@ -42,7 +42,7 @@
 .sum-lbl{font-size:.68rem;color:var(--t3);text-transform:uppercase;letter-spacing:.04em}
 </style>
 </head>
-<body style="background:var(--base)">
+<body style="background:var(--base);overflow:auto;height:auto;display:block">
 <div class="audit-wrap">
   <div class="audit-h1">Modal Alignment Audit</div>
   <div class="audit-sub">Every multi-field row in the Add/Edit modal (<code>#mov</code>, including the embedded Collection Details section) and the Move-to-Collection modal (<code>#btcov</code>), measured with <code>getBoundingClientRect()</code> at 1280×1000 @2x DPR. For each row: do all labels end (bottom edge) at the same Y, and do all fields start (top edge) at the same Y? Field <i>height</i> is allowed to differ when the controls are genuinely different types (e.g. a date-overlay widget vs. a plain input) — see the Release Date row below for a passing example of that exception.</div>
