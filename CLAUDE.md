@@ -20,3 +20,13 @@ This app has exactly four categories of small UI elements, and the distinctions 
 ## Full style guide
 
 **`reviews/style-guide.html`** covers everything in the app that is *not* a Pill/Badge/Chip/Stat: design tokens (colors, radii, typography), buttons (header, modal, panel, card, FAB, notes, sidebar), form controls, and every structural component (header, game/collection card, filter sidebar, modals, side panel, calendar, toasts/tooltips/dropdowns) — class names, hex colors (click to copy), CSS variable names, and hover/selected/active states, rendered with the real `style.css`. It cross-links to `pills-badges-chips-stats-reference.html` rather than duplicating it. When in doubt about any non-pill/badge/chip/stat element's class or look, check this file before guessing; keep both files in sync with `style.css` as the app evolves.
+
+## Standalone report/review HTML pages
+
+Any one-off HTML page in `reviews/` (audits, reports, style references) that links the real `style.css` inherits `body{height:100%;overflow:hidden}`, which is meant for the app shell's internal scroll containers, not a plain document. Left as-is, the page clips at the viewport height and cannot be scrolled. Every such page's `<body>` tag must override this, e.g.:
+
+```html
+<body style="overflow:auto;height:auto;display:block">
+```
+
+Do this every time, not just when someone notices the page doesn't scroll.
