@@ -425,29 +425,25 @@
     </div>
   </div>
 </div>
-<!-- SPEND STATS MODAL -->
-<div id="ssov">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-body">
-    <div class="mt" style="color:var(--blue)">Spend Stats</div>
-
-    <div class="ss-filters">
-      <div class="sb ss-fsec" id="ssPlatSec">
-        <div class="sl" id="ssPlatToggle">
-          Platform
-          <span class="sl-count" id="ssPlatCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
-          <span class="sl-toggle">▾</span>
-        </div>
-        <div class="sb-body" id="ssPlatBody">
+<!-- SPEND STATS DASHBOARD — full-page overlay, same pattern as #calOv -->
+<div id="ssov" style="display:none;position:fixed;inset:0;background:rgba(3,19,41,.85);backdrop-filter:blur(4px);z-index:250;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto">
+  <div class="ssdash">
+    <div class="ssdash-hdr">
+      <span class="ssdash-title">Spend Stats</span>
+      <button class="hb accent" id="ssClose">✕</button>
+    </div>
+    <div class="ssdash-body">
+      <div class="ss-filters">
+        <div class="ss-fgroup">
+          <span class="ss-flabel">Platform</span>
           <div class="fbar-pills" id="ssPlatPills"></div>
         </div>
-      </div>
-      <div class="sb ss-fsec" id="ssDateSec">
-        <div class="sl" id="ssDateToggle">
-          Purchase date
-          <span class="sl-toggle">▾</span>
+        <div class="ss-fgroup">
+          <span class="ss-flabel">Store</span>
+          <div class="fbar-pills" id="ssStorePills"></div>
         </div>
-        <div class="sb-body" id="ssDateBody">
+        <div class="ss-fgroup">
+          <span class="ss-flabel">Purchase date</span>
           <div class="ss-date-range">
             <input type="date" id="ssDateFrom" autocomplete="off">
             <span class="ss-date-sep">to</span>
@@ -456,27 +452,27 @@
             <button type="button" class="ss-date-shortcut" id="ssDateThisYear">This year</button>
           </div>
         </div>
-      </div>
-      <div class="sb ss-fsec collapsed" id="ssStoreSec">
-        <div class="sl collapsed" id="ssStoreToggle">
-          Store
-          <span class="sl-count" id="ssStoreCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
-          <span class="sl-toggle">▾</span>
-        </div>
-        <div class="sb-body" id="ssStoreBody" style="max-height:0">
-          <div class="fbar-pills" id="ssStorePills"></div>
-        </div>
-      </div>
-      <div class="ss-clear-row">
         <button class="ss-clear" id="ssClearFilters">Clear filters</button>
       </div>
-    </div>
 
-    <div id="ssStats" class="ss-stats"></div>
-    <div id="ssBody"></div>
-    </div><!-- /.modal-body -->
-    <div class="ma">
-      <button class="mb2" id="ssClose">Close</button>
+      <div class="ss-kpis" id="ssKpis"></div>
+
+      <div id="ssEmpty" class="ss-empty" style="display:none">No purchases match these filters.</div>
+      <div class="ss-grid" id="ssGrid">
+        <div class="ss-card ss-card-wide">
+          <div class="ss-card-hdr">Spend by month</div>
+          <div class="ss-linewrap" id="ssMonthChart"></div>
+          <div class="ss-undated-note" id="ssUndatedNote" style="display:none"></div>
+        </div>
+        <div class="ss-card">
+          <div class="ss-card-hdr">Spend by platform</div>
+          <div class="ss-hbars" id="ssPlatChart"></div>
+        </div>
+        <div class="ss-card">
+          <div class="ss-card-hdr">Spend by year</div>
+          <div class="ss-hbars" id="ssYearChart"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
