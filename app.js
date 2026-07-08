@@ -2925,6 +2925,7 @@ window.addEventListener('popstate',function(){
   if(window._rdcIsOpen&&window._rdcIsOpen()){if(window._rdcTryClose&&!window._rdcTryClose())history.pushState({rdcovOpen:true},'','');return;}
   if(window._plcIsOpen&&window._plcIsOpen()){if(window._plcTryClose&&!window._plcTryClose())history.pushState({plcovOpen:true},'','');return;}
   if(window._ssIsOpen&&window._ssIsOpen()){window._ssTryClose&&window._ssTryClose();return;}
+  if(window._tkIsOpen&&window._tkIsOpen()){window._tkTryClose&&window._tkTryClose();return;}
   const fbar=document.getElementById('fbar');
   if(fbar&&fbar.classList.contains('on')){window._rawCloseFbar&&window._rawCloseFbar();return;}
   if(document.getElementById('panel').classList.contains('on')){
@@ -4707,6 +4708,72 @@ document.addEventListener('keydown',function(e){
     document.getElementById('hmenu').classList.remove('on');
     open();
   };
+})();
+
+// ══════════════════════════════════════════
+//  TRADE KEYS
+// ══════════════════════════════════════════
+(function(){
+  const ov=document.getElementById('tkov');
+  if(!ov)return;
+  const closeBtn=document.getElementById('tkClose');
+  const copyBtn=document.getElementById('tkCopy');
+  const summaryEl=document.getElementById('tkSummary');
+  const textEl=document.getElementById('tkText');
+
+  function steamUrlFor(g){
+    return g.storeLink||(g.steamAppId?`https://store.steampowered.com/app/${g.steamAppId}/`:`https://store.steampowered.com/search/?term=${encodeURIComponent(g.title||'')}`);
+  }
+  function buildMarkdown(){
+    return games.filter(g=>g.key)
+      .sort((a,b)=>(a.title||'').localeCompare(b.title||''))
+      .map(g=>`[${g.title}](${steamUrlFor(g)})`)
+      .join('\n');
+  }
+
+  function _closeTk(){
+    ov.classList.remove('on');
+    if(history.state&&history.state.tkovOpen)history.replaceState(null,'','');
+  }
+  window._tkTryClose=function(){_closeTk();return true;};
+  window._tkIsOpen=()=>ov.classList.contains('on');
+  closeBtn.onclick=_closeTk;
+  ov.addEventListener('click',e=>{if(e.target===ov)_closeTk();});
+
+  async function copyText(text){
+    try{await navigator.clipboard.writeText(text);return true}
+    catch(e){return false}
+  }
+
+  async function open(){
+    const md=buildMarkdown();
+    const n=md?md.split('\n').length:0;
+    if(!n){showToast('No games with a trade key set.');return}
+    textEl.value=md;
+    const ok=await copyText(md);
+    summaryEl.textContent=ok
+      ?`${n} trade key${n>1?'s':''} copied to clipboard — ready to paste.`
+      :`${n} trade key${n>1?'s':''} — clipboard copy failed, use the Copy button below.`;
+    showToast(ok?`Copied ${n} trade key${n>1?'s':''}`:'Could not copy — text ready below');
+    ov.classList.add('on');
+    history.pushState({tkovOpen:true},'','');
+    textEl.focus();textEl.select();
+  }
+
+  copyBtn.onclick=async()=>{
+    const ok=await copyText(textEl.value);
+    showToast(ok?'Copied to clipboard':'Could not copy to clipboard');
+  };
+
+  window.openTradeKeys=open;
+  [['hmTradeKeysBtn','hmenu'],['dhTradeKeysBtn','dhmenu']].forEach(([btnId,menuId])=>{
+    const btn=document.getElementById(btnId);
+    if(!btn)return;
+    btn.onclick=()=>{
+      document.getElementById(menuId).classList.remove('on');
+      open();
+    };
+  });
 })();
 
 // ══════════════════════════════════════════
