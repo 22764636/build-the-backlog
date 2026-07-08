@@ -391,8 +391,14 @@
     </div>
   </div>
 </div>
-<!-- GG.DEALS FETCH FLOATING BUBBLE (shown when modal is hidden) -->
-<button id="ggFetchBubble" aria-label="Price fetch in progress"></button>
+<!-- Floating progress bubbles for hidden background tasks (price fetch,
+     release date check, ...). A shared flex stack, not independently
+     fixed-positioned buttons, so any number active at once lay out without
+     overlapping — see #bubbleStack in style.css. -->
+<div id="bubbleStack">
+  <button id="ggFetchBubble" aria-label="Price fetch in progress"></button>
+  <button id="rdcBubble" aria-label="Release date check in progress"></button>
+</div>
 
 <!-- RELEASE DATE CHECK MODAL -->
 <div id="rdcov">
@@ -419,31 +425,39 @@
     </div>
   </div>
 </div>
-<!-- RELEASE DATE CHECK FLOATING BUBBLE (shown when modal is hidden) -->
-<button id="rdcBubble" aria-label="Release date check in progress"></button>
-
 <!-- SPEND STATS MODAL -->
 <div id="ssov">
   <div class="modal" style="max-width:640px">
     <div class="modal-body">
-    <div class="mt" style="color:var(--blue)">💶 Spend Stats</div>
+    <div class="mt" style="color:var(--blue)">Spend Stats</div>
 
     <div class="ss-filters">
-      <div class="ss-filters-row">
-        <div class="ss-filter-group">
-          <label>Platform</label>
+      <div class="sb ss-fsec" id="ssPlatSec">
+        <div class="sl" id="ssPlatToggle">
+          Platform
+          <span class="sl-count" id="ssPlatCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
+          <span class="sl-toggle">▾</span>
+        </div>
+        <div class="sb-body" id="ssPlatBody">
           <div class="fbar-pills" id="ssPlatPills"></div>
         </div>
-        <div class="ss-filter-group">
-          <label>Purchase date</label>
+      </div>
+      <div class="sb ss-fsec" id="ssDateSec">
+        <div class="sl" id="ssDateToggle">
+          Purchase date
+          <span class="sl-toggle">▾</span>
+        </div>
+        <div class="sb-body" id="ssDateBody">
           <div class="ss-date-range">
             <input type="date" id="ssDateFrom" autocomplete="off">
             <span class="ss-date-sep">to</span>
             <input type="date" id="ssDateTo" autocomplete="off">
+            <button type="button" class="ss-date-shortcut" id="ssDateThisMonth">This month</button>
+            <button type="button" class="ss-date-shortcut" id="ssDateThisYear">This year</button>
           </div>
         </div>
       </div>
-      <div class="sb ss-store-sec collapsed" id="ssStoreSec">
+      <div class="sb ss-fsec collapsed" id="ssStoreSec">
         <div class="sl collapsed" id="ssStoreToggle">
           Store
           <span class="sl-count" id="ssStoreCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
@@ -471,7 +485,7 @@
 <div id="tkov">
   <div class="modal" style="max-width:520px">
     <div class="modal-body">
-    <div class="mt" style="color:var(--blue)">🔑 Trade Keys</div>
+    <div class="mt" style="color:var(--blue)">Trade Keys</div>
     <div id="tkSummary" style="font-size:.82rem;color:var(--t2);margin-bottom:.7rem"></div>
     <textarea class="rta" id="tkText" readonly style="min-height:220px;font-family:monospace;font-size:.75rem"></textarea>
     </div><!-- /.modal-body -->

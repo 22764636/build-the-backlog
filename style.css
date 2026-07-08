@@ -250,7 +250,14 @@ button{text-transform:none;letter-spacing:0}
 .gg.lv .ggp-ov{display:none}
 /* side panel — Live Price section: same .ggp-* tags as the card overlay, plain row instead of an absolute-positioned strip */
 .pv-liveprice{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-height:1.1rem}
-#ggFetchBubble,#rdcBubble{display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:var(--cyan);border:none;cursor:pointer;z-index:400;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.68rem;color:#031329;text-align:center;line-height:1.2;box-shadow:0 2px 16px rgba(2,179,252,.45);animation:ggPulse 1.8s ease-in-out infinite}
+/* Shared stack for all hidden-background-task bubbles — position:fixed lives
+   here once, not duplicated per-bubble, so any number of simultaneously
+   active bubbles (2 today, more later) lay out via flex gap instead of
+   piling up on the exact same fixed coordinates and hiding each other. */
+#bubbleStack{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column-reverse;align-items:center;gap:.6rem;
+  z-index:400;pointer-events:none}
+#ggFetchBubble,#rdcBubble{display:none;position:static;pointer-events:auto;width:52px;height:52px;border-radius:50%;background:var(--cyan);border:none;cursor:pointer;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.68rem;color:#031329;text-align:center;line-height:1.2;box-shadow:0 2px 16px rgba(2,179,252,.45);animation:ggPulse 1.8s ease-in-out infinite}
 #ggFetchBubble.on,#rdcBubble.on{display:flex}
 @keyframes ggPulse{0%,100%{box-shadow:0 2px 16px rgba(2,179,252,.45)}50%{box-shadow:0 2px 24px rgba(2,179,252,.8)}}
 .b-unrel-card{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.04em;
@@ -564,23 +571,27 @@ button{text-transform:none;letter-spacing:0}
    labels/values sitting at the modal's right edge once content grows tall
    enough to scroll (platform/store/date breakdowns can get long). */
 #ssov .modal-body{scrollbar-gutter:stable}
-.ss-filters{display:flex;flex-direction:column;gap:.7rem;
+.ss-filters{display:flex;flex-direction:column;gap:.4rem;
   padding-bottom:.8rem;margin-bottom:.8rem;border-bottom:1px solid var(--bd)}
-.ss-filters-row{display:flex;flex-wrap:wrap;gap:.7rem 1.1rem;align-items:flex-end}
-.ss-filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0}
-.ss-filter-group label{font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
-/* Store reuses the exact .sb/.sl/.sb-body section-header component from the
-   main game-list groupings (see makeSection() in app.js) for visual and
-   interaction parity — same typography, trailing rule, and chevron. Always
-   its own row (never shares a row with Platform/Purchase date), and .sb's
-   own margin-bottom is redundant with .ss-filters' gap, so it's zeroed. */
-.ss-store-sec{margin-bottom:0}
-.ss-store-sec .sb-body{padding-top:.4rem}
-.ss-date-range{display:flex;align-items:center;gap:.4rem}
+/* Platform / Purchase date / Store all reuse the exact .sb/.sl/.sb-body
+   section-header component from the main game-list groupings (see
+   makeSection() in app.js) for visual and interaction parity — same
+   typography, trailing rule, chevron, and smooth expand/collapse. Each is
+   always its own row (never shares a row with another), and .sb's own
+   margin-bottom is redundant with .ss-filters' gap, so it's zeroed. Store
+   starts collapsed (via the .collapsed class in the markup); Platform and
+   Purchase date start expanded. */
+.ss-fsec{margin-bottom:0}
+.ss-fsec .sb-body{padding-top:.4rem}
+.ss-date-range{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem}
 .ss-date-range input{background:var(--base);border:1px solid var(--bd);border-radius:var(--r);
   padding:.35rem .5rem;color:var(--text);font-size:.75rem;outline:none;font-family:'Inter',sans-serif;
   color-scheme:dark}
 .ss-date-sep{font-size:.7rem;color:var(--t3)}
+.ss-date-shortcut{background:var(--base);border:1px solid var(--bd);border-radius:99px;
+  color:var(--t2);font-size:.68rem;font-weight:600;padding:.3rem .65rem;cursor:pointer;
+  transition:border-color .12s,color .12s}
+.ss-date-shortcut:hover{border-color:var(--blue);color:var(--blue)}
 .ss-clear-row{display:flex;justify-content:flex-end}
 .ss-clear{background:none;border:none;color:var(--pink);font-size:.68rem;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0}
@@ -615,8 +626,7 @@ button{text-transform:none;letter-spacing:0}
 .ss-trend-label{font-size:.6rem;color:var(--t3);white-space:nowrap;text-align:center}
 
 @media (max-width:560px){
-  .ss-filters{gap:.6rem}
-  .ss-filters-row{gap:.6rem .9rem}
+  .ss-filters{gap:.5rem}
   .ss-hbar-row{grid-template-columns:64px 1fr auto;gap:.4rem}
 }
 

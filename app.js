@@ -4536,37 +4536,45 @@ document.addEventListener('keydown',function(e){
   if(!ov)return;
   const closeBtn=document.getElementById('ssClose');
   const platEl=document.getElementById('ssPlatPills');
+  const platCount=document.getElementById('ssPlatCount');
   const storeEl=document.getElementById('ssStorePills');
-  const storeSec=document.getElementById('ssStoreSec');
-  const storeToggle=document.getElementById('ssStoreToggle');
-  const storeBody=document.getElementById('ssStoreBody');
   const storeCount=document.getElementById('ssStoreCount');
   const fromEl=document.getElementById('ssDateFrom');
   const toEl=document.getElementById('ssDateTo');
   const statsEl=document.getElementById('ssStats');
   const bodyEl=document.getElementById('ssBody');
 
-  // Same expand/collapse mechanics as the main list's .sb/.sl sections
-  // (see _toggleOneSb in app.js) — smooth max-height transition, chevron
-  // rotates via the shared .sl.collapsed .sl-toggle rule.
-  storeToggle.addEventListener('click',()=>{
-    const collapsing=!storeSec.classList.contains('collapsed');
-    if(collapsing){
-      storeBody.style.maxHeight=storeBody.scrollHeight+'px';
-      requestAnimationFrame(()=>{
-        storeBody.style.maxHeight='0';
-        storeSec.classList.add('collapsed');
-        storeToggle.classList.add('collapsed');
-      });
-    }else{
-      storeSec.classList.remove('collapsed');
-      storeToggle.classList.remove('collapsed');
-      storeBody.style.maxHeight=storeBody.scrollHeight+'px';
-      storeBody.addEventListener('transitionend',()=>{
-        if(!storeSec.classList.contains('collapsed'))storeBody.style.maxHeight='none';
-      },{once:true});
-    }
-  });
+  // Same expand/collapse mechanics as the main list's .sb/.sl sections (see
+  // _toggleOneSb in app.js) — smooth max-height transition, chevron rotates
+  // via the shared .sl.collapsed .sl-toggle rule. Shared by all three filter
+  // sections (Platform/Purchase date start expanded, Store starts collapsed
+  // — set via the .collapsed class already present in the markup).
+  function wireAccordion(secId,toggleId,bodyId){
+    const sec=document.getElementById(secId);
+    const toggle=document.getElementById(toggleId);
+    const body=document.getElementById(bodyId);
+    toggle.addEventListener('click',()=>{
+      const collapsing=!sec.classList.contains('collapsed');
+      if(collapsing){
+        body.style.maxHeight=body.scrollHeight+'px';
+        requestAnimationFrame(()=>{
+          body.style.maxHeight='0';
+          sec.classList.add('collapsed');
+          toggle.classList.add('collapsed');
+        });
+      }else{
+        sec.classList.remove('collapsed');
+        toggle.classList.remove('collapsed');
+        body.style.maxHeight=body.scrollHeight+'px';
+        body.addEventListener('transitionend',()=>{
+          if(!sec.classList.contains('collapsed'))body.style.maxHeight='none';
+        },{once:true});
+      }
+    });
+  }
+  wireAccordion('ssPlatSec','ssPlatToggle','ssPlatBody');
+  wireAccordion('ssDateSec','ssDateToggle','ssDateBody');
+  wireAccordion('ssStoreSec','ssStoreToggle','ssStoreBody');
 
   let ssPlats=new Set();
   let ssStores=new Set();
@@ -4618,6 +4626,7 @@ document.addEventListener('keydown',function(e){
     const platFreq={};
     all.forEach(r=>{if(r.platform)platFreq[r.platform]=(platFreq[r.platform]||0)+1;});
     const plats=PLATFORM_ORDER.filter(p=>platFreq[p]).concat(Object.keys(platFreq).filter(p=>!PLATFORM_ORDER.includes(p)));
+    platCount.textContent=plats.length;
     platEl.innerHTML=plats.length?plats.map(p=>{
       const sel=ssPlats.has(p);
       const cntCls=platTextColor(p)==='#fff'?'fpc-light':'fpc-dark';
@@ -4715,6 +4724,20 @@ document.addEventListener('keydown',function(e){
   };
   fromEl.addEventListener('change',render);
   toEl.addEventListener('change',render);
+
+  document.getElementById('ssDateThisMonth').onclick=()=>{
+    const d=new Date();
+    const y=d.getFullYear(),m=d.getMonth();
+    fromEl.value=`${y}-${String(m+1).padStart(2,'0')}-01`;
+    toEl.value=`${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y,m+1,0).getDate()).padStart(2,'0')}`;
+    render();
+  };
+  document.getElementById('ssDateThisYear').onclick=()=>{
+    const y=new Date().getFullYear();
+    fromEl.value=`${y}-01-01`;
+    toEl.value=`${y}-12-31`;
+    render();
+  };
 
   function open(){
     ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';

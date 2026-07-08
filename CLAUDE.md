@@ -2,6 +2,10 @@
 
 Guidance for Claude Code when working in this repo.
 
+## No emoji
+
+Never add emoji anywhere in this app — modal titles, buttons, headers, toasts, code comments, commit messages — unless the user explicitly asks for one in that instance. This has been raised repeatedly; treat it as a hard rule, not a style preference to weigh against "looks nice." Existing non-emoji glyphs used as icons (e.g. `↻`) are not emoji and are fine.
+
 ## Design system terminology
 
 This app has exactly four categories of small UI elements, and the distinctions are load-bearing — don't blur them:

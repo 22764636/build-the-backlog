@@ -142,17 +142,23 @@ function setRows(records) {
   const sheet = getSheet(SHEET_NAME);
   const rows = sheet.getDataRange().getValues();
   const headers = rows[0].map(String);
+  const rdCol = headers.indexOf('releaseDate');
 
   records.forEach(record => {
     const idCol = headers.indexOf('id');
     const existingRow = rows.findIndex((r, i) => i > 0 && String(r[idCol]) === String(record.id));
+    const targetRow = existingRow > 0 ? existingRow + 1 : sheet.getLastRow() + 1;
 
     const rowData = headers.map(h => toCell(record[h]));
-    if (existingRow > 0) {
-      sheet.getRange(existingRow + 1, 1, 1, headers.length).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
-    }
+    // releaseDate can be an intentionally imprecise string like "November 2026"
+    // (day unknown). Sheets' default "Automatic" cell format silently
+    // reparses any date-looking text into a real Date value — defaulting
+    // the missing day to the 1st — which permanently destroys that
+    // precision the moment it's written. Forcing the cell to plain-text
+    // format *before* the write is the only way to stop Sheets from doing
+    // this; fixing it after the fact can't recover the lost day.
+    if (rdCol > -1) sheet.getRange(targetRow, rdCol + 1).setNumberFormat('@');
+    sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
   });
 
   return { ok: true };
@@ -175,6 +181,12 @@ function setAll(records) {
 
   const rows = [headers, ...records.map(r => headers.map(h => toCell(r[h])))];
   sheet.clearContents();
+  // See setRows() above for why releaseDate must be forced to plain text
+  // before the values land — clearContents() doesn't reset cell format, so
+  // a column Sheets previously auto-converted to Date stays Date-formatted
+  // and would re-corrupt "November 2026"-style values right back.
+  const rdCol = headers.indexOf('releaseDate');
+  if (rdCol > -1 && rows.length > 1) sheet.getRange(2, rdCol + 1, rows.length - 1, 1).setNumberFormat('@');
   sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
 
   return { ok: true };
