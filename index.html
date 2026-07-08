@@ -116,6 +116,7 @@
   <button class="hmi" id="hmPriceBtn">Check live prices</button>
   <button class="hmi" id="hmSteamPriceBtn">Fill missing prices</button>
   <button class="hmi" id="hmSpendBtn">Spend stats</button>
+  <button class="hmi" id="hmTradeKeysBtn">Copy trade keys</button>
   <div class="hmi-row2">
     <button class="hmi" id="hmExpBtn">Export</button>
     <button class="hmi" id="hmImpBtn">Import</button>
@@ -129,6 +130,7 @@
   <button class="hmi" id="dhPriceBtn">Check live prices</button>
   <button class="hmi" id="dhSteamPriceBtn">Fill missing prices</button>
   <button class="hmi" id="dhSpendBtn">Spend stats</button>
+  <button class="hmi" id="dhTradeKeysBtn">Copy trade keys</button>
   <div class="hmi-row2">
     <button class="hmi" id="dhExpBtn">Export</button>
     <button class="hmi" id="dhImpBtn">Import</button>
@@ -461,6 +463,21 @@
     </div><!-- /.modal-body -->
     <div class="ma">
       <button class="mb2" id="ssClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRADE KEYS MODAL -->
+<div id="tkov">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-body">
+    <div class="mt" style="color:var(--blue)">🔑 Trade Keys</div>
+    <div id="tkSummary" style="font-size:.82rem;color:var(--t2);margin-bottom:.7rem"></div>
+    <textarea class="rta" id="tkText" readonly style="min-height:220px;font-family:monospace;font-size:.75rem"></textarea>
+    </div><!-- /.modal-body -->
+    <div class="ma">
+      <button class="mb2" id="tkClose">Close</button>
+      <button class="mb2 p" id="tkCopy">Copy</button>
     </div>
   </div>
 </div>

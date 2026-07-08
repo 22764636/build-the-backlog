@@ -249,6 +249,7 @@ function normalise(g){
     }
   }
   g.steamAppId=(g.steamAppId!==undefined&&g.steamAppId!==null&&g.steamAppId!=='')?String(g.steamAppId):'';
+  g.key=(g.key!==undefined&&g.key!==null&&g.key!=='')?String(g.key).trim():'';
   delete g.played;
   if(!Array.isArray(g.notes)){
     if(g.notes&&typeof g.notes==='string'){try{g.notes=JSON.parse(g.notes)}catch(e){g.notes=[]}}
@@ -1029,6 +1030,15 @@ const FAV_GG='https://gg.deals/favicon.ico';
 const FAV_SDB="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231b2838'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='16' fill='%2366c0f4'%3EDB%3C/text%3E%3C/svg%3E";
 function favImg(src,alt){return`<img src="${src}" alt="${alt}" width="13" height="13" onerror="this.style.opacity='.3'">`}
 function shareIcon(){return`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10V2M8 2L5 5M8 2l3 3"/><path d="M2 9v3.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V9"/></svg>`}
+function copyIcon(){return`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M3.5 10.5h-1a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/></svg>`}
+// Extra trading key (Steam duplicate-key giveaway) — populated by hand in the
+// synced Google Sheet, not editable in-app. See gameTradeKeyMarkdown() for
+// the console-snippet counterpart that lists every game with one set.
+async function copyGameKey(id){
+  const g=games.find(x=>String(x.id)===String(id));if(!g||!g.key)return;
+  try{await navigator.clipboard.writeText(g.key);showToast('Key copied to clipboard')}
+  catch(e){showToast('Could not copy key')}
+}
 // Share a game's store link — there's no shareable URL for a backlog entry itself
 // (data lives in localStorage/the user's private Sheet), so this shares wherever the
 // game can actually be found: g.storeLink if the user set one, else the Steam page,
@@ -2570,6 +2580,7 @@ function openPanel(id){
       return relStr;
     })()],
   ];
+  if(g.key)detLeft.push(['Trade Key', `<span style="font-family:monospace;word-break:break-all">${esc(g.key)}</span> <button type="button" class="pt-lnk" style="display:inline-flex;vertical-align:middle" onclick="copyGameKey('${esc(g.id)}')" title="Copy key">${copyIcon()}</button>`]);
   const detRight=[
     [t('pGenre'), genreHTML],
     [t('pPrice'), (()=>{
@@ -2914,6 +2925,7 @@ window.addEventListener('popstate',function(){
   if(window._rdcIsOpen&&window._rdcIsOpen()){if(window._rdcTryClose&&!window._rdcTryClose())history.pushState({rdcovOpen:true},'','');return;}
   if(window._plcIsOpen&&window._plcIsOpen()){if(window._plcTryClose&&!window._plcTryClose())history.pushState({plcovOpen:true},'','');return;}
   if(window._ssIsOpen&&window._ssIsOpen()){window._ssTryClose&&window._ssTryClose();return;}
+  if(window._tkIsOpen&&window._tkIsOpen()){window._tkTryClose&&window._tkTryClose();return;}
   const fbar=document.getElementById('fbar');
   if(fbar&&fbar.classList.contains('on')){window._rawCloseFbar&&window._rawCloseFbar();return;}
   if(document.getElementById('panel').classList.contains('on')){
@@ -4696,6 +4708,72 @@ document.addEventListener('keydown',function(e){
     document.getElementById('hmenu').classList.remove('on');
     open();
   };
+})();
+
+// ══════════════════════════════════════════
+//  TRADE KEYS
+// ══════════════════════════════════════════
+(function(){
+  const ov=document.getElementById('tkov');
+  if(!ov)return;
+  const closeBtn=document.getElementById('tkClose');
+  const copyBtn=document.getElementById('tkCopy');
+  const summaryEl=document.getElementById('tkSummary');
+  const textEl=document.getElementById('tkText');
+
+  function steamUrlFor(g){
+    return g.storeLink||(g.steamAppId?`https://store.steampowered.com/app/${g.steamAppId}/`:`https://store.steampowered.com/search/?term=${encodeURIComponent(g.title||'')}`);
+  }
+  function buildMarkdown(){
+    return games.filter(g=>g.key)
+      .sort((a,b)=>(a.title||'').localeCompare(b.title||''))
+      .map(g=>`[${g.title}](${steamUrlFor(g)})`)
+      .join('\n');
+  }
+
+  function _closeTk(){
+    ov.classList.remove('on');
+    if(history.state&&history.state.tkovOpen)history.replaceState(null,'','');
+  }
+  window._tkTryClose=function(){_closeTk();return true;};
+  window._tkIsOpen=()=>ov.classList.contains('on');
+  closeBtn.onclick=_closeTk;
+  ov.addEventListener('click',e=>{if(e.target===ov)_closeTk();});
+
+  async function copyText(text){
+    try{await navigator.clipboard.writeText(text);return true}
+    catch(e){return false}
+  }
+
+  async function open(){
+    const md=buildMarkdown();
+    const n=md?md.split('\n').length:0;
+    if(!n){showToast('No games with a trade key set.');return}
+    textEl.value=md;
+    const ok=await copyText(md);
+    summaryEl.textContent=ok
+      ?`${n} trade key${n>1?'s':''} copied to clipboard — ready to paste.`
+      :`${n} trade key${n>1?'s':''} — clipboard copy failed, use the Copy button below.`;
+    showToast(ok?`Copied ${n} trade key${n>1?'s':''}`:'Could not copy — text ready below');
+    ov.classList.add('on');
+    history.pushState({tkovOpen:true},'','');
+    textEl.focus();textEl.select();
+  }
+
+  copyBtn.onclick=async()=>{
+    const ok=await copyText(textEl.value);
+    showToast(ok?'Copied to clipboard':'Could not copy to clipboard');
+  };
+
+  window.openTradeKeys=open;
+  [['hmTradeKeysBtn','hmenu'],['dhTradeKeysBtn','dhmenu']].forEach(([btnId,menuId])=>{
+    const btn=document.getElementById(btnId);
+    if(!btn)return;
+    btn.onclick=()=>{
+      document.getElementById(menuId).classList.remove('on');
+      open();
+    };
+  });
 })();
 
 // ══════════════════════════════════════════
