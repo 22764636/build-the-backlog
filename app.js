@@ -1047,6 +1047,13 @@ async function shareGame(id){
   try{await navigator.clipboard.writeText(url);showToast('Link copied to clipboard')}
   catch(e){showToast('Could not copy link')}
 }
+// Key Chip's whole-body click action — copies via a data attribute (not an
+// inline-string arg) so odd characters in a key can't break the onclick attr.
+async function copyKeyChip(el){
+  const key=el.dataset.key;if(!key)return;
+  try{await navigator.clipboard.writeText(key);showToast('Key copied to clipboard')}
+  catch(e){showToast('Could not copy key')}
+}
 // Drop a single spare key once it's traded away — doesn't touch the sheet
 // row's other columns, just rewrites games[].key on next save.
 function removeGameKey(id,idx){
@@ -2600,10 +2607,12 @@ function openPanel(id){
 
   // Trading — spare keys for this game, populated by hand in the synced
   // Google Sheet (games[].key, a JSON array of strings). Only shown when
-  // at least one key is set; each key is its own removable chip so a
-  // traded-away key can be dropped without touching the sheet directly.
+  // at least one key is set. Each key is a Key Chip (.kchip) — its own
+  // type, not a Chip variant: Filter Chip's label:value+x shape, plus
+  // Status Chip's whole-body click-to-act behavior (click copies the key
+  // instead of retrying a sync).
   if(g.key&&g.key.length){
-    const keyChips=g.key.map((k,i)=>`<span class="fchip"><span class="fchip-label">Key ${i+1}:</span><span class="fchip-val">${esc(k)}</span><button type="button" class="fchip-x" onclick="removeGameKey('${esc(g.id)}',${i})" title="Remove key">✕</button></span>`).join('');
+    const keyChips=g.key.map((k,i)=>`<span class="kchip" data-key="${esc(k)}" onclick="copyKeyChip(this)" title="Click to copy"><span class="kchip-label">Key ${i+1}:</span><span class="kchip-val">${esc(k)}</span><button type="button" class="kchip-x" onclick="event.stopPropagation();removeGameKey('${esc(g.id)}',${i})" title="Remove key">✕</button></span>`).join('');
     b+=`<div class="ps"><div class="psl">Trading</div><div class="pv" style="display:flex;flex-wrap:wrap;gap:.35rem">${keyChips}</div></div>`;
   }
 
