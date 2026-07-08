@@ -44,7 +44,7 @@
     <a href="#genres">Genres</a><a href="#tags">Tags</a><a href="#developers">Developers</a><a href="#publishers">Publishers</a>
     <a href="#all-four">All Four At Once</a><a href="#variants">Casing Variants</a>
     <a href="#dupe-title">Duplicate Titles</a><a href="#dupe-appid">Duplicate Steam App IDs</a>
-    <a href="#orphan-dlc">Orphan DLC</a><a href="#completeness">Missing Data</a><a href="#full-report">Full Report</a>
+    <a href="#orphan-dlc">Orphan DLC</a><a href="#completeness">Missing Data</a><a href="#trade-keys">Trade Keys</a><a href="#full-report">Full Report</a>
   </div>
 
   <!-- ══════════════════════ GENRES ══════════════════════ -->
@@ -246,6 +246,24 @@
   }).filter(Boolean);
   console.log(`${rows.length} game(s) with missing data`);
   console.table(rows);
+})();</code></pre>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ TRADE KEYS ══════════════════════ -->
+  <div class="sec" id="trade-keys">
+    <div class="sec-hdr"><h2>Trade Keys</h2></div>
+    <p class="sec-desc">Markdown list of every game with a spare trading key set (<code>games[].key</code>, populated by hand in the synced Google Sheet), as <code>[title](steamURL)</code> — paste straight into a Markdown doc or Discord message.</p>
+    <div class="code-block">
+      <div class="code-hdr"><span class="code-title">Markdown list of games with a trade key</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre class="code-pre"><code>(() => {
+  const steamUrl = g => g.storeLink || (g.steamAppId
+    ? `https://store.steampowered.com/app/${g.steamAppId}/`
+    : `https://store.steampowered.com/search/?term=${encodeURIComponent(g.title || '')}`);
+  const withKey = games.filter(g => g.key);
+  const md = withKey.map(g => `[${g.title}](${steamUrl(g)})`).join('\n');
+  console.log(md || 'No games with a trade key set.');
+  console.log(`${withKey.length} game(s) with a trade key`);
 })();</code></pre>
     </div>
   </div>
