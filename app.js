@@ -4535,14 +4535,43 @@ document.addEventListener('keydown',function(e){
   const ov=document.getElementById('ssov');
   if(!ov)return;
   const closeBtn=document.getElementById('ssClose');
-  const platEl=document.getElementById('ssPlatPills');
   const storeEl=document.getElementById('ssStorePills');
+  const storeCount=document.getElementById('ssStoreCount');
   const fromEl=document.getElementById('ssDateFrom');
   const toEl=document.getElementById('ssDateTo');
   const kpisEl=document.getElementById('ssKpis');
   const emptyEl=document.getElementById('ssEmpty');
   const gridEl=document.getElementById('ssGrid');
   const undatedEl=document.getElementById('ssUndatedNote');
+
+  // Same expand/collapse mechanics as the main list's .sb/.sl sections (see
+  // _toggleOneSb in app.js) — smooth max-height transition, chevron rotates
+  // via the shared .sl.collapsed .sl-toggle rule. Store is the only filter
+  // left with a UI section (Platform/Purchase date are click-a-bar now), so
+  // it's the only one that needs this, collapsed by default.
+  (function wireStoreAccordion(){
+    const sec=document.getElementById('ssStoreSec');
+    const toggle=document.getElementById('ssStoreToggle');
+    const body=document.getElementById('ssStoreBody');
+    toggle.addEventListener('click',()=>{
+      const collapsing=!sec.classList.contains('collapsed');
+      if(collapsing){
+        body.style.maxHeight=body.scrollHeight+'px';
+        requestAnimationFrame(()=>{
+          body.style.maxHeight='0';
+          sec.classList.add('collapsed');
+          toggle.classList.add('collapsed');
+        });
+      }else{
+        sec.classList.remove('collapsed');
+        toggle.classList.remove('collapsed');
+        body.style.maxHeight=body.scrollHeight+'px';
+        body.addEventListener('transitionend',()=>{
+          if(!sec.classList.contains('collapsed'))body.style.maxHeight='none';
+        },{once:true});
+      }
+    });
+  })();
 
   let ssPlats=new Set();
   let ssStores=new Set();
@@ -4593,25 +4622,10 @@ document.addEventListener('keydown',function(e){
 
   function renderFilters(){
     const all=purchaseRecords();
-    const platFreq={};
-    all.forEach(r=>{if(r.platform)platFreq[r.platform]=(platFreq[r.platform]||0)+1;});
-    const plats=PLATFORM_ORDER.filter(p=>platFreq[p]).concat(Object.keys(platFreq).filter(p=>!PLATFORM_ORDER.includes(p)));
-    platEl.innerHTML=plats.length?plats.map(p=>{
-      const sel=ssPlats.has(p);
-      const cntCls=platTextColor(p)==='#fff'?'fpc-light':'fpc-dark';
-      return`<button class="b-plat fbar-pill${sel?' selected':''}" data-val="${esc(p)}" style="background:${platColor(p)};color:${platTextColor(p)}">${esc(p)}<span class="fbar-pill-count ${cntCls}">${platFreq[p]}</span></button>`;
-    }).join(''):`<div style="color:var(--t3);font-size:.75rem">No purchases yet</div>`;
-    platEl.querySelectorAll('.fbar-pill').forEach(el=>{
-      el.addEventListener('click',()=>{
-        const v=el.dataset.val;
-        ssPlats.has(v)?ssPlats.delete(v):ssPlats.add(v);
-        render();
-      });
-    });
-
     const storeFreq={};
     all.forEach(r=>{if(r.store)storeFreq[r.store]=(storeFreq[r.store]||0)+1;});
     const stores=Object.keys(storeFreq).sort((a,b)=>storeFreq[b]-storeFreq[a]);
+    storeCount.textContent=stores.length;
     storeEl.innerHTML=stores.length?stores.map(s=>{
       const sel=ssStores.has(s);
       return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--indigo);color:#fff">${esc(s)}<span class="fbar-pill-count fpc-light">${storeFreq[s]}</span></button>`;
@@ -4637,15 +4651,19 @@ document.addEventListener('keydown',function(e){
     `;
   }
 
-  // Shared horizontal-bar renderer for the Platform and Year cards — rows
-  // fade+rise in (staggered) and each bar's fill grows from 0 on a rAF tick
-  // so filter changes always replay the animation, not just first paint.
+  // Shared horizontal-bar renderer for the Platform/Year/Month-of-year
+  // cards — rows fade+rise in (staggered) and each bar's fill grows from 0
+  // on a rAF tick so filter changes always replay the animation, not just
+  // first paint. onClick is optional: the calendar-month breakdown isn't
+  // drill-downable (a single from/to date range can't express "every
+  // March across every year"), so it renders read-only, no pointer cursor.
   function renderHBars(containerId,rows,onClick){
     const el=document.getElementById(containerId);
     const max=Math.max(...rows.map(r=>r.val),0.01);
     if(!rows.length){el.innerHTML=`<div class="ss-empty">No data.</div>`;return;}
+    const clickable=!!onClick;
     el.innerHTML=rows.map((r,i)=>`
-      <div class="ss-hbar-row${r.selected?' selected':''}" data-key="${esc(r.key)}" style="animation-delay:${i*30}ms">
+      <div class="ss-hbar-row${r.selected?' selected':''}${clickable?'':' static'}" data-key="${esc(r.key)}" style="animation-delay:${i*30}ms">
         <div class="ss-hbar-label">${esc(r.key)}</div>
         <div class="ss-hbar-track"><div class="ss-hbar-fill" data-w="${(r.val/max*100).toFixed(1)}" style="width:0;background:${r.color}"></div></div>
         <div class="ss-hbar-val">${fmtEur(r.val)}</div>
@@ -4653,9 +4671,28 @@ document.addEventListener('keydown',function(e){
     requestAnimationFrame(()=>{
       el.querySelectorAll('.ss-hbar-fill').forEach(f=>{f.style.width=f.dataset.w+'%'});
     });
-    el.querySelectorAll('.ss-hbar-row').forEach(row=>{
-      row.addEventListener('click',()=>onClick(row.dataset.key));
+    if(clickable){
+      el.querySelectorAll('.ss-hbar-row').forEach(row=>{
+        row.addEventListener('click',()=>onClick(row.dataset.key));
+      });
+    }
+  }
+
+  // Calendar-month aggregate (Jan..Dec totals across every year) — a
+  // seasonality view, distinct from the month-by-month trend line above
+  // (which is per specific YYYY-MM instance, not per calendar position).
+  function renderCalMonthChart(recs){
+    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const byM={};
+    recs.forEach(r=>{
+      if(!r.date)return;
+      const m=parseInt(r.date.slice(5,7),10);
+      if(!m)return;
+      byM[m]=(byM[m]||0)+r.cost;
     });
+    const rows=Object.keys(byM).map(Number).sort((a,b)=>a-b)
+      .map(m=>({key:names[m-1],val:byM[m],color:'var(--blue)'}));
+    renderHBars('ssCalMonthChart',rows,null);
   }
 
   function renderMonthChart(recs){
@@ -4794,26 +4831,11 @@ document.addEventListener('keydown',function(e){
     });
 
     renderMonthChart(recs);
+    renderCalMonthChart(recs);
   }
 
   document.getElementById('ssClearFilters').onclick=()=>{
     ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';render();
-  };
-  fromEl.addEventListener('change',render);
-  toEl.addEventListener('change',render);
-
-  document.getElementById('ssDateThisMonth').onclick=()=>{
-    const d=new Date();
-    const y=d.getFullYear(),m=d.getMonth();
-    fromEl.value=`${y}-${String(m+1).padStart(2,'0')}-01`;
-    toEl.value=`${y}-${String(m+1).padStart(2,'0')}-${String(lastDayOfMonth(y,m+1)).padStart(2,'0')}`;
-    render();
-  };
-  document.getElementById('ssDateThisYear').onclick=()=>{
-    const y=new Date().getFullYear();
-    fromEl.value=`${y}-01-01`;
-    toEl.value=`${y}-12-31`;
-    render();
   };
 
   function open(){

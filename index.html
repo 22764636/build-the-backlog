@@ -433,25 +433,23 @@
       <button class="hb accent" id="ssClose">✕</button>
     </div>
     <div class="ssdash-body">
+      <!-- Platform and Purchase date are no longer here — clicking a bar in
+           the Platform/Year/Month charts below does the same job. Store has
+           no chart of its own (there'd be too many to plot usefully), so it
+           stays as the one manual filter, collapsed by default. -->
       <div class="ss-filters">
-        <div class="ss-fgroup">
-          <span class="ss-flabel">Platform</span>
-          <div class="fbar-pills" id="ssPlatPills"></div>
-        </div>
-        <div class="ss-fgroup">
-          <span class="ss-flabel">Store</span>
-          <div class="fbar-pills" id="ssStorePills"></div>
-        </div>
-        <div class="ss-fgroup">
-          <span class="ss-flabel">Purchase date</span>
-          <div class="ss-date-range">
-            <input type="date" id="ssDateFrom" autocomplete="off">
-            <span class="ss-date-sep">to</span>
-            <input type="date" id="ssDateTo" autocomplete="off">
-            <button type="button" class="ss-date-shortcut" id="ssDateThisMonth">This month</button>
-            <button type="button" class="ss-date-shortcut" id="ssDateThisYear">This year</button>
+        <div class="sb ss-fsec collapsed" id="ssStoreSec">
+          <div class="sl collapsed" id="ssStoreToggle">
+            Store
+            <span class="sl-count" id="ssStoreCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
+            <span class="sl-toggle">▾</span>
+          </div>
+          <div class="sb-body" id="ssStoreBody" style="max-height:0">
+            <div class="fbar-pills" id="ssStorePills"></div>
           </div>
         </div>
+        <input type="hidden" id="ssDateFrom">
+        <input type="hidden" id="ssDateTo">
         <button class="ss-clear" id="ssClearFilters">Clear filters</button>
       </div>
 
@@ -460,7 +458,7 @@
       <div id="ssEmpty" class="ss-empty" style="display:none">No purchases match these filters.</div>
       <div class="ss-grid" id="ssGrid">
         <div class="ss-card ss-card-wide">
-          <div class="ss-card-hdr">Spend by month</div>
+          <div class="ss-card-hdr">Spend over time</div>
           <div class="ss-linewrap" id="ssMonthChart"></div>
           <div class="ss-undated-note" id="ssUndatedNote" style="display:none"></div>
         </div>
@@ -471,6 +469,10 @@
         <div class="ss-card">
           <div class="ss-card-hdr">Spend by year</div>
           <div class="ss-hbars" id="ssYearChart"></div>
+        </div>
+        <div class="ss-card">
+          <div class="ss-card-hdr">Spend by month</div>
+          <div class="ss-hbars" id="ssCalMonthChart"></div>
         </div>
       </div>
     </div>
