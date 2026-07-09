@@ -4535,43 +4535,13 @@ document.addEventListener('keydown',function(e){
   const ov=document.getElementById('ssov');
   if(!ov)return;
   const closeBtn=document.getElementById('ssClose');
-  const storeEl=document.getElementById('ssStorePills');
-  const storeCount=document.getElementById('ssStoreCount');
   const fromEl=document.getElementById('ssDateFrom');
   const toEl=document.getElementById('ssDateTo');
   const kpisEl=document.getElementById('ssKpis');
   const emptyEl=document.getElementById('ssEmpty');
   const gridEl=document.getElementById('ssGrid');
+  const trendCard=document.getElementById('ssTrendCard');
   const undatedEl=document.getElementById('ssUndatedNote');
-
-  // Same expand/collapse mechanics as the main list's .sb/.sl sections (see
-  // _toggleOneSb in app.js) — smooth max-height transition, chevron rotates
-  // via the shared .sl.collapsed .sl-toggle rule. Store is the only filter
-  // left with a UI section (Platform/Purchase date are click-a-bar now), so
-  // it's the only one that needs this, collapsed by default.
-  (function wireStoreAccordion(){
-    const sec=document.getElementById('ssStoreSec');
-    const toggle=document.getElementById('ssStoreToggle');
-    const body=document.getElementById('ssStoreBody');
-    toggle.addEventListener('click',()=>{
-      const collapsing=!sec.classList.contains('collapsed');
-      if(collapsing){
-        body.style.maxHeight=body.scrollHeight+'px';
-        requestAnimationFrame(()=>{
-          body.style.maxHeight='0';
-          sec.classList.add('collapsed');
-          toggle.classList.add('collapsed');
-        });
-      }else{
-        sec.classList.remove('collapsed');
-        toggle.classList.remove('collapsed');
-        body.style.maxHeight=body.scrollHeight+'px';
-        body.addEventListener('transitionend',()=>{
-          if(!sec.classList.contains('collapsed'))body.style.maxHeight='none';
-        },{once:true});
-      }
-    });
-  })();
 
   let ssPlats=new Set();
   let ssStores=new Set();
@@ -4619,25 +4589,6 @@ document.addEventListener('keydown',function(e){
     return`${names[parseInt(m,10)-1]} '${y.slice(2)}`;
   }
   function lastDayOfMonth(y,m){return new Date(y,m,0).getDate();}
-
-  function renderFilters(){
-    const all=purchaseRecords();
-    const storeFreq={};
-    all.forEach(r=>{if(r.store)storeFreq[r.store]=(storeFreq[r.store]||0)+1;});
-    const stores=Object.keys(storeFreq).sort((a,b)=>storeFreq[b]-storeFreq[a]);
-    storeCount.textContent=stores.length;
-    storeEl.innerHTML=stores.length?stores.map(s=>{
-      const sel=ssStores.has(s);
-      return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--indigo);color:#fff">${esc(s)}<span class="fbar-pill-count fpc-light">${storeFreq[s]}</span></button>`;
-    }).join(''):`<div style="color:var(--t3);font-size:.75rem">No purchases yet</div>`;
-    storeEl.querySelectorAll('.fbar-pill').forEach(el=>{
-      el.addEventListener('click',()=>{
-        const v=el.dataset.val;
-        ssStores.has(v)?ssStores.delete(v):ssStores.add(v);
-        render();
-      });
-    });
-  }
 
   function renderKpis(recs){
     const totalSpend=recs.reduce((s,r)=>s+r.cost,0);
@@ -4705,13 +4656,16 @@ document.addEventListener('keydown',function(e){
       byMonth[ym]=(byMonth[ym]||0)+r.cost;
     });
     const months=Object.keys(byMonth).sort();
+    // A trend needs at least two points — one dated month is just a dot in
+    // an otherwise empty card, so drop the whole card rather than force it.
+    if(months.length<=1){
+      trendCard.style.display='none';
+      return;
+    }
+    trendCard.style.display='';
     const undated=recs.filter(r=>!r.date).length;
     undatedEl.style.display=undated?'block':'none';
     undatedEl.textContent=undated?`${undated} purchase${undated>1?'s':''} without a date excluded from this chart.`:'';
-    if(!months.length){
-      wrap.innerHTML=`<div class="ss-empty">No dated purchases to chart.</div>`;
-      return;
-    }
 
     // viewBox width = the container's actual rendered width, so the SVG
     // never needs non-uniform scaling to fill it — preserveAspectRatio
@@ -4794,7 +4748,6 @@ document.addEventListener('keydown',function(e){
   }
 
   function render(){
-    renderFilters();
     const recs=filteredRecords();
     renderKpis(recs);
 
@@ -4812,6 +4765,15 @@ document.addEventListener('keydown',function(e){
       .map(k=>({key:k,val:byPlat[k],color:platColor(k),selected:ssPlats.has(k)}));
     renderHBars('ssPlatChart',platRows,v=>{
       ssPlats.has(v)?ssPlats.delete(v):ssPlats.add(v);
+      render();
+    });
+
+    const byStore={};
+    recs.forEach(r=>{const k=r.store||'—';byStore[k]=(byStore[k]||0)+r.cost;});
+    const storeRows=Object.keys(byStore).sort((a,b)=>byStore[b]-byStore[a])
+      .map(k=>({key:k,val:byStore[k],color:'var(--indigo)',selected:ssStores.has(k)}));
+    renderHBars('ssStoreChart',storeRows,v=>{
+      ssStores.has(v)?ssStores.delete(v):ssStores.add(v);
       render();
     });
 

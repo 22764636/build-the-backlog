@@ -430,34 +430,24 @@
   <div class="ssdash">
     <div class="ssdash-hdr">
       <span class="ssdash-title">Spend Stats</span>
-      <button class="hb accent" id="ssClose">✕</button>
+      <div class="ssdash-hdr-actions">
+        <button class="ss-clear" id="ssClearFilters">Clear filters</button>
+        <button class="hb accent" id="ssClose">✕</button>
+      </div>
     </div>
     <div class="ssdash-body">
-      <!-- Platform and Purchase date are no longer here — clicking a bar in
-           the Platform/Year/Month charts below does the same job. Store has
-           no chart of its own (there'd be too many to plot usefully), so it
-           stays as the one manual filter, collapsed by default. -->
-      <div class="ss-filters">
-        <div class="sb ss-fsec collapsed" id="ssStoreSec">
-          <div class="sl collapsed" id="ssStoreToggle">
-            Store
-            <span class="sl-count" id="ssStoreCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
-            <span class="sl-toggle">▾</span>
-          </div>
-          <div class="sb-body" id="ssStoreBody" style="max-height:0">
-            <div class="fbar-pills" id="ssStorePills"></div>
-          </div>
-        </div>
-        <input type="hidden" id="ssDateFrom">
-        <input type="hidden" id="ssDateTo">
-        <button class="ss-clear" id="ssClearFilters">Clear filters</button>
-      </div>
+      <!-- No filter section — every dimension (platform, store, year,
+           month) is its own chart card below; click a bar/point to filter.
+           These two stay in the DOM (unused visually) because chart clicks
+           still read/write them as the shared date-range filter state. -->
+      <input type="hidden" id="ssDateFrom">
+      <input type="hidden" id="ssDateTo">
 
       <div class="ss-kpis" id="ssKpis"></div>
 
       <div id="ssEmpty" class="ss-empty" style="display:none">No purchases match these filters.</div>
       <div class="ss-grid" id="ssGrid">
-        <div class="ss-card ss-card-wide">
+        <div class="ss-card ss-card-wide" id="ssTrendCard">
           <div class="ss-card-hdr">Spend over time</div>
           <div class="ss-linewrap" id="ssMonthChart"></div>
           <div class="ss-undated-note" id="ssUndatedNote" style="display:none"></div>
@@ -465,6 +455,10 @@
         <div class="ss-card">
           <div class="ss-card-hdr">Spend by platform</div>
           <div class="ss-hbars" id="ssPlatChart"></div>
+        </div>
+        <div class="ss-card">
+          <div class="ss-card-hdr">Spend by store</div>
+          <div class="ss-hbars" id="ssStoreChart"></div>
         </div>
         <div class="ss-card">
           <div class="ss-card-hdr">Spend by year</div>

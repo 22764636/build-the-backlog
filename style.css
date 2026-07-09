@@ -576,18 +576,13 @@ button{text-transform:none;letter-spacing:0}
 .ssdash-hdr{display:flex;align-items:center;justify-content:space-between;
   padding:1rem 1.3rem;border-bottom:1px solid var(--bd)}
 .ssdash-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.15rem;color:var(--text)}
+.ssdash-hdr-actions{display:flex;align-items:center;gap:1rem}
 .ssdash-body{padding:1.3rem;scrollbar-gutter:stable}
 
-/* Filter row — Platform and Purchase date got folded into click-to-filter
-   bars/points on the charts below, so Store (no chart of its own) is the
-   only manual filter left. Reuses .sb/.sl/.sb-body — same collapsed-by-
-   default accordion component as everywhere else in the app. */
-.ss-filters{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;
-  padding-bottom:.6rem;margin-bottom:1.2rem;border-bottom:1px solid var(--bd)}
-.ss-fsec{margin-bottom:0;flex:1;min-width:0}
-.ss-fsec .sb-body{padding-top:.4rem}
+/* No filter section anymore — every dimension is a click-to-filter chart
+   card, so "Clear filters" moved to the header as a plain reset action. */
 .ss-clear{background:none;border:none;color:var(--pink);font-size:.68rem;font-weight:600;
-  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0;margin-left:auto;align-self:flex-start}
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0}
 .ss-clear:hover{text-decoration:underline}
 .ss-empty{color:var(--t3);font-size:.85rem;padding:2rem 0;text-align:center}
 
@@ -650,8 +645,6 @@ button{text-transform:none;letter-spacing:0}
   .ss-grid{grid-template-columns:1fr}
 }
 @media (max-width:560px){
-  .ss-filters{gap:.7rem}
-  .ss-clear{margin-left:0}
   .ss-hbar-row{grid-template-columns:64px 1fr auto;gap:.4rem}
   .ss-kpis{grid-template-columns:repeat(2,1fr)}
 }
