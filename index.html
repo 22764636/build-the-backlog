@@ -391,8 +391,14 @@
     </div>
   </div>
 </div>
-<!-- GG.DEALS FETCH FLOATING BUBBLE (shown when modal is hidden) -->
-<button id="ggFetchBubble" aria-label="Price fetch in progress"></button>
+<!-- Floating progress bubbles for hidden background tasks (price fetch,
+     release date check, ...). A shared flex stack, not independently
+     fixed-positioned buttons, so any number active at once lay out without
+     overlapping — see #bubbleStack in style.css. -->
+<div id="bubbleStack">
+  <button id="ggFetchBubble" aria-label="Price fetch in progress"></button>
+  <button id="rdcBubble" aria-label="Release date check in progress"></button>
+</div>
 
 <!-- RELEASE DATE CHECK MODAL -->
 <div id="rdcov">
@@ -419,50 +425,54 @@
     </div>
   </div>
 </div>
-<!-- RELEASE DATE CHECK FLOATING BUBBLE (shown when modal is hidden) -->
-<button id="rdcBubble" aria-label="Release date check in progress"></button>
-
-<!-- SPEND STATS MODAL -->
-<div id="ssov">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-body">
-    <div class="mt" style="color:var(--blue)">💶 Spend Stats</div>
-
-    <div class="ss-filters">
-      <div class="ss-filters-row">
-        <div class="ss-filter-group">
-          <label>Platform</label>
+<!-- SPEND STATS DASHBOARD — full-page overlay, same pattern as #calOv -->
+<div id="ssov" style="display:none;position:fixed;inset:0;background:rgba(3,19,41,.85);backdrop-filter:blur(4px);z-index:250;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto">
+  <div class="ssdash">
+    <div class="ssdash-hdr">
+      <span class="ssdash-title">Spend Stats</span>
+      <button class="hb accent" id="ssClose">✕</button>
+    </div>
+    <div class="ssdash-body">
+      <div class="ss-filters">
+        <div class="ss-fgroup">
+          <span class="ss-flabel">Platform</span>
           <div class="fbar-pills" id="ssPlatPills"></div>
         </div>
-        <div class="ss-filter-group">
-          <label>Purchase date</label>
+        <div class="ss-fgroup">
+          <span class="ss-flabel">Store</span>
+          <div class="fbar-pills" id="ssStorePills"></div>
+        </div>
+        <div class="ss-fgroup">
+          <span class="ss-flabel">Purchase date</span>
           <div class="ss-date-range">
             <input type="date" id="ssDateFrom" autocomplete="off">
             <span class="ss-date-sep">to</span>
             <input type="date" id="ssDateTo" autocomplete="off">
+            <button type="button" class="ss-date-shortcut" id="ssDateThisMonth">This month</button>
+            <button type="button" class="ss-date-shortcut" id="ssDateThisYear">This year</button>
           </div>
         </div>
-      </div>
-      <div class="sb ss-store-sec collapsed" id="ssStoreSec">
-        <div class="sl collapsed" id="ssStoreToggle">
-          Store
-          <span class="sl-count" id="ssStoreCount" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)"></span>
-          <span class="sl-toggle">▾</span>
-        </div>
-        <div class="sb-body" id="ssStoreBody" style="max-height:0">
-          <div class="fbar-pills" id="ssStorePills"></div>
-        </div>
-      </div>
-      <div class="ss-clear-row">
         <button class="ss-clear" id="ssClearFilters">Clear filters</button>
       </div>
-    </div>
 
-    <div id="ssStats" class="ss-stats"></div>
-    <div id="ssBody"></div>
-    </div><!-- /.modal-body -->
-    <div class="ma">
-      <button class="mb2" id="ssClose">Close</button>
+      <div class="ss-kpis" id="ssKpis"></div>
+
+      <div id="ssEmpty" class="ss-empty" style="display:none">No purchases match these filters.</div>
+      <div class="ss-grid" id="ssGrid">
+        <div class="ss-card ss-card-wide">
+          <div class="ss-card-hdr">Spend by month</div>
+          <div class="ss-linewrap" id="ssMonthChart"></div>
+          <div class="ss-undated-note" id="ssUndatedNote" style="display:none"></div>
+        </div>
+        <div class="ss-card">
+          <div class="ss-card-hdr">Spend by platform</div>
+          <div class="ss-hbars" id="ssPlatChart"></div>
+        </div>
+        <div class="ss-card">
+          <div class="ss-card-hdr">Spend by year</div>
+          <div class="ss-hbars" id="ssYearChart"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -471,7 +481,7 @@
 <div id="tkov">
   <div class="modal" style="max-width:520px">
     <div class="modal-body">
-    <div class="mt" style="color:var(--blue)">🔑 Trade Keys</div>
+    <div class="mt" style="color:var(--blue)">Trade Keys</div>
     <div id="tkSummary" style="font-size:.82rem;color:var(--t2);margin-bottom:.7rem"></div>
     <textarea class="rta" id="tkText" readonly style="min-height:220px;font-family:monospace;font-size:.75rem"></textarea>
     </div><!-- /.modal-body -->

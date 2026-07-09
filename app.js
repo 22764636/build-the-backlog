@@ -4537,42 +4537,19 @@ document.addEventListener('keydown',function(e){
   const closeBtn=document.getElementById('ssClose');
   const platEl=document.getElementById('ssPlatPills');
   const storeEl=document.getElementById('ssStorePills');
-  const storeSec=document.getElementById('ssStoreSec');
-  const storeToggle=document.getElementById('ssStoreToggle');
-  const storeBody=document.getElementById('ssStoreBody');
-  const storeCount=document.getElementById('ssStoreCount');
   const fromEl=document.getElementById('ssDateFrom');
   const toEl=document.getElementById('ssDateTo');
-  const statsEl=document.getElementById('ssStats');
-  const bodyEl=document.getElementById('ssBody');
-
-  // Same expand/collapse mechanics as the main list's .sb/.sl sections
-  // (see _toggleOneSb in app.js) — smooth max-height transition, chevron
-  // rotates via the shared .sl.collapsed .sl-toggle rule.
-  storeToggle.addEventListener('click',()=>{
-    const collapsing=!storeSec.classList.contains('collapsed');
-    if(collapsing){
-      storeBody.style.maxHeight=storeBody.scrollHeight+'px';
-      requestAnimationFrame(()=>{
-        storeBody.style.maxHeight='0';
-        storeSec.classList.add('collapsed');
-        storeToggle.classList.add('collapsed');
-      });
-    }else{
-      storeSec.classList.remove('collapsed');
-      storeToggle.classList.remove('collapsed');
-      storeBody.style.maxHeight=storeBody.scrollHeight+'px';
-      storeBody.addEventListener('transitionend',()=>{
-        if(!storeSec.classList.contains('collapsed'))storeBody.style.maxHeight='none';
-      },{once:true});
-    }
-  });
+  const kpisEl=document.getElementById('ssKpis');
+  const emptyEl=document.getElementById('ssEmpty');
+  const gridEl=document.getElementById('ssGrid');
+  const undatedEl=document.getElementById('ssUndatedNote');
 
   let ssPlats=new Set();
   let ssStores=new Set();
 
   function _closeSs(){
     ov.classList.remove('on');
+    ov.style.display='none';
     if(history.state&&history.state.ssovOpen)history.replaceState(null,'','');
   }
   window._ssTryClose=function(){_closeSs();return true;};
@@ -4612,6 +4589,7 @@ document.addEventListener('keydown',function(e){
     const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return`${names[parseInt(m,10)-1]} '${y.slice(2)}`;
   }
+  function lastDayOfMonth(y,m){return new Date(y,m,0).getDate();}
 
   function renderFilters(){
     const all=purchaseRecords();
@@ -4634,7 +4612,6 @@ document.addEventListener('keydown',function(e){
     const storeFreq={};
     all.forEach(r=>{if(r.store)storeFreq[r.store]=(storeFreq[r.store]||0)+1;});
     const stores=Object.keys(storeFreq).sort((a,b)=>storeFreq[b]-storeFreq[a]);
-    storeCount.textContent=stores.length;
     storeEl.innerHTML=stores.length?stores.map(s=>{
       const sel=ssStores.has(s);
       return`<button class="fbar-pill${sel?' selected':''}" data-val="${esc(s)}" style="background:var(--indigo);color:#fff">${esc(s)}<span class="fbar-pill-count fpc-light">${storeFreq[s]}</span></button>`;
@@ -4648,38 +4625,41 @@ document.addEventListener('keydown',function(e){
     });
   }
 
-  function render(){
-    renderFilters();
-    const recs=filteredRecords();
+  function renderKpis(recs){
     const totalSpend=recs.reduce((s,r)=>s+r.cost,0);
     const gameIds=new Set(recs.map(r=>r.game.id));
     const avg=gameIds.size?totalSpend/gameIds.size:0;
-
-    statsEl.innerHTML=`
-      <span class="chip"><b>${fmtEur(totalSpend)}</b><span>total spend</span></span>
-      <span class="chip"><b>${gameIds.size}</b><span>games</span></span>
-      <span class="chip"><b>${recs.length}</b><span>purchases</span></span>
-      <span class="chip"><b>${fmtEur(avg)}</b><span>avg/game</span></span>
+    kpisEl.innerHTML=`
+      <div class="ss-kpi"><div class="ss-kpi-label">Total spend</div><div class="ss-kpi-val">${fmtEur(totalSpend)}</div></div>
+      <div class="ss-kpi"><div class="ss-kpi-label">Games</div><div class="ss-kpi-val">${gameIds.size}</div></div>
+      <div class="ss-kpi"><div class="ss-kpi-label">Purchases</div><div class="ss-kpi-val">${recs.length}</div></div>
+      <div class="ss-kpi"><div class="ss-kpi-label">Avg / game</div><div class="ss-kpi-val">${fmtEur(avg)}</div></div>
     `;
+  }
 
-    if(!recs.length){
-      bodyEl.innerHTML=`<div class="ss-empty">No purchases match these filters.</div>`;
-      return;
-    }
-
-    // By platform
-    const byPlat={};
-    recs.forEach(r=>{const k=r.platform||'—';byPlat[k]=(byPlat[k]||0)+r.cost;});
-    const platRows=Object.keys(byPlat).sort((a,b)=>byPlat[b]-byPlat[a]);
-    const platMax=Math.max(...platRows.map(k=>byPlat[k]),0.01);
-    const platHtml=platRows.map(k=>`
-      <div class="ss-hbar-row">
-        <div class="ss-hbar-label">${esc(k)}</div>
-        <div class="ss-hbar-track"><div class="ss-hbar-fill" style="width:${(byPlat[k]/platMax*100).toFixed(1)}%;background:${platColor(k)}"></div></div>
-        <div class="ss-hbar-val">${fmtEur(byPlat[k])}</div>
+  // Shared horizontal-bar renderer for the Platform and Year cards — rows
+  // fade+rise in (staggered) and each bar's fill grows from 0 on a rAF tick
+  // so filter changes always replay the animation, not just first paint.
+  function renderHBars(containerId,rows,onClick){
+    const el=document.getElementById(containerId);
+    const max=Math.max(...rows.map(r=>r.val),0.01);
+    if(!rows.length){el.innerHTML=`<div class="ss-empty">No data.</div>`;return;}
+    el.innerHTML=rows.map((r,i)=>`
+      <div class="ss-hbar-row${r.selected?' selected':''}" data-key="${esc(r.key)}" style="animation-delay:${i*30}ms">
+        <div class="ss-hbar-label">${esc(r.key)}</div>
+        <div class="ss-hbar-track"><div class="ss-hbar-fill" data-w="${(r.val/max*100).toFixed(1)}" style="width:0;background:${r.color}"></div></div>
+        <div class="ss-hbar-val">${fmtEur(r.val)}</div>
       </div>`).join('');
+    requestAnimationFrame(()=>{
+      el.querySelectorAll('.ss-hbar-fill').forEach(f=>{f.style.width=f.dataset.w+'%'});
+    });
+    el.querySelectorAll('.ss-hbar-row').forEach(row=>{
+      row.addEventListener('click',()=>onClick(row.dataset.key));
+    });
+  }
 
-    // By month
+  function renderMonthChart(recs){
+    const wrap=document.getElementById('ssMonthChart');
     const byMonth={};
     recs.forEach(r=>{
       if(!r.date)return;
@@ -4687,27 +4667,133 @@ document.addEventListener('keydown',function(e){
       if(!/^\d{4}-\d{2}$/.test(ym))return;
       byMonth[ym]=(byMonth[ym]||0)+r.cost;
     });
-    const months=Object.keys(byMonth).sort().reverse();
-    const monthMax=Math.max(...months.map(ym=>byMonth[ym]),0.01);
-    const trendHtml=months.map(ym=>`
-      <div class="ss-trend-col" title="${monthLabel(ym)}: ${fmtEur(byMonth[ym])}">
-        <div class="ss-trend-val">${fmtEur(byMonth[ym])}</div>
-        <div class="ss-trend-bar" style="height:${Math.max(byMonth[ym]/monthMax*100,2)}%"></div>
-        <div class="ss-trend-label">${monthLabel(ym)}</div>
-      </div>`).join('');
-    const undatedNote=recs.some(r=>!r.date)
-      ?`<div style="color:var(--t3);font-size:.68rem;margin-top:.4rem">${recs.filter(r=>!r.date).length} purchase(s) without a date excluded from the trend chart.</div>`
-      :'';
+    const months=Object.keys(byMonth).sort();
+    const undated=recs.filter(r=>!r.date).length;
+    undatedEl.style.display=undated?'block':'none';
+    undatedEl.textContent=undated?`${undated} purchase${undated>1?'s':''} without a date excluded from this chart.`:'';
+    if(!months.length){
+      wrap.innerHTML=`<div class="ss-empty">No dated purchases to chart.</div>`;
+      return;
+    }
 
-    bodyEl.innerHTML=`
-      <div class="ss-section-title">Spend by platform</div>
-      <div class="ss-hbars">${platHtml}</div>
-      <div class="ss-section-title">Spend by month</div>
-      ${months.length
-        ?`<div class="ss-trend">${trendHtml}</div>`
-        :`<div class="ss-empty">No dated purchases to chart.</div>`}
-      ${undatedNote}
+    // viewBox width = the container's actual rendered width, so the SVG
+    // never needs non-uniform scaling to fill it — preserveAspectRatio
+    // "none" against a fixed 1000-wide viewBox stretched axis-label text
+    // into illegible slivers on narrow (mobile) containers.
+    const W=Math.max(wrap.clientWidth,280),H=220,padL=8,padR=8,padT=16,padB=26;
+    const plotW=W-padL-padR,plotH=H-padT-padB;
+    const max=Math.max(...months.map(ym=>byMonth[ym]),0.01);
+    const stepX=months.length>1?plotW/(months.length-1):0;
+    const pts=months.map((ym,i)=>({
+      x:padL+(months.length>1?i*stepX:plotW/2),
+      y:padT+plotH-(byMonth[ym]/max*plotH),
+      ym,val:byMonth[ym]
+    }));
+    const pathD=pts.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
+    const baseY=(padT+plotH).toFixed(1);
+    const areaD=`${pathD} L${pts[pts.length-1].x.toFixed(1)} ${baseY} L${pts[0].x.toFixed(1)} ${baseY} Z`;
+    const labelEvery=Math.max(1,Math.ceil(months.length/8));
+    const dotsHtml=pts.map((p,i)=>{
+      const show=i%labelEvery===0||i===pts.length-1;
+      return`<circle class="ss-line-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" data-i="${i}" style="animation-delay:${.3+i*.02}s"></circle>
+        <rect class="ss-line-hit" x="${(p.x-14).toFixed(1)}" y="${padT}" width="28" height="${plotH}" data-i="${i}" tabindex="0"></rect>
+        ${show?`<text class="ss-line-axis-label" x="${p.x.toFixed(1)}" y="${H-6}" text-anchor="middle">${monthLabel(p.ym)}</text>`:''}`;
+    }).join('');
+
+    wrap.innerHTML=`
+      <svg viewBox="0 0 ${W} ${H}">
+        <path class="ss-line-area" d="${areaD}"></path>
+        <path class="ss-line-path" id="ssLinePathEl" d="${pathD}"></path>
+        ${dotsHtml}
+        <line class="ss-line-crosshair" id="ssCrosshair" x1="0" y1="${padT}" x2="0" y2="${padT+plotH}"></line>
+      </svg>
+      <div class="ss-line-tip" id="ssLineTip"></div>
     `;
+
+    // Draw the line in via stroke-dashoffset rather than snapping to its
+    // final path — the one animation that needs JS (CSS can't measure path
+    // length), everything else on this chart is a plain CSS keyframe.
+    const pathEl=document.getElementById('ssLinePathEl');
+    const len=pathEl.getTotalLength();
+    pathEl.style.strokeDasharray=len;
+    pathEl.style.strokeDashoffset=len;
+    requestAnimationFrame(()=>{
+      pathEl.style.transition='stroke-dashoffset .6s ease-out';
+      pathEl.style.strokeDashoffset='0';
+    });
+
+    const tip=document.getElementById('ssLineTip');
+    const crosshair=document.getElementById('ssCrosshair');
+    const svgEl=wrap.querySelector('svg');
+    wrap.querySelectorAll('.ss-line-hit').forEach(hit=>{
+      const i=parseInt(hit.dataset.i,10);
+      const p=pts[i];
+      function activate(){
+        const rect=svgEl.getBoundingClientRect();
+        const sx=rect.width/W,sy=rect.height/H;
+        crosshair.setAttribute('x1',p.x);crosshair.setAttribute('x2',p.x);
+        crosshair.style.opacity='1';
+        tip.innerHTML=`<b>${fmtEur(p.val)}</b> · ${monthLabel(p.ym)}`;
+        tip.style.left=(p.x*sx)+'px';
+        tip.style.top=(p.y*sy)+'px';
+        tip.classList.add('on');
+        wrap.querySelectorAll('.ss-line-dot').forEach(d=>d.classList.remove('hover'));
+        wrap.querySelector(`.ss-line-dot[data-i="${i}"]`).classList.add('hover');
+      }
+      hit.addEventListener('pointerenter',activate);
+      hit.addEventListener('focus',activate);
+      hit.addEventListener('click',()=>{
+        const[y,m]=p.ym.split('-');
+        fromEl.value=`${y}-${m}-01`;
+        toEl.value=`${y}-${m}-${String(lastDayOfMonth(+y,+m)).padStart(2,'0')}`;
+        render();
+      });
+    });
+    wrap.addEventListener('pointerleave',()=>{
+      crosshair.style.opacity='0';
+      tip.classList.remove('on');
+      wrap.querySelectorAll('.ss-line-dot').forEach(d=>d.classList.remove('hover'));
+    });
+  }
+
+  function render(){
+    renderFilters();
+    const recs=filteredRecords();
+    renderKpis(recs);
+
+    if(!recs.length){
+      emptyEl.style.display='block';
+      gridEl.style.display='none';
+      return;
+    }
+    emptyEl.style.display='none';
+    gridEl.style.display='grid';
+
+    const byPlat={};
+    recs.forEach(r=>{const k=r.platform||'—';byPlat[k]=(byPlat[k]||0)+r.cost;});
+    const platRows=Object.keys(byPlat).sort((a,b)=>byPlat[b]-byPlat[a])
+      .map(k=>({key:k,val:byPlat[k],color:platColor(k),selected:ssPlats.has(k)}));
+    renderHBars('ssPlatChart',platRows,v=>{
+      ssPlats.has(v)?ssPlats.delete(v):ssPlats.add(v);
+      render();
+    });
+
+    const byYear={};
+    recs.forEach(r=>{
+      if(!r.date)return;
+      const y=r.date.slice(0,4);
+      if(!/^\d{4}$/.test(y))return;
+      byYear[y]=(byYear[y]||0)+r.cost;
+    });
+    const yearRows=Object.keys(byYear).sort()
+      .map(y=>({key:y,val:byYear[y],color:'var(--blue)',selected:fromEl.value===`${y}-01-01`&&toEl.value===`${y}-12-31`}));
+    renderHBars('ssYearChart',yearRows,y=>{
+      fromEl.value=`${y}-01-01`;
+      toEl.value=`${y}-12-31`;
+      render();
+    });
+
+    renderMonthChart(recs);
   }
 
   document.getElementById('ssClearFilters').onclick=()=>{
@@ -4716,9 +4802,24 @@ document.addEventListener('keydown',function(e){
   fromEl.addEventListener('change',render);
   toEl.addEventListener('change',render);
 
+  document.getElementById('ssDateThisMonth').onclick=()=>{
+    const d=new Date();
+    const y=d.getFullYear(),m=d.getMonth();
+    fromEl.value=`${y}-${String(m+1).padStart(2,'0')}-01`;
+    toEl.value=`${y}-${String(m+1).padStart(2,'0')}-${String(lastDayOfMonth(y,m+1)).padStart(2,'0')}`;
+    render();
+  };
+  document.getElementById('ssDateThisYear').onclick=()=>{
+    const y=new Date().getFullYear();
+    fromEl.value=`${y}-01-01`;
+    toEl.value=`${y}-12-31`;
+    render();
+  };
+
   function open(){
     ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';
     ov.classList.add('on');
+    ov.style.display='flex';
     history.pushState({ssovOpen:true},'','');
     render();
   }
