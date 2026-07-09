@@ -1064,6 +1064,20 @@ function removeGameKey(id,idx){
   if(openId===g.id)openPanel(openId);
 }
 
+// Disables a menu item (both its mobile #hmenu and desktop #dhmenu copies)
+// and shows a small pulsing dot while a background batch job (release
+// date check, live prices, missing prices) is running — prevents firing
+// a second overlapping run of the same job, which used to be possible by
+// just clicking the menu item again while the first run was still going.
+function setMenuRunning(ids,running){
+  ids.forEach(id=>{
+    const btn=document.getElementById(id);
+    if(!btn)return;
+    btn.disabled=running;
+    btn.classList.toggle('running',running);
+  });
+}
+
 // ══════════════════════════════════════════
 //  TOAST
 // ══════════════════════════════════════════
@@ -4343,6 +4357,7 @@ document.addEventListener('keydown',function(e){
     ov.classList.remove('on');
     bubble.classList.remove('on');
     _rdcRunning=false;_rdcAborted=false;_rdcHidden=false;
+    setMenuRunning(['hmRdcBtn','dhDatesBtn'],false);
     _hideConfirm();
     closeBtn.style.display='none';hideBtn.style.display='';cancelBtn.style.display='';
     if(history.state&&history.state.rdcovOpen)history.replaceState(null,'','');
@@ -4392,6 +4407,10 @@ document.addEventListener('keydown',function(e){
   }
 
   async function run(){
+    // Already running — bring the existing progress modal back into view
+    // instead of starting a second, overlapping fetch loop over the same
+    // targets (that used to be possible by just clicking this again).
+    if(_rdcRunning){_showRdc();return}
     if(OFFLINE){showToast('Offline — cannot reach Steam.');return}
     const targets=games.filter(g=>g.steamAppId&&isGameUnreleased(g)&&!isCancelled(g));
     if(!targets.length){showToast('No unreleased Steam games found.');return}
@@ -4401,6 +4420,7 @@ document.addEventListener('keydown',function(e){
     log.innerHTML='';
     summary.textContent=`Checking ${targets.length} game${targets.length>1?'s':''}…`;
     _rdcRunning=true;_rdcAborted=false;_rdcHidden=false;
+    setMenuRunning(['hmRdcBtn','dhDatesBtn'],true);
     _hideConfirm();
     closeBtn.style.display='none';hideBtn.style.display='';cancelBtn.style.display='';
     bubble.textContent=`0\n/${targets.length}`;
@@ -4444,6 +4464,7 @@ document.addEventListener('keydown',function(e){
     }
 
     _rdcRunning=false;
+    setMenuRunning(['hmRdcBtn','dhDatesBtn'],false);
     _hideConfirm();
     closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
     if(_rdcAborted){
@@ -4474,6 +4495,7 @@ document.addEventListener('keydown',function(e){
   function _closePlc(){
     ov.classList.remove('on');
     _plcRunning=false;_plcAborted=false;
+    setMenuRunning(['hmSteamPriceBtn','dhSteamPriceBtn'],false);
     closeBtn.textContent='Close';
     if(history.state&&history.state.plcovOpen)history.replaceState(null,'','');
   }
@@ -4490,12 +4512,14 @@ document.addEventListener('keydown',function(e){
     log.appendChild(d);log.scrollTop=log.scrollHeight;
   }
   async function run(){
+    if(_plcRunning){ov.classList.add('on');return}
     if(OFFLINE){showToast('Offline — cannot reach Steam.');return}
     const targets=games.filter(g=>g.steamAppId&&(g.price==null||g.price==='')&&!isGameUnreleased(g)&&!isCancelled(g)&&!g.delisted);
     if(!targets.length){showToast('No released Steam games without a price found.');return}
     ov.classList.add('on');history.pushState({plcovOpen:true},'','');
     log.innerHTML='';summary.textContent=`Checking ${targets.length} game${targets.length>1?'s':''}…`;
     _plcRunning=true;_plcAborted=false;closeBtn.textContent='Cancel';
+    setMenuRunning(['hmSteamPriceBtn','dhSteamPriceBtn'],true);
     let found=0,unavailable=0,failed=0;
     for(let i=0;i<targets.length;i++){
       if(_plcAborted)break;
@@ -4521,6 +4545,7 @@ document.addEventListener('keydown',function(e){
       if(i<targets.length-1&&!_plcAborted)await new Promise(r=>setTimeout(r,400));
     }
     _plcRunning=false;closeBtn.textContent='Close';
+    setMenuRunning(['hmSteamPriceBtn','dhSteamPriceBtn'],false);
     if(_plcAborted){summary.textContent=`Stopped — ${found} found, ${unavailable} delisted${failed?`, ${failed} failed`:''}`;}
     else{summary.textContent=`Done — ${found} found, ${unavailable} delisted${failed?`, ${failed} failed`:''}`;}
     if(found)dispatchRender();
@@ -4965,6 +4990,7 @@ async function loadSavedPrices(){
 }
 
 async function runGGDealsFetch(){
+  if(_ggFetchRunning){_showGgFetchModal();return}
   if(!GG_WORKER){showToast('GG.deals worker not configured.');return;}
   const today=todayISO();
   const eligible=games.filter(g=>
@@ -4986,6 +5012,7 @@ async function runGGDealsFetch(){
   _ggFetchCancelled=false;
   _ggFetchHidden=false;
   _ggFetchRunning=true;
+  setMenuRunning(['hmPriceBtn','dhPriceBtn'],true);
 
   const ov=document.getElementById('ggFetchOv');
   const progressEl=document.getElementById('ggFetchProgress');
@@ -5066,6 +5093,7 @@ async function runGGDealsFetch(){
       setProgress(`Error: ${err.message}`);
       console.error('BTB GG.deals error:',err);
       _ggFetchRunning=false;_hideGgConfirm();
+      setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
       closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
       closeBtn.onclick=_closeGgFetchModal;
       return;
@@ -5090,6 +5118,7 @@ async function runGGDealsFetch(){
     statusEl.textContent='All done!';
   }
   _ggFetchRunning=false;_hideGgConfirm();
+  setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
   closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
   closeBtn.onclick=_closeGgFetchModal;
   // If hidden, show done state in bubble then restore modal
@@ -5116,6 +5145,7 @@ function _closeGgFetchModal(){
   _ggFetchCancelled=true;
   _ggFetchHidden=false;
   _ggFetchRunning=false;
+  setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
   _hideGgConfirm();
   document.getElementById('ggFetchOv').classList.remove('on');
   document.getElementById('ggFetchBubble').classList.remove('on');

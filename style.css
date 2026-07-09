@@ -629,12 +629,13 @@ button{text-transform:none;letter-spacing:0}
    dots with a 2px surface ring, crosshair + one tooltip for every series
    (a single series here) at the nearest X. */
 .ss-linewrap{position:relative;height:220px}
-.ss-linewrap svg{width:100%;height:100%;overflow:visible}
+.ss-linewrap svg{width:100%;height:100%;overflow:visible;-webkit-tap-highlight-color:transparent}
 .ss-line-path{fill:none;stroke:var(--blue);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .ss-line-area{fill:var(--blue);opacity:0;animation:ssAreaIn .5s .3s ease-out both}
 .ss-line-dot{fill:var(--blue);stroke:var(--base);stroke-width:2;opacity:0;animation:ssGrowIn .3s ease-out both}
 .ss-line-dot:hover,.ss-line-dot.hover{r:6}
-.ss-line-hit{fill:transparent}
+.ss-line-hit{fill:transparent;-webkit-tap-highlight-color:transparent;outline:none}
+.ss-line-hit:focus,.ss-line-hit:focus-visible{outline:none}
 .ss-line-crosshair{stroke:var(--bd2);stroke-width:1;pointer-events:none;opacity:0}
 .ss-line-axis-label{font-size:9px;fill:var(--t3);font-family:'Inter',sans-serif}
 .ss-line-tip{position:absolute;pointer-events:none;background:var(--s1);border:1px solid var(--bd2);
@@ -921,6 +922,15 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 }
 .hmi:first-of-type{border-top:none}
 .hmi:hover{background:#02b3fc15;color:var(--text)}
+/* Running state — a batch job (release dates, live prices, missing
+   prices) is already in progress, so this trigger is disabled with a
+   small pulsing dot instead of being clickable to start a second
+   overlapping run. */
+.hmi.running{color:var(--t3);cursor:default;pointer-events:none;position:relative;padding-right:1.8rem}
+.hmi.running:hover{background:transparent}
+.hmi.running::after{content:'';position:absolute;right:.75rem;top:50%;transform:translateY(-50%);
+  width:7px;height:7px;border-radius:50%;background:var(--amber);animation:ggPulse2 1.2s ease-in-out infinite}
+@keyframes ggPulse2{0%,100%{opacity:.5;transform:translateY(-50%) scale(.85)}50%{opacity:1;transform:translateY(-50%) scale(1.15)}}
 .hmi-theme{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-top:1px solid var(--bd)}
 .hmi-theme-label{font-size:.8rem;font-weight:500;color:var(--t2)}
 
