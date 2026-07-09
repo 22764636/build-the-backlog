@@ -4535,16 +4535,22 @@ document.addEventListener('keydown',function(e){
   const ov=document.getElementById('ssov');
   if(!ov)return;
   const closeBtn=document.getElementById('ssClose');
-  const fromEl=document.getElementById('ssDateFrom');
-  const toEl=document.getElementById('ssDateTo');
   const kpisEl=document.getElementById('ssKpis');
   const emptyEl=document.getElementById('ssEmpty');
   const gridEl=document.getElementById('ssGrid');
   const trendCard=document.getElementById('ssTrendCard');
   const undatedEl=document.getElementById('ssUndatedNote');
 
+  // All four are Sets, toggled the same way on click — plain click, no
+  // modifier key, works identically on desktop and mobile. Year/Month used
+  // to be a single continuous from/to date range; that made multi-select
+  // and un-selecting impossible (a range can't hold "2022 and 2025, not
+  // 2023/2024") and made "every February across every year" inexpressible.
+  // Sets, OR'd within each dimension and AND'd across dimensions, fix both.
   let ssPlats=new Set();
   let ssStores=new Set();
+  let ssYears=new Set();
+  let ssMonths=new Set(); // calendar month numbers 1-12
 
   function _closeSs(){
     ov.classList.remove('on');
@@ -4573,12 +4579,23 @@ document.addEventListener('keydown',function(e){
     return out;
   }
 
-  function filteredRecords(){
+  // exclude lets a chart see every option for its OWN dimension while still
+  // respecting the other three — e.g. the Platform chart filters by
+  // store/year/month but not by platform, so every platform bar (selected
+  // or not) stays visible and clickable instead of vanishing the moment
+  // one platform is chosen.
+  function filteredRecords(exclude){
     return purchaseRecords().filter(r=>{
-      if(ssPlats.size&&!ssPlats.has(r.platform))return false;
-      if(ssStores.size&&!ssStores.has(r.store))return false;
-      if(fromEl.value&&(!r.date||r.date<fromEl.value))return false;
-      if(toEl.value&&(!r.date||r.date>toEl.value))return false;
+      if(exclude!=='plat'&&ssPlats.size&&!ssPlats.has(r.platform))return false;
+      if(exclude!=='store'&&ssStores.size&&!ssStores.has(r.store))return false;
+      if(exclude!=='year'&&ssYears.size){
+        const y=r.date?r.date.slice(0,4):'';
+        if(!y||!ssYears.has(y))return false;
+      }
+      if(exclude!=='month'&&ssMonths.size){
+        const m=r.date?parseInt(r.date.slice(5,7),10):0;
+        if(!m||!ssMonths.has(m))return false;
+      }
       return true;
     });
   }
@@ -4588,7 +4605,6 @@ document.addEventListener('keydown',function(e){
     const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return`${names[parseInt(m,10)-1]} '${y.slice(2)}`;
   }
-  function lastDayOfMonth(y,m){return new Date(y,m,0).getDate();}
 
   function renderKpis(recs){
     const totalSpend=recs.reduce((s,r)=>s+r.cost,0);
@@ -4602,12 +4618,12 @@ document.addEventListener('keydown',function(e){
     `;
   }
 
-  // Shared horizontal-bar renderer for the Platform/Year/Month-of-year
-  // cards — rows fade+rise in (staggered) and each bar's fill grows from 0
-  // on a rAF tick so filter changes always replay the animation, not just
-  // first paint. onClick is optional: the calendar-month breakdown isn't
-  // drill-downable (a single from/to date range can't express "every
-  // March across every year"), so it renders read-only, no pointer cursor.
+  // Shared horizontal-bar renderer for the Platform/Store/Year/Month cards
+  // — rows fade+rise in (staggered) and each bar's fill grows from 0 on a
+  // rAF tick so filter changes always replay the animation, not just first
+  // paint. key is the filter identity (toggled into a Set on click); label
+  // is what's shown — they differ for the calendar-month chart (key: 1-12,
+  // label: "Jan").
   function renderHBars(containerId,rows,onClick){
     const el=document.getElementById(containerId);
     const max=Math.max(...rows.map(r=>r.val),0.01);
@@ -4615,7 +4631,7 @@ document.addEventListener('keydown',function(e){
     const clickable=!!onClick;
     el.innerHTML=rows.map((r,i)=>`
       <div class="ss-hbar-row${r.selected?' selected':''}${clickable?'':' static'}" data-key="${esc(r.key)}" style="animation-delay:${i*30}ms">
-        <div class="ss-hbar-label">${esc(r.key)}</div>
+        <div class="ss-hbar-label">${esc(r.label)}</div>
         <div class="ss-hbar-track"><div class="ss-hbar-fill" data-w="${(r.val/max*100).toFixed(1)}" style="width:0;background:${r.color}"></div></div>
         <div class="ss-hbar-val">${fmtEur(r.val)}</div>
       </div>`).join('');
@@ -4632,6 +4648,7 @@ document.addEventListener('keydown',function(e){
   // Calendar-month aggregate (Jan..Dec totals across every year) — a
   // seasonality view, distinct from the month-by-month trend line above
   // (which is per specific YYYY-MM instance, not per calendar position).
+  // Clickable: toggles ssMonths, same as every other dimension.
   function renderCalMonthChart(recs){
     const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const byM={};
@@ -4642,8 +4659,12 @@ document.addEventListener('keydown',function(e){
       byM[m]=(byM[m]||0)+r.cost;
     });
     const rows=Object.keys(byM).map(Number).sort((a,b)=>a-b)
-      .map(m=>({key:names[m-1],val:byM[m],color:'var(--blue)'}));
-    renderHBars('ssCalMonthChart',rows,null);
+      .map(m=>({key:String(m),label:names[m-1],val:byM[m],color:'var(--blue)',selected:ssMonths.has(m)}));
+    renderHBars('ssCalMonthChart',rows,k=>{
+      const m=parseInt(k,10);
+      ssMonths.has(m)?ssMonths.delete(m):ssMonths.add(m);
+      render();
+    });
   }
 
   function renderMonthChart(recs){
@@ -4731,14 +4752,12 @@ document.addEventListener('keydown',function(e){
         wrap.querySelectorAll('.ss-line-dot').forEach(d=>d.classList.remove('hover'));
         wrap.querySelector(`.ss-line-dot[data-i="${i}"]`).classList.add('hover');
       }
+      // Hover only — no click. This chart already reflects every active
+      // filter (it's built from the full, non-excluded record set), so a
+      // point on it is a consequence of the other charts' selections, not
+      // its own filter to set.
       hit.addEventListener('pointerenter',activate);
       hit.addEventListener('focus',activate);
-      hit.addEventListener('click',()=>{
-        const[y,m]=p.ym.split('-');
-        fromEl.value=`${y}-${m}-01`;
-        toEl.value=`${y}-${m}-${String(lastDayOfMonth(+y,+m)).padStart(2,'0')}`;
-        render();
-      });
     });
     wrap.addEventListener('pointerleave',()=>{
       crosshair.style.opacity='0';
@@ -4748,60 +4767,69 @@ document.addEventListener('keydown',function(e){
   }
 
   function render(){
-    const recs=filteredRecords();
-    renderKpis(recs);
-
-    if(!recs.length){
+    // Genuinely nothing to show (no purchases at all, unrelated to filters)
+    // vs. the current filter combination happening to match zero records
+    // are different states — only the former hides the whole dashboard.
+    // The latter keeps every chart rendering from its own exclude-self
+    // data, so the bars you'd click to back out of the combination stay
+    // visible and clickable instead of vanishing along with everything else.
+    if(!purchaseRecords().length){
+      emptyEl.textContent='No purchases in your collection yet.';
       emptyEl.style.display='block';
+      kpisEl.style.display='none';
       gridEl.style.display='none';
       return;
     }
-    emptyEl.style.display='none';
+    kpisEl.style.display='';
     gridEl.style.display='grid';
 
+    const recs=filteredRecords();
+    renderKpis(recs);
+    emptyEl.textContent='No purchases match this combination — click a highlighted bar below to deselect it.';
+    emptyEl.style.display=recs.length?'none':'block';
+
     const byPlat={};
-    recs.forEach(r=>{const k=r.platform||'—';byPlat[k]=(byPlat[k]||0)+r.cost;});
+    filteredRecords('plat').forEach(r=>{const k=r.platform||'—';byPlat[k]=(byPlat[k]||0)+r.cost;});
     const platRows=Object.keys(byPlat).sort((a,b)=>byPlat[b]-byPlat[a])
-      .map(k=>({key:k,val:byPlat[k],color:platColor(k),selected:ssPlats.has(k)}));
+      .map(k=>({key:k,label:k,val:byPlat[k],color:platColor(k),selected:ssPlats.has(k)}));
     renderHBars('ssPlatChart',platRows,v=>{
       ssPlats.has(v)?ssPlats.delete(v):ssPlats.add(v);
       render();
     });
 
     const byStore={};
-    recs.forEach(r=>{const k=r.store||'—';byStore[k]=(byStore[k]||0)+r.cost;});
+    filteredRecords('store').forEach(r=>{const k=r.store||'—';byStore[k]=(byStore[k]||0)+r.cost;});
     const storeRows=Object.keys(byStore).sort((a,b)=>byStore[b]-byStore[a])
-      .map(k=>({key:k,val:byStore[k],color:'var(--indigo)',selected:ssStores.has(k)}));
+      .map(k=>({key:k,label:k,val:byStore[k],color:'var(--indigo)',selected:ssStores.has(k)}));
     renderHBars('ssStoreChart',storeRows,v=>{
       ssStores.has(v)?ssStores.delete(v):ssStores.add(v);
       render();
     });
 
     const byYear={};
-    recs.forEach(r=>{
+    filteredRecords('year').forEach(r=>{
       if(!r.date)return;
       const y=r.date.slice(0,4);
       if(!/^\d{4}$/.test(y))return;
       byYear[y]=(byYear[y]||0)+r.cost;
     });
-    const yearRows=Object.keys(byYear).sort()
-      .map(y=>({key:y,val:byYear[y],color:'var(--blue)',selected:fromEl.value===`${y}-01-01`&&toEl.value===`${y}-12-31`}));
+    const yearRows=Object.keys(byYear).sort((a,b)=>b.localeCompare(a)) // newest first
+      .map(y=>({key:y,label:y,val:byYear[y],color:'var(--blue)',selected:ssYears.has(y)}));
     renderHBars('ssYearChart',yearRows,y=>{
-      fromEl.value=`${y}-01-01`;
-      toEl.value=`${y}-12-31`;
+      ssYears.has(y)?ssYears.delete(y):ssYears.add(y);
       render();
     });
 
     renderMonthChart(recs);
-    renderCalMonthChart(recs);
+    renderCalMonthChart(filteredRecords('month'));
   }
 
   document.getElementById('ssClearFilters').onclick=()=>{
-    ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';render();
+    ssPlats=new Set();ssStores=new Set();ssYears=new Set();ssMonths=new Set();render();
   };
 
   function open(){
-    ssPlats=new Set();ssStores=new Set();fromEl.value='';toEl.value='';
+    ssPlats=new Set();ssStores=new Set();ssYears=new Set();ssMonths=new Set();
     ov.classList.add('on');
     ov.style.display='flex';
     history.pushState({ssovOpen:true},'','');

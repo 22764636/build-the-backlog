@@ -436,12 +436,12 @@
       </div>
     </div>
     <div class="ssdash-body">
-      <!-- No filter section — every dimension (platform, store, year,
-           month) is its own chart card below; click a bar/point to filter.
-           These two stay in the DOM (unused visually) because chart clicks
-           still read/write them as the shared date-range filter state. -->
-      <input type="hidden" id="ssDateFrom">
-      <input type="hidden" id="ssDateTo">
+      <!-- No filter section — Platform/Store/Year/Month are each their own
+           chart card below; click a bar to toggle it (multi-select, plain
+           click, no modifier key — same Set-toggle for all four). Each
+           chart renders from records filtered by the *other* three
+           dimensions, never its own, so every option always stays visible
+           and clickable regardless of what's currently selected. -->
 
       <div class="ss-kpis" id="ssKpis"></div>
 
