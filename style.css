@@ -256,6 +256,16 @@ button{text-transform:none;letter-spacing:0}
 .ph-chart{position:relative;min-height:70px;margin-top:.5rem}
 .ph-chart svg{width:100%;height:130px;display:block;overflow:visible;-webkit-tap-highlight-color:transparent}
 .ph-empty{font-size:.78rem;color:var(--t3);padding:.3rem 0}
+/* Range filter — same selector-pill shape/grammar as .plat-tab (picking
+   which window of history to view is the same job as picking a platform
+   tab: one mutually-exclusive choice from a row). Wraps to a second line
+   on narrow panels rather than overflowing. */
+.ph-range-row{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.3rem}
+.ph-range-pill{padding:.15rem .5rem;border-radius:20px;border:1.5px solid var(--bd);background:transparent;
+  color:var(--t2);font-size:.64rem;font-weight:700;cursor:pointer;transition:all .15s;
+  font-family:'Rajdhani',sans-serif;letter-spacing:.04em;text-transform:uppercase}
+.ph-range-pill:hover{border-color:var(--blue);color:var(--blue)}
+.ph-range-pill.on{background:var(--blue);color:#031329;border-color:transparent}
 .ph-line-retail{fill:none;stroke:var(--cyan);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .ph-line-keyshop{fill:none;stroke:var(--amber);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .ph-line-low{stroke-width:1;stroke-dasharray:3 3;opacity:.5}

@@ -5006,6 +5006,22 @@ async function loadSavedPrices(){
 // reads it back for one game and draws a small SVG line chart, same
 // hand-rolled idiom as the Spend Stats trend chart (renderMonthChart).
 // Fetched on demand per panel open rather than preloaded for every game.
+const PH_RANGES=[['7d','7D',7],['1m','1M',30],['3m','3M',91],['6m','6M',182],['1y','1Y',365],['all','All',0]];
+function filterRowsByRange(rows,range){
+  const preset=PH_RANGES.find(r=>r[0]===range);
+  if(!preset||!preset[2])return rows;
+  const cutoff=Date.now()-preset[2]*86400000;
+  return rows.filter(r=>Number(r.fetched_at)>=cutoff);
+}
+// "28 Jun, 14:32" — date matches the app's DD Mon convention (fmtDate), plus
+// a 24h time so multiple same-day fetches are distinguishable in the tooltip.
+function fmtPhTipDate(ts){
+  const d=new Date(Number(ts));
+  if(isNaN(d.getTime()))return'';
+  const hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');
+  return`${d.getDate()} ${_months[d.getMonth()]}, ${hh}:${mm}`;
+}
+
 async function renderPriceHistoryChart(g){
   const forId=g.id;
   function mount(){return openId===forId?document.getElementById('phChart'):null;}
@@ -5030,6 +5046,27 @@ async function renderPriceHistoryChart(g){
     el.innerHTML=`<div class="ph-empty">${rows&&rows.length?'Only one price check recorded so far — the chart fills in as more come in.':'No price history yet — run Check Live Prices.'}</div>`;
     return;
   }
+  drawPhChart(el,g,rows,'all');
+}
+
+// Draws (or redraws, on a range-pill click) the chart for one game from an
+// already-fetched row set — switching ranges never re-hits the network.
+function drawPhChart(el,g,allRows,range){
+  const rangeRow=`<div class="ph-range-row">${PH_RANGES.map(([key,label])=>
+    `<button type="button" class="ph-range-pill${key===range?' on':''}" data-range="${key}">${label}</button>`
+  ).join('')}</div>`;
+  const wireRangeRow=()=>{
+    el.querySelectorAll('.ph-range-pill').forEach(btn=>{
+      btn.onclick=()=>drawPhChart(el,g,allRows,btn.dataset.range);
+    });
+  };
+
+  const rows=filterRowsByRange(allRows,range);
+  if(rows.length<2){
+    el.innerHTML=`${rangeRow}<div class="ph-empty">Not enough price checks in this range.</div>`;
+    wireRangeRow();
+    return;
+  }
 
   const W=Math.max(el.clientWidth||280,220),H=130,padL=6,padR=6,padT=10,padB=20;
   const plotW=W-padL-padR,plotH=H-padT-padB;
@@ -5040,7 +5077,8 @@ async function renderPriceHistoryChart(g){
     if(!isNaN(kv)&&kv>0)vals.push(kv);
   });
   if(!vals.length){
-    el.innerHTML=`<div class="ph-empty">No price data recorded yet.</div>`;
+    el.innerHTML=`${rangeRow}<div class="ph-empty">No price data recorded in this range.</div>`;
+    wireRangeRow();
     return;
   }
   const max=Math.max(...vals)*1.08;
@@ -5078,19 +5116,23 @@ async function renderPriceHistoryChart(g){
     lowKeyshop>0?`<line class="ph-line-low keyshop" x1="${padL}" x2="${W-padR}" y1="${yOf(lowKeyshop).toFixed(1)}" y2="${yOf(lowKeyshop).toFixed(1)}"></line>`:'',
   ].join('');
 
+  // Axis labels are anchored to their point (start/middle/end) instead of
+  // always "middle" so the first/last labels grow inward from the edge
+  // rather than centering on it and getting clipped by the panel.
   const labelEvery=Math.max(1,Math.ceil(rows.length/5));
   const axisLabels=rows.map((r,i)=>{
     if(i%labelEvery!==0&&i!==rows.length-1)return'';
     const d=new Date(Number(r.fetched_at));
     if(isNaN(d.getTime()))return'';
-    return`<text class="ph-axis-label" x="${xOf(i).toFixed(1)}" y="${H-6}" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`;
+    const anchor=i===0?'start':i===rows.length-1?'end':'middle';
+    return`<text class="ph-axis-label" x="${xOf(i).toFixed(1)}" y="${H-6}" text-anchor="${anchor}">${d.getDate()}/${d.getMonth()+1}</text>`;
   }).join('');
 
   const dotsHtml=(pts,cls)=>pts.map(p=>p?`<circle class="ph-dot ${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3"></circle>`:'').join('');
   const hitW=Math.max(stepX,16);
   const hitsHtml=rows.map((r,i)=>`<rect class="ph-hit" x="${(xOf(i)-hitW/2).toFixed(1)}" y="${padT}" width="${hitW.toFixed(1)}" height="${plotH}" data-i="${i}" tabindex="0"></rect>`).join('');
 
-  el.innerHTML=`
+  el.innerHTML=`${rangeRow}
     <svg viewBox="0 0 ${W} ${H}">
       ${lowLines}
       ${retailD?`<path class="ph-line-retail" d="${retailD}"></path>`:''}
@@ -5106,6 +5148,7 @@ async function renderPriceHistoryChart(g){
       ${retailPts.some(Boolean)?`<span class="ph-legend-item"><i class="ph-swatch retail"></i>Retail${lowRetail>0?` · low €${lowRetail.toFixed(2)}`:''}</span>`:''}
       ${keyshopPts.some(Boolean)?`<span class="ph-legend-item"><i class="ph-swatch keyshop"></i>Key${lowKeyshop>0?` · low €${lowKeyshop.toFixed(2)}`:''}</span>`:''}
     </div>`;
+  wireRangeRow();
 
   const svgEl=el.querySelector('svg');
   const tip=document.getElementById('phTip');
@@ -5119,17 +5162,24 @@ async function renderPriceHistoryChart(g){
       const x=xOf(i);
       crosshair.setAttribute('x1',x);crosshair.setAttribute('x2',x);
       crosshair.style.opacity='1';
-      const d=new Date(Number(r.fetched_at));
-      const dateLbl=isNaN(d.getTime())?'':d.toLocaleDateString();
+      const dateLbl=fmtPhTipDate(r.fetched_at);
       const rv=parseFloat(r.retail),kv=parseFloat(r.keyshop);
       const parts=[];
       let topY=padT+plotH;
       if(!isNaN(rv)&&rv>0){parts.push(`<b class="retail">€${rv.toFixed(2)}</b> retail`);topY=Math.min(topY,yOf(rv));}
       if(!isNaN(kv)&&kv>0){parts.push(`<b class="keyshop">€${kv.toFixed(2)}</b> key`);topY=Math.min(topY,yOf(kv));}
       tip.innerHTML=`${parts.join(' · ')}${dateLbl?` · ${dateLbl}`:''}`;
-      tip.style.left=(x*sx)+'px';
-      tip.style.top=(topY*sy)+'px';
       tip.classList.add('on');
+      // Center over the point, then clamp within the chart's own bounds —
+      // otherwise the tooltip's edge-most half hangs off the panel and gets
+      // clipped (its ancestor scroll container has no room to show it).
+      const tipHalfW=tip.offsetWidth/2;
+      const desiredLeft=x*sx;
+      const minLeft=tipHalfW+2;
+      const maxLeft=rect.width-tipHalfW-2;
+      const clampedLeft=Math.max(minLeft,Math.min(maxLeft,desiredLeft));
+      tip.style.left=clampedLeft+'px';
+      tip.style.top=(topY*sy)+'px';
     }
     hit.addEventListener('pointerenter',activate);
     hit.addEventListener('focus',activate);
