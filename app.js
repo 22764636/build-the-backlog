@@ -4949,6 +4949,12 @@ document.addEventListener('keydown',function(e){
 let _ggFetchCancelled=false;
 let _ggFetchHidden=false;
 let _ggFetchRunning=false;
+// True while openGgFetchModalIdle's getLatestFetchDiffs call is in flight —
+// Refresh Now stays disabled until it settles. Starting a live run before
+// then would diff against whatever ggPriceCache/last-known state happens
+// to be loaded so far, comparing against stale or partial data instead of
+// the run that's about to be shown as "last checked".
+let _ggIdleLoading=false;
 
 function _showGgConfirm(){
   document.getElementById('ggFetchConfirm').style.display='';
@@ -5269,6 +5275,8 @@ function _ggSetButtonsForState(){
     closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';refreshBtn.style.display='';
     progWrap.style.display='none';
   }
+  refreshBtn.disabled=_ggIdleLoading;
+  refreshBtn.textContent=_ggIdleLoading?'Loading…':'Refresh Now';
 }
 
 // Entry point for "Check Live Prices" — opens the modal showing what the
@@ -5278,13 +5286,21 @@ function _ggSetButtonsForState(){
 async function openGgFetchModalIdle(){
   if(_ggFetchRunning){_showGgFetchModal();return}
   _showGgFetchModal();
+  // Refresh Now stays disabled until this settles — see _ggIdleLoading.
+  _ggIdleLoading=true;
   _ggSetButtonsForState();
   document.getElementById('ggFetchStatus').textContent='';
   const metaEl=document.getElementById('ggFetchMeta');
   const gridEl=document.getElementById('ggFetchGrid');
   metaEl.textContent='Loading last results…';
   gridEl.innerHTML='';
+  function doneLoading(){
+    _ggIdleLoading=false;
+    _ggSetButtonsForState();
+    return !_ggFetchRunning; // false = a run took over while this was loading — its own view already took over, skip touching the grid/meta
+  }
   if(!SHEET_URL){
+    doneLoading();
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">Connect a sheet to check live prices.</div>`;
     return;
@@ -5294,12 +5310,12 @@ async function openGgFetchModalIdle(){
     const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now(),{mode:'cors'});
     rows=await res.json();
   }catch(e){
-    if(_ggFetchRunning)return; // a run started while this was loading — its own view already took over
+    if(!doneLoading())return;
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">Couldn't load last results.</div>`;
     return;
   }
-  if(_ggFetchRunning)return;
+  if(!doneLoading())return;
   if(!Array.isArray(rows)||!rows.length){
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">No price checks recorded yet — click Refresh Now to run one.</div>`;
