@@ -31,6 +31,8 @@ function doGet(e) {
       case 'getPlatStores': result = getPlatStores(); break;
       case 'getRateLog':    result = getRateLog();      break;
       case 'getGamePrices': result = getGamePrices();   break;
+      case 'getPriceHistory': result = getPriceHistory(params.appid); break;
+      case 'getLatestFetchDiffs': result = getLatestFetchDiffs(); break;
       default:              result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -238,6 +240,102 @@ function getGamePrices() {
   });
 }
 
+// ── Read one game's price history, oldest → newest ──────────────
+function getPriceHistory(appid) {
+  if (!appid) return { error: 'Missing appid' };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(PRICE_HISTORY_SHEET);
+  if (!sheet) return [];
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(String);
+  const c = h => headers.indexOf(h);
+  const key = String(appid);
+  return rows.slice(1)
+    .filter(r => String(r[c('appid')]) === key)
+    .map(r => ({
+      fetched_at: r[c('fetched_at')],
+      retail: r[c('retail')],
+      keyshop: r[c('keyshop')],
+      currency: r[c('currency')],
+    }))
+    .sort((a, b) => Number(a.fetched_at) - Number(b.fetched_at));
+}
+
+// ── Reconstruct the most recent live-price fetch run's results, so any
+//    device can view "what changed last time" without having been the one
+//    that ran it — batches inside one run land ~61s apart, so a 30-minute
+//    gap between rows marks the boundary of a new run. ──────────────────
+function getLatestFetchDiffs() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const histSheet = ss.getSheetByName(PRICE_HISTORY_SHEET);
+  if (!histSheet) return [];
+  const rows = histSheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(String);
+  const c = h => headers.indexOf(h);
+
+  const all = rows.slice(1).map(r => ({
+    appid: String(r[c('appid')]),
+    title: r[c('title')],
+    fetched_at: Number(r[c('fetched_at')]) || 0,
+    retail: parseFloat(r[c('retail')]) || 0,
+    keyshop: parseFloat(r[c('keyshop')]) || 0,
+    currency: r[c('currency')],
+  })).sort((a, b) => a.fetched_at - b.fetched_at);
+  if (!all.length) return [];
+
+  const RUN_GAP_MS = 30 * 60 * 1000;
+  const distinctTs = [...new Set(all.map(r => r.fetched_at))].sort((a, b) => a - b);
+  let runStartTs = distinctTs[distinctTs.length - 1];
+  for (let i = distinctTs.length - 1; i > 0; i--) {
+    if (distinctTs[i] - distinctTs[i - 1] <= RUN_GAP_MS) runStartTs = distinctTs[i - 1];
+    else break;
+  }
+
+  // Latest row per appid within the run, and the most recent row per appid
+  // from BEFORE the run started (to diff against).
+  const latestByAppid = {};
+  const priorByAppid = {};
+  all.forEach(r => {
+    if (r.fetched_at >= runStartTs) latestByAppid[r.appid] = r;
+    else priorByAppid[r.appid] = r; // overwritten while walking forward — ends up as the latest pre-run row
+  });
+
+  const lowsByAppid = {};
+  const gpSheet = ss.getSheetByName(GAME_PRICES_SHEET);
+  if (gpSheet) {
+    const gpRows = gpSheet.getDataRange().getValues();
+    if (gpRows.length > 1) {
+      const gpHeaders = gpRows[0].map(String);
+      const gc = h => gpHeaders.indexOf(h);
+      gpRows.slice(1).forEach(r => {
+        lowsByAppid[String(r[gc('appid')])] = {
+          retail: parseFloat(r[gc('personal_low_retail')]) || 0,
+          keyshop: parseFloat(r[gc('personal_low_keyshop')]) || 0,
+        };
+      });
+    }
+  }
+
+  return Object.keys(latestByAppid).map(appid => {
+    const cur = latestByAppid[appid];
+    const prev = priorByAppid[appid];
+    const low = lowsByAppid[appid] || { retail: 0, keyshop: 0 };
+    return {
+      appid: appid,
+      title: cur.title,
+      fetched_at: cur.fetched_at,
+      retail: cur.retail,
+      keyshop: cur.keyshop,
+      prevRetail: prev ? prev.retail : 0,
+      prevKeyshop: prev ? prev.keyshop : 0,
+      lowRetail: low.retail,
+      lowKeyshop: low.keyshop,
+    };
+  }).sort((a, b) => b.fetched_at - a.fetched_at);
+}
+
 // ── GG.deals rate-limit log: append + prune rows older than 1h ──
 function logFetch(entry) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -275,6 +373,7 @@ function upsertGamePrices(entries) {
   for (let i = 1; i < data.length; i++) idx[String(data[i][c('appid')])] = i;
 
   const newLows = [];
+  const lows = {}; // appid -> { retail, keyshop } personal-low AFTER this upsert
   const now = Date.now();
 
   entries.forEach(entry => {
@@ -292,6 +391,10 @@ function upsertGamePrices(entries) {
       data[i][c('last_fetched')] = now;
       if (retail  > 0 && retail  <= prevLowR) { data[i][c('personal_low_retail')]  = retail;  newLows.push(key); }
       if (keyshop > 0 && keyshop <= prevLowK)   data[i][c('personal_low_keyshop')] = keyshop;
+      lows[key] = {
+        retail:  parseFloat(data[i][c('personal_low_retail')])  || 0,
+        keyshop: parseFloat(data[i][c('personal_low_keyshop')]) || 0,
+      };
     } else {
       const row = new Array(headers.length).fill('');
       row[c('appid')]                = entry.appid;
@@ -304,13 +407,14 @@ function upsertGamePrices(entries) {
       idx[key] = data.length;
       data.push(row);
       if (retail > 0) newLows.push(key);
+      lows[key] = { retail: retail || 0, keyshop: keyshop || 0 };
     }
   });
 
   // Write back entire range in one call (new rows already appended to data)
   sheet.getRange(1, 1, data.length, headers.length).setValues(data);
 
-  return { ok: true, newLows };
+  return { ok: true, newLows, lows };
 }
 
 // ── Append rows to PriceHistory ──────────────────────────────

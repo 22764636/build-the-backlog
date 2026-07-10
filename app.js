@@ -2496,12 +2496,20 @@ function openPanel(id){
     </div>`;
 
   // Live Price — see ggPriceTags() for eligibility/data rules; same badges
-  // as the wishlist card overlay, just laid out as a left-aligned row
+  // as the wishlist card overlay. The chart below is just the current
+  // price's trend, so it lives in the same section instead of a separate
+  // one — showing the same number twice (badge row + chart's last point)
+  // read as two different facts otherwise. Chart is fetched async after
+  // the panel body is in the DOM (see renderPriceHistoryChart, called
+  // below); this just emits the placeholder it mounts into.
+  let _priceHistTracked=false;
   {
     const _tags=ggPriceTags(g);
     if(_tags){
       const _row=_tags.notrack?`<span class="ggp-notrack">€ Non Tracked</span>`:`${_tags.retailStr}${_tags.badgeStr}${_tags.keysStr}`;
-      b+=`<div class="ps"><div class="psl">${t('pLivePrice')}</div><div class="pv-liveprice">${_row}</div></div>`;
+      _priceHistTracked=!_tags.notrack;
+      const _chart=_priceHistTracked?`<div class="ph-chart" id="phChart"><div class="ph-empty">Loading…</div></div>`:'';
+      b+=`<div class="ps"><div class="psl">${t('pLivePrice')}</div><div class="pv-liveprice">${_row}</div>${_chart}</div>`;
     }
   }
 
@@ -2717,6 +2725,7 @@ function openPanel(id){
       :`<button class="pa d" id="prm">${t('pRemove')}</button>`;
 
   document.getElementById('pbody').innerHTML=b;
+  if(_priceHistTracked)renderPriceHistoryChart(g);
 
   // Parallax scroll on cover image
   const _pb2El=document.getElementById('pbody');
@@ -4260,7 +4269,7 @@ function doImport(){
   document.getElementById('dhViewList').addEventListener('click',dh(()=>{if(vm!=='list'){vm='list';dispatchRender();applyVm();}}));
   document.getElementById('dhMetaBtn').addEventListener('click',dh(async()=>{fetchMeta(true);showToast('Metadata refreshed.');}));
   document.getElementById('dhDatesBtn').addEventListener('click',dh(()=>runReleaseDateCheck()));
-  document.getElementById('dhPriceBtn').addEventListener('click',dh(()=>runGGDealsFetch()));
+  document.getElementById('dhPriceBtn').addEventListener('click',dh(()=>openGgFetchModalIdle()));
   document.getElementById('dhSteamPriceBtn').addEventListener('click',dh(()=>runPriceLookup()));
   document.getElementById('dhSpendBtn').addEventListener('click',dh(()=>openSpendStats()));
   document.getElementById('dhExpBtn').addEventListener('click',dh(doExport));
@@ -4971,6 +4980,7 @@ async function loadSavedPrices(){
       const retail=parseFloat(row.last_retail)||0;
       const keyshop=parseFloat(row.last_keyshop)||0;
       const personalLowRetail=parseFloat(row.personal_low_retail)||0;
+      const personalLowKeyshop=parseFloat(row.personal_low_keyshop)||0;
       if(!ggPriceCache[appid]){
         ggPriceCache[appid]={
           retail:retail||'',
@@ -4980,6 +4990,8 @@ async function loadSavedPrices(){
           currency:'EUR',
           fetchedAt:row.last_fetched||0,
           personalLow:personalLowRetail>0&&retail>0&&retail<=personalLowRetail,
+          lowRetail:personalLowRetail,
+          lowKeyshop:personalLowKeyshop,
         };
       }
     });
@@ -4987,6 +4999,269 @@ async function loadSavedPrices(){
   }catch(e){
     console.warn('BTB: Could not load saved prices.',e);
   }
+}
+
+// Side panel Price History chart — every fetch is logged server-side
+// (PriceHistory sheet, see appendPriceHistory in runGGDealsFetch), this
+// reads it back for one game and draws a small SVG line chart, same
+// hand-rolled idiom as the Spend Stats trend chart (renderMonthChart).
+// Fetched on demand per panel open rather than preloaded for every game.
+async function renderPriceHistoryChart(g){
+  const forId=g.id;
+  function mount(){return openId===forId?document.getElementById('phChart'):null;}
+  const container=mount();
+  if(!container)return;
+  if(!SHEET_URL||!g.steamAppId){
+    container.innerHTML=`<div class="ph-empty">History needs a live sync connection.</div>`;
+    return;
+  }
+  let rows;
+  try{
+    const res=await fetch(SHEET_URL+'?action=getPriceHistory&appid='+encodeURIComponent(g.steamAppId)+'&_='+Date.now(),{mode:'cors'});
+    rows=await res.json();
+  }catch(e){
+    const el=mount();
+    if(el)el.innerHTML=`<div class="ph-empty">Couldn't load price history.</div>`;
+    return;
+  }
+  const el=mount();
+  if(!el)return;
+  if(!Array.isArray(rows)||rows.length<2){
+    el.innerHTML=`<div class="ph-empty">${rows&&rows.length?'Only one price check recorded so far — the chart fills in as more come in.':'No price history yet — run Check Live Prices.'}</div>`;
+    return;
+  }
+
+  const W=Math.max(el.clientWidth||280,220),H=130,padL=6,padR=6,padT=10,padB=20;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const vals=[];
+  rows.forEach(r=>{
+    const rv=parseFloat(r.retail),kv=parseFloat(r.keyshop);
+    if(!isNaN(rv)&&rv>0)vals.push(rv);
+    if(!isNaN(kv)&&kv>0)vals.push(kv);
+  });
+  if(!vals.length){
+    el.innerHTML=`<div class="ph-empty">No price data recorded yet.</div>`;
+    return;
+  }
+  const max=Math.max(...vals)*1.08;
+  const stepX=plotW/(rows.length-1);
+  const xOf=i=>padL+i*stepX;
+  const yOf=v=>padT+plotH-(v/max*plotH);
+
+  function seriesPts(field){
+    return rows.map((r,i)=>{
+      const v=parseFloat(r[field]);
+      return(!isNaN(v)&&v>0)?{x:xOf(i),y:yOf(v)}:null;
+    });
+  }
+  // Missing points break the line into segments rather than jumping across the gap.
+  function pathFor(pts){
+    const segs=[];let seg=[];
+    pts.forEach(p=>{
+      if(p)seg.push(p);
+      else if(seg.length){segs.push(seg);seg=[];}
+    });
+    if(seg.length)segs.push(seg);
+    return segs.map(s=>s.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ')).join(' ');
+  }
+
+  const retailPts=seriesPts('retail');
+  const keyshopPts=seriesPts('keyshop');
+  const retailD=pathFor(retailPts);
+  const keyshopD=pathFor(keyshopPts);
+
+  const cache=ggPriceCache[g.steamAppId]||{};
+  const lowRetail=parseFloat(cache.lowRetail)||0;
+  const lowKeyshop=parseFloat(cache.lowKeyshop)||0;
+  const lowLines=[
+    lowRetail>0?`<line class="ph-line-low retail" x1="${padL}" x2="${W-padR}" y1="${yOf(lowRetail).toFixed(1)}" y2="${yOf(lowRetail).toFixed(1)}"></line>`:'',
+    lowKeyshop>0?`<line class="ph-line-low keyshop" x1="${padL}" x2="${W-padR}" y1="${yOf(lowKeyshop).toFixed(1)}" y2="${yOf(lowKeyshop).toFixed(1)}"></line>`:'',
+  ].join('');
+
+  const labelEvery=Math.max(1,Math.ceil(rows.length/5));
+  const axisLabels=rows.map((r,i)=>{
+    if(i%labelEvery!==0&&i!==rows.length-1)return'';
+    const d=new Date(Number(r.fetched_at));
+    if(isNaN(d.getTime()))return'';
+    return`<text class="ph-axis-label" x="${xOf(i).toFixed(1)}" y="${H-6}" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }).join('');
+
+  const dotsHtml=(pts,cls)=>pts.map(p=>p?`<circle class="ph-dot ${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3"></circle>`:'').join('');
+  const hitW=Math.max(stepX,16);
+  const hitsHtml=rows.map((r,i)=>`<rect class="ph-hit" x="${(xOf(i)-hitW/2).toFixed(1)}" y="${padT}" width="${hitW.toFixed(1)}" height="${plotH}" data-i="${i}" tabindex="0"></rect>`).join('');
+
+  el.innerHTML=`
+    <svg viewBox="0 0 ${W} ${H}">
+      ${lowLines}
+      ${retailD?`<path class="ph-line-retail" d="${retailD}"></path>`:''}
+      ${keyshopD?`<path class="ph-line-keyshop" d="${keyshopD}"></path>`:''}
+      ${dotsHtml(retailPts,'retail')}
+      ${dotsHtml(keyshopPts,'keyshop')}
+      ${axisLabels}
+      <line class="ph-crosshair" id="phCrosshair" x1="0" y1="${padT}" x2="0" y2="${padT+plotH}"></line>
+      ${hitsHtml}
+    </svg>
+    <div class="ph-tip" id="phTip"></div>
+    <div class="ph-legend">
+      ${retailPts.some(Boolean)?`<span class="ph-legend-item"><i class="ph-swatch retail"></i>Retail${lowRetail>0?` · low €${lowRetail.toFixed(2)}`:''}</span>`:''}
+      ${keyshopPts.some(Boolean)?`<span class="ph-legend-item"><i class="ph-swatch keyshop"></i>Key${lowKeyshop>0?` · low €${lowKeyshop.toFixed(2)}`:''}</span>`:''}
+    </div>`;
+
+  const svgEl=el.querySelector('svg');
+  const tip=document.getElementById('phTip');
+  const crosshair=document.getElementById('phCrosshair');
+  el.querySelectorAll('.ph-hit').forEach(hit=>{
+    const i=parseInt(hit.dataset.i,10);
+    const r=rows[i];
+    function activate(){
+      const rect=svgEl.getBoundingClientRect();
+      const sx=rect.width/W,sy=rect.height/H;
+      const x=xOf(i);
+      crosshair.setAttribute('x1',x);crosshair.setAttribute('x2',x);
+      crosshair.style.opacity='1';
+      const d=new Date(Number(r.fetched_at));
+      const dateLbl=isNaN(d.getTime())?'':d.toLocaleDateString();
+      const rv=parseFloat(r.retail),kv=parseFloat(r.keyshop);
+      const parts=[];
+      let topY=padT+plotH;
+      if(!isNaN(rv)&&rv>0){parts.push(`<b class="retail">€${rv.toFixed(2)}</b> retail`);topY=Math.min(topY,yOf(rv));}
+      if(!isNaN(kv)&&kv>0){parts.push(`<b class="keyshop">€${kv.toFixed(2)}</b> key`);topY=Math.min(topY,yOf(kv));}
+      tip.innerHTML=`${parts.join(' · ')}${dateLbl?` · ${dateLbl}`:''}`;
+      tip.style.left=(x*sx)+'px';
+      tip.style.top=(topY*sy)+'px';
+      tip.classList.add('on');
+    }
+    hit.addEventListener('pointerenter',activate);
+    hit.addEventListener('focus',activate);
+  });
+  el.addEventListener('pointerleave',()=>{
+    crosshair.style.opacity='0';
+    tip.classList.remove('on');
+  });
+}
+
+// Formats one price field ("R"/"K") for the live-price fetch log: current
+// value, delta vs the price cached before this run, and the gap to the
+// lowest price ever recorded for this game (or "new low" if this fetch
+// beat it). before/lowV are pre-fetch snapshots — see runGGDealsFetch().
+// "3h ago" / "2d ago" style relative time, for the "Last checked" header —
+// daysAgo()/fmtAdded() above only have day granularity, too coarse for a
+// check that might have run minutes ago.
+function fmtTimeAgo(ts){
+  if(!ts)return'';
+  const diff=Date.now()-Number(ts);
+  const mins=Math.floor(diff/60000);
+  if(mins<1)return'just now';
+  if(mins<60)return`${mins}m ago`;
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return`${hrs}h ago`;
+  const days=Math.floor(hrs/24);
+  if(days<30)return`${days}d ago`;
+  const dt=new Date(Number(ts));
+  return`${dt.getDate()} ${_months[dt.getMonth()]} ${dt.getFullYear()}`;
+}
+
+// One price field ("Retail"/"Key") inside a live-price result card: current
+// value, a delta badge vs. the price before this run, and either a "low
+// €X" caption or a "★ new low" badge when this result beats the lowest
+// ever recorded for that field.
+function ggPriceStatHTML(label,newV,oldV,lowV){
+  if(isNaN(newV)||newV<=0){
+    return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val ggr-na">—</span></div>`;
+  }
+  const cur=`€${newV.toFixed(2)}`;
+  const hasOld=!isNaN(oldV)&&oldV>0;
+  const deltaBadge=!hasOld
+    ?`<span class="bdg ggr-badge flat">new</span>`
+    :Math.abs(newV-oldV)<0.005
+      ?`<span class="bdg ggr-badge flat">=</span>`
+      :`<span class="bdg ggr-badge ${newV<oldV?'down':'up'}">${newV<oldV?'↓':'↑'}€${Math.abs(newV-oldV).toFixed(2)}</span>`;
+  const lowBit=lowV>0
+    ?(newV-lowV<=0.005?`<span class="bdg ggr-badge newlow">★ new low</span>`:`<span class="ggr-lowtext">low €${lowV.toFixed(2)}</span>`)
+    :'';
+  return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val">${cur}</span>${deltaBadge}${lowBit}</div>`;
+}
+// One result card — shared by the live in-progress grid and the
+// reconstructed "last results" idle view, so both look identical.
+function ggPriceCardHTML(e){
+  const r=parseFloat(e.retail),k=parseFloat(e.keyshop);
+  const oldR=e.oldRetail!=null?parseFloat(e.oldRetail):NaN;
+  const oldK=e.oldKeyshop!=null?parseFloat(e.oldKeyshop):NaN;
+  const lowR=parseFloat(e.lowRetail)||0,lowK=parseFloat(e.lowKeyshop)||0;
+  const hasOldR=!isNaN(oldR)&&oldR>0,hasOldK=!isNaN(oldK)&&oldK>0;
+  let cls='skip';
+  if((hasOldR&&r<oldR)||(hasOldK&&k<oldK))cls='ok';
+  else if((hasOldR&&r>oldR)||(hasOldK&&k>oldK))cls='up';
+  else if(!hasOldR&&!hasOldK)cls='ok';
+  return`<div class="ggr-card ${cls}">
+    <div class="ggr-title">${esc(e.title)}</div>
+    ${ggPriceStatHTML('Retail',r,oldR,lowR)}
+    ${ggPriceStatHTML('Key',k,oldK,lowK)}
+  </div>`;
+}
+function ggPriceErrCardHTML(title){
+  return`<div class="ggr-card err"><div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div></div>`;
+}
+
+// Shows/hides the modal's running-vs-idle chrome (progress bar, Hide/Cancel
+// vs. Close/Refresh Now) purely off _ggFetchRunning, so every place that
+// flips that flag can just call this instead of toggling buttons by hand.
+function _ggSetButtonsForState(){
+  const closeBtn=document.getElementById('ggFetchClose');
+  const hideBtn=document.getElementById('ggFetchHide');
+  const cancelBtn=document.getElementById('ggFetchCancel');
+  const refreshBtn=document.getElementById('ggFetchRefresh');
+  const progWrap=document.getElementById('ggFetchProgWrap');
+  if(_ggFetchRunning){
+    closeBtn.style.display='none';hideBtn.style.display='';cancelBtn.style.display='';refreshBtn.style.display='none';
+    progWrap.style.display='';
+  }else{
+    closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';refreshBtn.style.display='';
+    progWrap.style.display='none';
+  }
+}
+
+// Entry point for "Check Live Prices" — opens the modal showing what the
+// LAST run found (reconstructed from the PriceHistory sheet via
+// getLatestFetchDiffs), so results are visible from any device, not just
+// the one that ran the fetch. "Refresh Now" inside kicks off a real run.
+async function openGgFetchModalIdle(){
+  if(_ggFetchRunning){_showGgFetchModal();return}
+  _showGgFetchModal();
+  _ggSetButtonsForState();
+  document.getElementById('ggFetchStatus').textContent='';
+  const metaEl=document.getElementById('ggFetchMeta');
+  const gridEl=document.getElementById('ggFetchGrid');
+  metaEl.textContent='Loading last results…';
+  gridEl.innerHTML='';
+  if(!SHEET_URL){
+    metaEl.textContent='';
+    gridEl.innerHTML=`<div class="ggr-empty">Connect a sheet to check live prices.</div>`;
+    return;
+  }
+  let rows;
+  try{
+    const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now(),{mode:'cors'});
+    rows=await res.json();
+  }catch(e){
+    if(_ggFetchRunning)return; // a run started while this was loading — its own view already took over
+    metaEl.textContent='';
+    gridEl.innerHTML=`<div class="ggr-empty">Couldn't load last results.</div>`;
+    return;
+  }
+  if(_ggFetchRunning)return;
+  if(!Array.isArray(rows)||!rows.length){
+    metaEl.textContent='';
+    gridEl.innerHTML=`<div class="ggr-empty">No price checks recorded yet — click Refresh Now to run one.</div>`;
+    return;
+  }
+  const latestTs=Math.max(...rows.map(r=>r.fetched_at||0));
+  metaEl.textContent=`Last checked ${fmtTimeAgo(latestTs)} · ${rows.length} game${rows.length>1?'s':''}`;
+  gridEl.innerHTML=rows.map(r=>ggPriceCardHTML({
+    title:r.title,retail:r.retail,keyshop:r.keyshop,
+    oldRetail:r.prevRetail,oldKeyshop:r.prevKeyshop,
+    lowRetail:r.lowRetail,lowKeyshop:r.lowKeyshop,
+  })).join('');
 }
 
 async function runGGDealsFetch(){
@@ -5018,10 +5293,11 @@ async function runGGDealsFetch(){
   const progressEl=document.getElementById('ggFetchProgress');
   const statusEl=document.getElementById('ggFetchStatus');
   const barEl=document.getElementById('ggFetchBar');
-  const listEl=document.getElementById('ggFetchList');
-  const closeBtn=document.getElementById('ggFetchClose');
-  const hideBtn=document.getElementById('ggFetchHide');
+  const gridEl=document.getElementById('ggFetchGrid');
+  const metaEl=document.getElementById('ggFetchMeta');
   const cancelBtn=document.getElementById('ggFetchCancel');
+  const hideBtn=document.getElementById('ggFetchHide');
+  const closeBtn=document.getElementById('ggFetchClose');
   const bubble=document.getElementById('ggFetchBubble');
 
   function setProgress(status){
@@ -5033,15 +5309,14 @@ async function runGGDealsFetch(){
   }
 
   _hideGgConfirm();
-  closeBtn.style.display='none';
-  hideBtn.style.display='';
-  cancelBtn.style.display='';
+  _ggSetButtonsForState();
   cancelBtn.textContent='Cancel';
   cancelBtn.onclick=()=>_ggFetchTryClose();
   hideBtn.onclick=_hideGgFetchModal;
   document.getElementById('ggFetchConfirmContinue').onclick=()=>_hideGgConfirm();
   document.getElementById('ggFetchConfirmStop').onclick=()=>{_ggFetchCancelled=true;_hideGgConfirm();};
-  listEl.innerHTML='';
+  metaEl.textContent='';
+  gridEl.innerHTML='';
   ov.classList.add('on');
   history.pushState({ggFetchOpen:true},'','');
   setProgress('Starting…');
@@ -5049,7 +5324,6 @@ async function runGGDealsFetch(){
   for(let b=0;b<batches.length&&!_ggFetchCancelled;b++){
     const batch=batches[b];
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
-    listEl.innerHTML=batch.map(g=>`<div>${esc(g.title)}</div>`).join('');
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
       const res=await fetch(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`);
@@ -5061,21 +5335,34 @@ async function runGGDealsFetch(){
 
       const priceEntries=[];
       const historyEntries=[];
+      const cardsHtml=[];
       batch.forEach(g=>{
         const d=json.data[g.steamAppId];
+        const before=ggPriceCache[g.steamAppId];
         if(d&&d.prices){
           ggPriceCache[g.steamAppId]={
             retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,
             histRetail:d.prices.historicalRetail,histKeyshop:d.prices.historicalKeyshops,
-            currency:d.prices.currency,fetchedAt:fetchTs,personalLow:false,
+            currency:d.prices.currency,fetchedAt:fetchTs,
+            personalLow:before?before.personalLow:false,
+            lowRetail:before?(before.lowRetail||0):0,
+            lowKeyshop:before?(before.lowKeyshop||0):0,
           };
           priceEntries.push({appid:g.steamAppId,title:g.title,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops});
           historyEntries.push({appid:g.steamAppId,title:g.title,fetched_at:fetchTs,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,currency:d.prices.currency});
+          cardsHtml.push(ggPriceCardHTML({
+            title:g.title,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,
+            oldRetail:before?before.retail:NaN,oldKeyshop:before?before.keyshop:NaN,
+            lowRetail:before?before.lowRetail:0,lowKeyshop:before?before.lowKeyshop:0,
+          }));
+        }else{
+          cardsHtml.push(ggPriceErrCardHTML(g.title));
         }
       });
       fetched+=batch.length;
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
+      gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
 
       if(SHEET_URL&&priceEntries.length){
         try{
@@ -5083,8 +5370,15 @@ async function runGGDealsFetch(){
           const result=await r.json();
           if(result.newLows&&result.newLows.length){
             result.newLows.forEach(appid=>{if(ggPriceCache[appid])ggPriceCache[appid].personalLow=true;});
-            dispatchRender();
           }
+          if(result.lows){
+            Object.keys(result.lows).forEach(appid=>{
+              if(!ggPriceCache[appid])return;
+              ggPriceCache[appid].lowRetail=result.lows[appid].retail||0;
+              ggPriceCache[appid].lowKeyshop=result.lows[appid].keyshop||0;
+            });
+          }
+          if((result.newLows&&result.newLows.length)||result.lows)dispatchRender();
         }catch(e){}
         fetch(SHEET_URL+'?action=appendPriceHistory',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
         fetch(SHEET_URL+'?action=logFetch',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
@@ -5094,7 +5388,7 @@ async function runGGDealsFetch(){
       console.error('BTB GG.deals error:',err);
       _ggFetchRunning=false;_hideGgConfirm();
       setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
-      closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
+      _ggSetButtonsForState();
       closeBtn.onclick=_closeGgFetchModal;
       return;
     }
@@ -5109,7 +5403,6 @@ async function runGGDealsFetch(){
     }
   }
 
-  listEl.innerHTML='';
   if(_ggFetchCancelled){
     setProgress('Cancelled.');
   }else{
@@ -5117,9 +5410,10 @@ async function runGGDealsFetch(){
     barEl.style.width='100%';
     statusEl.textContent='All done!';
   }
+  metaEl.textContent=`Checked just now · ${fetched} game${fetched===1?'':'s'}`;
   _ggFetchRunning=false;_hideGgConfirm();
   setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
-  closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
+  _ggSetButtonsForState();
   closeBtn.onclick=_closeGgFetchModal;
   // If hidden, show done state in bubble then restore modal
   if(_ggFetchHidden){
@@ -5153,12 +5447,13 @@ function _closeGgFetchModal(){
 }
 document.getElementById('ggFetchOv').addEventListener('click',e=>{if(e.target===document.getElementById('ggFetchOv'))_ggFetchTryClose();});
 document.getElementById('ggFetchBubble').onclick=_showGgFetchModal;
+document.getElementById('ggFetchRefresh').onclick=()=>runGGDealsFetch();
 window._ggFetchTryClose=_ggFetchTryClose;
 window._ggFetchIsOpen=()=>document.getElementById('ggFetchOv').classList.contains('on')||_ggFetchHidden;
 
 document.getElementById('hmPriceBtn').onclick=()=>{
   document.getElementById('hmenu').classList.remove('on');
-  runGGDealsFetch();
+  openGgFetchModalIdle();
 };
 document.getElementById('hmSteamPriceBtn').onclick=()=>{
   document.getElementById('hmenu').classList.remove('on');
