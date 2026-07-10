@@ -362,18 +362,19 @@
 
 <!-- GG.DEALS FETCH PROGRESS MODAL -->
 <div id="ggFetchOv">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:680px">
     <div class="modal-body">
       <div id="ggFetchMain">
-        <div class="mt" style="color:var(--blue)">Fetching Live Prices</div>
-        <div style="margin:.8rem 0 .5rem">
+        <div class="mt" style="color:var(--blue)">Live Prices</div>
+        <div id="ggFetchMeta" style="font-size:.78rem;color:var(--t3);margin:.35rem 0 .3rem;min-height:1.1em"></div>
+        <div id="ggFetchProgWrap" style="margin:.4rem 0 .5rem;display:none">
           <div style="font-size:.85rem;color:var(--t2);margin-bottom:.4rem" id="ggFetchProgress">Preparing…</div>
           <div style="height:6px;background:var(--s2);border-radius:3px;overflow:hidden">
             <div id="ggFetchBar" style="height:100%;background:var(--cyan);width:0%;transition:width .4s"></div>
           </div>
         </div>
         <div style="font-size:.82rem;color:var(--amber);min-height:1.2em" id="ggFetchStatus"></div>
-        <div id="ggFetchList" style="margin-top:.55rem"></div>
+        <div class="ggr-grid" id="ggFetchGrid"></div>
       </div>
       <div id="ggFetchConfirm" style="display:none">
         <div class="mt" style="color:var(--pink)">Stop Fetching Prices?</div>
@@ -382,8 +383,9 @@
     </div>
     <div class="ma" id="ggFetchMainBar">
       <button class="mb2" id="ggFetchClose" style="display:none">Close</button>
-      <button class="mb2" id="ggFetchHide">Hide</button>
-      <button class="mb2" id="ggFetchCancel">Cancel</button>
+      <button class="mb2" id="ggFetchHide" style="display:none">Hide</button>
+      <button class="mb2" id="ggFetchCancel" style="display:none">Cancel</button>
+      <button class="mb2 p" id="ggFetchRefresh">Refresh Now</button>
     </div>
     <div class="ma" id="ggFetchConfirmBar" style="display:none">
       <button class="mb2" id="ggFetchConfirmContinue">Continue</button>
