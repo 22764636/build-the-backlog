@@ -250,6 +250,35 @@ button{text-transform:none;letter-spacing:0}
 .gg.lv .ggp-ov{display:none}
 /* side panel — Live Price section: same .ggp-* tags as the card overlay, plain row instead of an absolute-positioned strip */
 .pv-liveprice{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-height:1.1rem}
+/* side panel — Price History chart: every live-price fetch is logged, this
+   plots retail/keyshop over time. Same hand-rolled SVG idiom as the Spend
+   Stats trend chart (.ss-line-*) — see renderPriceHistoryChart() in app.js. */
+.ph-chart{position:relative;min-height:70px}
+.ph-chart svg{width:100%;height:130px;display:block;overflow:visible;-webkit-tap-highlight-color:transparent}
+.ph-empty{font-size:.78rem;color:var(--t3);padding:.3rem 0}
+.ph-line-retail{fill:none;stroke:var(--cyan);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ph-line-keyshop{fill:none;stroke:var(--amber);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ph-line-low{stroke-width:1;stroke-dasharray:3 3;opacity:.5}
+.ph-line-low.retail{stroke:var(--cyan)}
+.ph-line-low.keyshop{stroke:var(--amber)}
+.ph-dot{stroke:var(--base);stroke-width:1.5}
+.ph-dot.retail{fill:var(--cyan)}
+.ph-dot.keyshop{fill:var(--amber)}
+.ph-hit{fill:transparent;-webkit-tap-highlight-color:transparent;outline:none}
+.ph-hit:focus,.ph-hit:focus-visible{outline:none}
+.ph-crosshair{stroke:var(--bd2);stroke-width:1;pointer-events:none;opacity:0}
+.ph-axis-label{font-size:8px;fill:var(--t3);font-family:'Inter',sans-serif}
+.ph-tip{position:absolute;pointer-events:none;background:var(--s1);border:1px solid var(--bd2);
+  border-radius:6px;padding:.35rem .55rem;font-size:.68rem;color:var(--text);white-space:nowrap;
+  transform:translate(-50%,-125%);opacity:0;transition:opacity .1s;z-index:5}
+.ph-tip.on{opacity:1}
+.ph-tip b.retail{color:var(--cyan)}
+.ph-tip b.keyshop{color:var(--amber)}
+.ph-legend{display:flex;gap:.8rem;font-size:.66rem;color:var(--t3);margin-top:.3rem}
+.ph-legend-item{display:flex;align-items:center;gap:.3rem}
+.ph-swatch{width:8px;height:8px;border-radius:2px;display:inline-block}
+.ph-swatch.retail{background:var(--cyan)}
+.ph-swatch.keyshop{background:var(--amber)}
 /* Shared stack for all hidden-background-task bubbles — position:fixed lives
    here once, not duplicated per-bubble, so any number of simultaneously
    active bubbles (2 today, more later) lay out via flex gap instead of
@@ -561,13 +590,17 @@ button{text-transform:none;letter-spacing:0}
    modal — its display/position/z-index live inline in index.html, this
    only adds the .on hook so JS-toggling the class is enough on its own. */
 #ssov.on{display:flex!important}
-#rdcLog,#plcLog{max-height:300px;overflow-y:auto;font-size:.72rem;font-family:monospace;line-height:1.7;background:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:.5rem .7rem}
+#rdcLog,#plcLog,#ggFetchList{max-height:300px;overflow-y:auto;font-size:.72rem;font-family:monospace;line-height:1.7;background:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:.5rem .7rem}
 #rdcLog .rdc-ok{color:var(--green)}
 #rdcLog .rdc-skip{color:var(--t3)}
 #rdcLog .rdc-err{color:var(--pink)}
 #plcLog .plc-ok{color:var(--green)}
 #plcLog .plc-skip{color:var(--t3)}
 #plcLog .plc-err{color:var(--pink)}
+#ggFetchList .ggl-ok{color:var(--green)}
+#ggFetchList .ggl-skip{color:var(--t3)}
+#ggFetchList .ggl-up{color:var(--amber)}
+#ggFetchList .ggl-err{color:var(--pink)}
 .b-delisted{background:#cc6600;color:#fff;font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;user-select:none;-webkit-user-select:none}
 
 /* SPEND STATS DASHBOARD — full-page overlay, same #calOv pattern */

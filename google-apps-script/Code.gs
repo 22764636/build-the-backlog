@@ -31,6 +31,7 @@ function doGet(e) {
       case 'getPlatStores': result = getPlatStores(); break;
       case 'getRateLog':    result = getRateLog();      break;
       case 'getGamePrices': result = getGamePrices();   break;
+      case 'getPriceHistory': result = getPriceHistory(params.appid); break;
       default:              result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -238,6 +239,28 @@ function getGamePrices() {
   });
 }
 
+// ── Read one game's price history, oldest → newest ──────────────
+function getPriceHistory(appid) {
+  if (!appid) return { error: 'Missing appid' };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(PRICE_HISTORY_SHEET);
+  if (!sheet) return [];
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(String);
+  const c = h => headers.indexOf(h);
+  const key = String(appid);
+  return rows.slice(1)
+    .filter(r => String(r[c('appid')]) === key)
+    .map(r => ({
+      fetched_at: r[c('fetched_at')],
+      retail: r[c('retail')],
+      keyshop: r[c('keyshop')],
+      currency: r[c('currency')],
+    }))
+    .sort((a, b) => Number(a.fetched_at) - Number(b.fetched_at));
+}
+
 // ── GG.deals rate-limit log: append + prune rows older than 1h ──
 function logFetch(entry) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -275,6 +298,7 @@ function upsertGamePrices(entries) {
   for (let i = 1; i < data.length; i++) idx[String(data[i][c('appid')])] = i;
 
   const newLows = [];
+  const lows = {}; // appid -> { retail, keyshop } personal-low AFTER this upsert
   const now = Date.now();
 
   entries.forEach(entry => {
@@ -292,6 +316,10 @@ function upsertGamePrices(entries) {
       data[i][c('last_fetched')] = now;
       if (retail  > 0 && retail  <= prevLowR) { data[i][c('personal_low_retail')]  = retail;  newLows.push(key); }
       if (keyshop > 0 && keyshop <= prevLowK)   data[i][c('personal_low_keyshop')] = keyshop;
+      lows[key] = {
+        retail:  parseFloat(data[i][c('personal_low_retail')])  || 0,
+        keyshop: parseFloat(data[i][c('personal_low_keyshop')]) || 0,
+      };
     } else {
       const row = new Array(headers.length).fill('');
       row[c('appid')]                = entry.appid;
@@ -304,13 +332,14 @@ function upsertGamePrices(entries) {
       idx[key] = data.length;
       data.push(row);
       if (retail > 0) newLows.push(key);
+      lows[key] = { retail: retail || 0, keyshop: keyshop || 0 };
     }
   });
 
   // Write back entire range in one call (new rows already appended to data)
   sheet.getRange(1, 1, data.length, headers.length).setValues(data);
 
-  return { ok: true, newLows };
+  return { ok: true, newLows, lows };
 }
 
 // ── Append rows to PriceHistory ──────────────────────────────

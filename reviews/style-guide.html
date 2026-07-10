@@ -556,13 +556,14 @@
     </div>
 
     <div class="el-block">
-      <div class="el-hdr"><span class="el-hdr-name">Log dialogs</span><span class="el-hdr-class">#rdcLog / #plcLog</span></div>
-      <div class="el-hdr-usage">Monospace scrolling log inside the Release-Date-Check and Live-Price-Check modals, bg <span class="varname">var(--base)</span>, border <span class="varname">var(--bd)</span>.</div>
+      <div class="el-hdr"><span class="el-hdr-name">Log dialogs</span><span class="el-hdr-class">#rdcLog / #plcLog / #ggFetchList</span></div>
+      <div class="el-hdr-usage">Monospace scrolling log inside the Release-Date-Check, Fill-Missing-Prices and Check-Live-Prices modals, bg <span class="varname">var(--base)</span>, border <span class="varname">var(--bd)</span>. The live-prices log (<code>.ggl-*</code>) appends one line per game per batch — current retail/keyshop price, the delta vs. what was cached before this run, and the gap to the lowest price ever recorded for that game (or "★ new low" when this fetch beats it) — mirroring the release-date checker's "old → new" diff line for prices instead of dates.</div>
       <table class="v-table">
         <tr><th>Line type</th><th>Preview</th><th>Color</th><th>Var</th></tr>
-        <tr><td class="v-name">OK</td><td class="v-preview" style="font-family:monospace"><span style="color:#9cff00">✓ Hades II — up to date</span></td><td><span class="hexcopy" onclick="copyHex(this,'#9cff00')">#9cff00</span></td><td class="varname">var(--green)</td></tr>
-        <tr><td class="v-name">Skip</td><td class="v-preview" style="font-family:monospace"><span style="color:#4a6280">– Skipped (no store link)</span></td><td><span class="hexcopy" onclick="copyHex(this,'#4a6280')">#4a6280</span></td><td class="varname">var(--t3)</td></tr>
-        <tr><td class="v-name">Error</td><td class="v-preview" style="font-family:monospace"><span style="color:#ff00aa">✕ Failed to fetch</span></td><td><span class="hexcopy" onclick="copyHex(this,'#ff00aa')">#ff00aa</span></td><td class="varname">var(--pink)</td></tr>
+        <tr><td class="v-name">OK / price dropped</td><td class="v-preview" style="font-family:monospace"><span style="color:#9cff00">Hades II — R €14.99 (↓€2.00) · low €12.99 (+€2.00)  K €10.49 (↓€1.00) · ★ new low</span></td><td><span class="hexcopy" onclick="copyHex(this,'#9cff00')">#9cff00</span></td><td class="varname">var(--green)</td></tr>
+        <tr><td class="v-name">Skip / unchanged</td><td class="v-preview" style="font-family:monospace"><span style="color:#4a6280">Balatro — R €13.99 (=) · low €9.99 (+€4.00)  K €12.50 (=) · low €11.00 (+€1.50)</span></td><td><span class="hexcopy" onclick="copyHex(this,'#4a6280')">#4a6280</span></td><td class="varname">var(--t3)</td></tr>
+        <tr><td class="v-name">Up / price rose <span style="font-weight:400;color:var(--t3)">(live-prices only)</span></td><td class="v-preview" style="font-family:monospace"><span style="color:#f7cd26">Hollow Knight — R €18.99 (↑€1.00) · low €14.99 (+€4.00)  K —</span></td><td><span class="hexcopy" onclick="copyHex(this,'#f7cd26')">#f7cd26</span></td><td class="varname">var(--amber)</td></tr>
+        <tr><td class="v-name">Error</td><td class="v-preview" style="font-family:monospace"><span style="color:#ff00aa">✗ Silksong — no price data</span></td><td><span class="hexcopy" onclick="copyHex(this,'#ff00aa')">#ff00aa</span></td><td class="varname">var(--pink)</td></tr>
       </table>
     </div>
   </div>
@@ -607,6 +608,11 @@
         <tr><td class="v-name">Edit textarea</td><td class="v-note">bg <span class="varname">var(--s1)</span>, border <span class="varname">var(--blue)</span> (always shown active while editing)</td></tr>
         <tr><td class="v-name">Compose date field</td><td class="v-note">pill-shaped (99px), <span class="varname">var(--t3)</span> → focus <span class="varname">var(--blue)</span> border + <span class="varname">var(--text)</span></td></tr>
       </table>
+    </div>
+
+    <div class="el-block">
+      <div class="el-hdr"><span class="el-hdr-name">Price History chart</span><span class="el-hdr-class">.ph-chart</span></div>
+      <div class="el-hdr-usage">Follows the Live Price row for any tracked game (same eligibility as the <span class="el-hdr-class">.ggp-*</span> badges — wishlist, or bought-but-still-on-Steam-wishlist, with a Steam app id). Fetched on demand per panel open from the PriceHistory sheet (every live-price check is logged there), not preloaded for every game. Hand-rolled inline SVG, same idiom as the Spend Stats trend chart (<span class="el-hdr-class">.ss-line-*</span>): retail (<span class="varname">var(--cyan)</span>) and keyshop (<span class="varname">var(--amber)</span>) lines with dot markers, a dashed reference line at each series' personal-low, hover/focus tooltip + crosshair via invisible hit rects. Needs at least 2 recorded price checks to draw a line; shows an empty-state message otherwise.</div>
     </div>
 
     <div class="el-block">

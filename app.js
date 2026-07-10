@@ -31,7 +31,7 @@ const S={
   pLinks:'Links',pSteam:'Steam',pGG:'gg.deals',pSDB:'SteamDB',pPriority:'Priority',
   pActions:'Actions',pEdit:'Edit',pMarkBt:'Add to Collection',pMarkWl:'Move to Wishlist',pRemove:'Remove',pReinstate:'Reinstate',
   pReview:'My Review',pSaveRev:'Save review',pRmNote:'Removed — reason:',
-  pLivePrice:'Live Price',
+  pLivePrice:'Live Price',pPriceHistory:'Price History',
   noGames:'No games here yet.',noHint:'Press + Add game to start!',
   mBt:'Add to Collection',mWl:'Move to Wishlist'
 };
@@ -2497,12 +2497,21 @@ function openPanel(id){
 
   // Live Price — see ggPriceTags() for eligibility/data rules; same badges
   // as the wishlist card overlay, just laid out as a left-aligned row
+  let _priceHistTracked=false;
   {
     const _tags=ggPriceTags(g);
     if(_tags){
       const _row=_tags.notrack?`<span class="ggp-notrack">€ Non Tracked</span>`:`${_tags.retailStr}${_tags.badgeStr}${_tags.keysStr}`;
       b+=`<div class="ps"><div class="psl">${t('pLivePrice')}</div><div class="pv-liveprice">${_row}</div></div>`;
+      _priceHistTracked=!_tags.notrack;
     }
+  }
+
+  // Price History — chart is fetched async after the panel body is in the
+  // DOM (see renderPriceHistoryChart, called below); this is just the
+  // placeholder the chart mounts into.
+  if(_priceHistTracked){
+    b+=`<div class="ps"><div class="psl">${t('pPriceHistory')}</div><div class="ph-chart" id="phChart"><div class="ph-empty">Loading…</div></div></div>`;
   }
 
   // Collection box — immediately after hotness (bought games only)
@@ -2717,6 +2726,7 @@ function openPanel(id){
       :`<button class="pa d" id="prm">${t('pRemove')}</button>`;
 
   document.getElementById('pbody').innerHTML=b;
+  if(_priceHistTracked)renderPriceHistoryChart(g);
 
   // Parallax scroll on cover image
   const _pb2El=document.getElementById('pbody');
@@ -4971,6 +4981,7 @@ async function loadSavedPrices(){
       const retail=parseFloat(row.last_retail)||0;
       const keyshop=parseFloat(row.last_keyshop)||0;
       const personalLowRetail=parseFloat(row.personal_low_retail)||0;
+      const personalLowKeyshop=parseFloat(row.personal_low_keyshop)||0;
       if(!ggPriceCache[appid]){
         ggPriceCache[appid]={
           retail:retail||'',
@@ -4980,6 +4991,8 @@ async function loadSavedPrices(){
           currency:'EUR',
           fetchedAt:row.last_fetched||0,
           personalLow:personalLowRetail>0&&retail>0&&retail<=personalLowRetail,
+          lowRetail:personalLowRetail,
+          lowKeyshop:personalLowKeyshop,
         };
       }
     });
@@ -4987,6 +5000,174 @@ async function loadSavedPrices(){
   }catch(e){
     console.warn('BTB: Could not load saved prices.',e);
   }
+}
+
+// Side panel Price History chart — every fetch is logged server-side
+// (PriceHistory sheet, see appendPriceHistory in runGGDealsFetch), this
+// reads it back for one game and draws a small SVG line chart, same
+// hand-rolled idiom as the Spend Stats trend chart (renderMonthChart).
+// Fetched on demand per panel open rather than preloaded for every game.
+async function renderPriceHistoryChart(g){
+  const forId=g.id;
+  function mount(){return openId===forId?document.getElementById('phChart'):null;}
+  const container=mount();
+  if(!container)return;
+  if(!SHEET_URL||!g.steamAppId){
+    container.innerHTML=`<div class="ph-empty">History needs a live sync connection.</div>`;
+    return;
+  }
+  let rows;
+  try{
+    const res=await fetch(SHEET_URL+'?action=getPriceHistory&appid='+encodeURIComponent(g.steamAppId)+'&_='+Date.now(),{mode:'cors'});
+    rows=await res.json();
+  }catch(e){
+    const el=mount();
+    if(el)el.innerHTML=`<div class="ph-empty">Couldn't load price history.</div>`;
+    return;
+  }
+  const el=mount();
+  if(!el)return;
+  if(!Array.isArray(rows)||rows.length<2){
+    el.innerHTML=`<div class="ph-empty">${rows&&rows.length?'Only one price check recorded so far — the chart fills in as more come in.':'No price history yet — run Check Live Prices.'}</div>`;
+    return;
+  }
+
+  const W=Math.max(el.clientWidth||280,220),H=130,padL=6,padR=6,padT=10,padB=20;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const vals=[];
+  rows.forEach(r=>{
+    const rv=parseFloat(r.retail),kv=parseFloat(r.keyshop);
+    if(!isNaN(rv)&&rv>0)vals.push(rv);
+    if(!isNaN(kv)&&kv>0)vals.push(kv);
+  });
+  if(!vals.length){
+    el.innerHTML=`<div class="ph-empty">No price data recorded yet.</div>`;
+    return;
+  }
+  const max=Math.max(...vals)*1.08;
+  const stepX=plotW/(rows.length-1);
+  const xOf=i=>padL+i*stepX;
+  const yOf=v=>padT+plotH-(v/max*plotH);
+
+  function seriesPts(field){
+    return rows.map((r,i)=>{
+      const v=parseFloat(r[field]);
+      return(!isNaN(v)&&v>0)?{x:xOf(i),y:yOf(v)}:null;
+    });
+  }
+  // Missing points break the line into segments rather than jumping across the gap.
+  function pathFor(pts){
+    const segs=[];let seg=[];
+    pts.forEach(p=>{
+      if(p)seg.push(p);
+      else if(seg.length){segs.push(seg);seg=[];}
+    });
+    if(seg.length)segs.push(seg);
+    return segs.map(s=>s.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ')).join(' ');
+  }
+
+  const retailPts=seriesPts('retail');
+  const keyshopPts=seriesPts('keyshop');
+  const retailD=pathFor(retailPts);
+  const keyshopD=pathFor(keyshopPts);
+
+  const cache=ggPriceCache[g.steamAppId]||{};
+  const lowRetail=parseFloat(cache.lowRetail)||0;
+  const lowKeyshop=parseFloat(cache.lowKeyshop)||0;
+  const lowLines=[
+    lowRetail>0?`<line class="ph-line-low retail" x1="${padL}" x2="${W-padR}" y1="${yOf(lowRetail).toFixed(1)}" y2="${yOf(lowRetail).toFixed(1)}"></line>`:'',
+    lowKeyshop>0?`<line class="ph-line-low keyshop" x1="${padL}" x2="${W-padR}" y1="${yOf(lowKeyshop).toFixed(1)}" y2="${yOf(lowKeyshop).toFixed(1)}"></line>`:'',
+  ].join('');
+
+  const labelEvery=Math.max(1,Math.ceil(rows.length/5));
+  const axisLabels=rows.map((r,i)=>{
+    if(i%labelEvery!==0&&i!==rows.length-1)return'';
+    const d=new Date(Number(r.fetched_at));
+    if(isNaN(d.getTime()))return'';
+    return`<text class="ph-axis-label" x="${xOf(i).toFixed(1)}" y="${H-6}" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }).join('');
+
+  const dotsHtml=(pts,cls)=>pts.map(p=>p?`<circle class="ph-dot ${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3"></circle>`:'').join('');
+  const hitW=Math.max(stepX,16);
+  const hitsHtml=rows.map((r,i)=>`<rect class="ph-hit" x="${(xOf(i)-hitW/2).toFixed(1)}" y="${padT}" width="${hitW.toFixed(1)}" height="${plotH}" data-i="${i}" tabindex="0"></rect>`).join('');
+
+  el.innerHTML=`
+    <svg viewBox="0 0 ${W} ${H}">
+      ${lowLines}
+      ${retailD?`<path class="ph-line-retail" d="${retailD}"></path>`:''}
+      ${keyshopD?`<path class="ph-line-keyshop" d="${keyshopD}"></path>`:''}
+      ${dotsHtml(retailPts,'retail')}
+      ${dotsHtml(keyshopPts,'keyshop')}
+      ${axisLabels}
+      <line class="ph-crosshair" id="phCrosshair" x1="0" y1="${padT}" x2="0" y2="${padT+plotH}"></line>
+      ${hitsHtml}
+    </svg>
+    <div class="ph-tip" id="phTip"></div>
+    <div class="ph-legend">
+      ${retailPts.some(Boolean)?`<span class="ph-legend-item"><i class="ph-swatch retail"></i>Retail${lowRetail>0?` · low €${lowRetail.toFixed(2)}`:''}</span>`:''}
+      ${keyshopPts.some(Boolean)?`<span class="ph-legend-item"><i class="ph-swatch keyshop"></i>Key${lowKeyshop>0?` · low €${lowKeyshop.toFixed(2)}`:''}</span>`:''}
+    </div>`;
+
+  const svgEl=el.querySelector('svg');
+  const tip=document.getElementById('phTip');
+  const crosshair=document.getElementById('phCrosshair');
+  el.querySelectorAll('.ph-hit').forEach(hit=>{
+    const i=parseInt(hit.dataset.i,10);
+    const r=rows[i];
+    function activate(){
+      const rect=svgEl.getBoundingClientRect();
+      const sx=rect.width/W,sy=rect.height/H;
+      const x=xOf(i);
+      crosshair.setAttribute('x1',x);crosshair.setAttribute('x2',x);
+      crosshair.style.opacity='1';
+      const d=new Date(Number(r.fetched_at));
+      const dateLbl=isNaN(d.getTime())?'':d.toLocaleDateString();
+      const rv=parseFloat(r.retail),kv=parseFloat(r.keyshop);
+      const parts=[];
+      let topY=padT+plotH;
+      if(!isNaN(rv)&&rv>0){parts.push(`<b class="retail">€${rv.toFixed(2)}</b> retail`);topY=Math.min(topY,yOf(rv));}
+      if(!isNaN(kv)&&kv>0){parts.push(`<b class="keyshop">€${kv.toFixed(2)}</b> key`);topY=Math.min(topY,yOf(kv));}
+      tip.innerHTML=`${parts.join(' · ')}${dateLbl?` · ${dateLbl}`:''}`;
+      tip.style.left=(x*sx)+'px';
+      tip.style.top=(topY*sy)+'px';
+      tip.classList.add('on');
+    }
+    hit.addEventListener('pointerenter',activate);
+    hit.addEventListener('focus',activate);
+  });
+  el.addEventListener('pointerleave',()=>{
+    crosshair.style.opacity='0';
+    tip.classList.remove('on');
+  });
+}
+
+// Formats one price field ("R"/"K") for the live-price fetch log: current
+// value, delta vs the price cached before this run, and the gap to the
+// lowest price ever recorded for this game (or "new low" if this fetch
+// beat it). before/lowV are pre-fetch snapshots — see runGGDealsFetch().
+function fmtPricePart(label,newV,oldV,lowV){
+  if(isNaN(newV)||newV<=0)return`${label} —`;
+  const cur=`€${newV.toFixed(2)}`;
+  const delta=(!isNaN(oldV)&&oldV>0)
+    ?(Math.abs(newV-oldV)<0.005?' (=)':` (${newV<oldV?'↓':'↑'}€${Math.abs(newV-oldV).toFixed(2)})`)
+    :' (new)';
+  const low=lowV>0
+    ?(newV-lowV<=0.005?' · ★ new low':` · low €${lowV.toFixed(2)} (+€${(newV-lowV).toFixed(2)})`)
+    :'';
+  return`${label} ${cur}${delta}${low}`;
+}
+function ggPriceDiffLine(g,before,prices){
+  const r=parseFloat(prices.currentRetail),k=parseFloat(prices.currentKeyshops);
+  const oldR=before?parseFloat(before.retail):NaN;
+  const oldK=before?parseFloat(before.keyshop):NaN;
+  const lowR=before?(parseFloat(before.lowRetail)||0):0;
+  const lowK=before?(parseFloat(before.lowKeyshop)||0):0;
+  const rOk=!isNaN(r)&&r>0,kOk=!isNaN(k)&&k>0;
+  let cls='ggl-skip';
+  if((rOk&&!isNaN(oldR)&&oldR>0&&r<oldR)||(kOk&&!isNaN(oldK)&&oldK>0&&k<oldK))cls='ggl-ok';
+  else if((rOk&&!isNaN(oldR)&&oldR>0&&r>oldR)||(kOk&&!isNaN(oldK)&&oldK>0&&k>oldK))cls='ggl-up';
+  else if(!before)cls='ggl-ok';
+  return`<div class="${cls}">${esc(g.title)} — ${fmtPricePart('R',r,oldR,lowR)}  ${fmtPricePart('K',k,oldK,lowK)}</div>`;
 }
 
 async function runGGDealsFetch(){
@@ -5049,7 +5230,6 @@ async function runGGDealsFetch(){
   for(let b=0;b<batches.length&&!_ggFetchCancelled;b++){
     const batch=batches[b];
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
-    listEl.innerHTML=batch.map(g=>`<div>${esc(g.title)}</div>`).join('');
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
       const res=await fetch(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`);
@@ -5061,21 +5241,31 @@ async function runGGDealsFetch(){
 
       const priceEntries=[];
       const historyEntries=[];
+      const diffLines=[];
       batch.forEach(g=>{
         const d=json.data[g.steamAppId];
+        const before=ggPriceCache[g.steamAppId];
         if(d&&d.prices){
           ggPriceCache[g.steamAppId]={
             retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,
             histRetail:d.prices.historicalRetail,histKeyshop:d.prices.historicalKeyshops,
-            currency:d.prices.currency,fetchedAt:fetchTs,personalLow:false,
+            currency:d.prices.currency,fetchedAt:fetchTs,
+            personalLow:before?before.personalLow:false,
+            lowRetail:before?(before.lowRetail||0):0,
+            lowKeyshop:before?(before.lowKeyshop||0):0,
           };
           priceEntries.push({appid:g.steamAppId,title:g.title,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops});
           historyEntries.push({appid:g.steamAppId,title:g.title,fetched_at:fetchTs,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,currency:d.prices.currency});
+          diffLines.push(ggPriceDiffLine(g,before,d.prices));
+        }else{
+          diffLines.push(`<div class="ggl-err">✗ ${esc(g.title)} — no price data</div>`);
         }
       });
       fetched+=batch.length;
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
+      listEl.insertAdjacentHTML('beforeend',diffLines.join(''));
+      listEl.scrollTop=listEl.scrollHeight;
 
       if(SHEET_URL&&priceEntries.length){
         try{
@@ -5083,8 +5273,15 @@ async function runGGDealsFetch(){
           const result=await r.json();
           if(result.newLows&&result.newLows.length){
             result.newLows.forEach(appid=>{if(ggPriceCache[appid])ggPriceCache[appid].personalLow=true;});
-            dispatchRender();
           }
+          if(result.lows){
+            Object.keys(result.lows).forEach(appid=>{
+              if(!ggPriceCache[appid])return;
+              ggPriceCache[appid].lowRetail=result.lows[appid].retail||0;
+              ggPriceCache[appid].lowKeyshop=result.lows[appid].keyshop||0;
+            });
+          }
+          if((result.newLows&&result.newLows.length)||result.lows)dispatchRender();
         }catch(e){}
         fetch(SHEET_URL+'?action=appendPriceHistory',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
         fetch(SHEET_URL+'?action=logFetch',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
@@ -5109,7 +5306,6 @@ async function runGGDealsFetch(){
     }
   }
 
-  listEl.innerHTML='';
   if(_ggFetchCancelled){
     setProgress('Cancelled.');
   }else{
