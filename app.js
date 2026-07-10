@@ -2977,6 +2977,11 @@ window.addEventListener('popstate',function(){
     openId=null;
     setTimeout(()=>pov.classList.remove('on'),290);
     const pf=document.getElementById('panelFooter');if(pf)pf.innerHTML='';
+    // Panel was opened from a Live Prices card (see _ggFetchGoToGame) —
+    // landing back on that modal's still-intact history entry should bring
+    // it back up, not leave the user staring at the bare main view. Reveal
+    // only (no pushState) — we're already sitting on that entry.
+    if(_ggFetchHidden&&history.state&&history.state.ggFetchOpen)_revealGgFetchModal();
     return;
   }
   const mov=document.getElementById('mov');
@@ -4949,11 +4954,10 @@ document.addEventListener('keydown',function(e){
 let _ggFetchCancelled=false;
 let _ggFetchHidden=false;
 let _ggFetchRunning=false;
-// True while openGgFetchModalIdle's getLatestFetchDiffs call is in flight —
-// Refresh Now stays disabled until it settles. Starting a live run before
-// then would diff against whatever ggPriceCache/last-known state happens
-// to be loaded so far, comparing against stale or partial data instead of
-// the run that's about to be shown as "last checked".
+// True while openGgFetchModalIdle's getLatestFetchDiffs call is in flight.
+// Refresh Now also waits on this — mainly so a run doesn't start and
+// immediately overwrite the "last results" grid while it's still being
+// populated. The correctness-critical gate is _savedPricesReady below.
 let _ggIdleLoading=false;
 
 function _showGgConfirm(){
@@ -4974,8 +4978,13 @@ function _ggFetchTryClose(){
   return true;
 }
 
+// Whether ggPriceCache reflects the sheet yet — the actual dependency for
+// correct live-price diffs (runGGDealsFetch diffs each game against
+// ggPriceCache, not against the idle "last results" view's own data).
+// Refresh Now stays disabled until this is true; see _ggSetButtonsForState.
+let _savedPricesReady=false;
 async function loadSavedPrices(){
-  if(!SHEET_URL)return;
+  if(!SHEET_URL){_savedPricesReady=true;_ggSetButtonsForState();return;}
   try{
     const res=await fetch(SHEET_URL+'?action=getGamePrices&_='+Date.now(),{mode:'cors'});
     const rows=await res.json();
@@ -5004,6 +5013,9 @@ async function loadSavedPrices(){
     dispatchRender();
   }catch(e){
     console.warn('BTB: Could not load saved prices.',e);
+  }finally{
+    _savedPricesReady=true;
+    _ggSetButtonsForState();
   }
 }
 
@@ -5275,8 +5287,14 @@ function _ggSetButtonsForState(){
     closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';refreshBtn.style.display='';
     progWrap.style.display='none';
   }
-  refreshBtn.disabled=_ggIdleLoading;
-  refreshBtn.textContent=_ggIdleLoading?'Loading…':'Refresh Now';
+  // Two independent things can still be loading: the idle view's own
+  // "last results" fetch (_ggIdleLoading, mostly about not clobbering that
+  // view mid-load) and ggPriceCache itself (_savedPricesReady — the one
+  // that actually matters for diff correctness, since runGGDealsFetch
+  // diffs against ggPriceCache, not against the idle view's data).
+  const notReady=_ggIdleLoading||!_savedPricesReady;
+  refreshBtn.disabled=notReady;
+  refreshBtn.textContent=notReady?'Loading…':'Refresh Now';
 }
 
 // Entry point for "Check Live Prices" — opens the modal showing what the
@@ -5364,7 +5382,6 @@ async function runGGDealsFetch(){
   const metaEl=document.getElementById('ggFetchMeta');
   const cancelBtn=document.getElementById('ggFetchCancel');
   const hideBtn=document.getElementById('ggFetchHide');
-  const closeBtn=document.getElementById('ggFetchClose');
   const bubble=document.getElementById('ggFetchBubble');
 
   function setProgress(status){
@@ -5457,7 +5474,6 @@ async function runGGDealsFetch(){
       _ggFetchRunning=false;_hideGgConfirm();
       setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
       _ggSetButtonsForState();
-      closeBtn.onclick=_closeGgFetchModal;
       return;
     }
 
@@ -5482,7 +5498,6 @@ async function runGGDealsFetch(){
   _ggFetchRunning=false;_hideGgConfirm();
   setMenuRunning(['hmPriceBtn','dhPriceBtn'],false);
   _ggSetButtonsForState();
-  closeBtn.onclick=_closeGgFetchModal;
   // If hidden, show done state in bubble then restore modal
   if(_ggFetchHidden){
     bubble.textContent='Done';
@@ -5496,10 +5511,16 @@ function _hideGgFetchModal(){
   document.getElementById('ggFetchBubble').classList.add('on');
 }
 
-function _showGgFetchModal(){
+// Sync the DOM to "modal visible" without touching history — for when
+// we're already sitting on a {ggFetchOpen:true} entry (e.g. popstate just
+// landed on one) and pushing again would leave a redundant entry behind.
+function _revealGgFetchModal(){
   _ggFetchHidden=false;
   document.getElementById('ggFetchBubble').classList.remove('on');
   document.getElementById('ggFetchOv').classList.add('on');
+}
+function _showGgFetchModal(){
+  _revealGgFetchModal();
   history.pushState({ggFetchOpen:true},'','');
 }
 
@@ -5516,14 +5537,20 @@ function _closeGgFetchModal(){
 document.getElementById('ggFetchOv').addEventListener('click',e=>{if(e.target===document.getElementById('ggFetchOv'))_ggFetchTryClose();});
 document.getElementById('ggFetchBubble').onclick=_showGgFetchModal;
 document.getElementById('ggFetchRefresh').onclick=()=>runGGDealsFetch();
+document.getElementById('ggFetchClose').onclick=_closeGgFetchModal;
 
 // Result cards are clickable — jump straight to that game's side panel.
-// A live run keeps going in the background (same as Hide) rather than
-// being cancelled by navigating away; an idle/finished modal just closes.
+// Always *hide* rather than close (even when idle/finished) — closing
+// replaces the modal's history entry with null, so Back from the panel
+// landed on the bare main view instead of returning here. Hiding leaves
+// the {ggFetchOpen:true} entry and the rendered grid intact; the main
+// popstate handler's panel-close branch re-shows the modal when it lands
+// back on that entry (see _ggFetchHidden check there).
 function _ggFetchGoToGame(appid){
   const g=games.find(x=>String(x.steamAppId)===String(appid));
   if(!g)return;
-  if(_ggFetchRunning)_hideGgFetchModal();else _closeGgFetchModal();
+  if(!_ggFetchRunning)document.getElementById('ggFetchBubble').textContent='Live\nPrices';
+  _hideGgFetchModal();
   openPanel(g.id);
 }
 document.getElementById('ggFetchGrid').addEventListener('click',e=>{
