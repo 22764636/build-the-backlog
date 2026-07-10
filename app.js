@@ -4949,6 +4949,12 @@ document.addEventListener('keydown',function(e){
 let _ggFetchCancelled=false;
 let _ggFetchHidden=false;
 let _ggFetchRunning=false;
+// True while openGgFetchModalIdle's getLatestFetchDiffs call is in flight —
+// Refresh Now stays disabled until it settles. Starting a live run before
+// then would diff against whatever ggPriceCache/last-known state happens
+// to be loaded so far, comparing against stale or partial data instead of
+// the run that's about to be shown as "last checked".
+let _ggIdleLoading=false;
 
 function _showGgConfirm(){
   document.getElementById('ggFetchConfirm').style.display='';
@@ -5243,14 +5249,14 @@ function ggPriceCardHTML(e){
   if((hasOldR&&r<oldR)||(hasOldK&&k<oldK))cls='ok';
   else if((hasOldR&&r>oldR)||(hasOldK&&k>oldK))cls='up';
   else if(!hasOldR&&!hasOldK)cls='ok';
-  return`<div class="ggr-card ${cls}">
+  return`<div class="ggr-card ${cls}" data-appid="${esc(String(e.appid))}" tabindex="0">
     <div class="ggr-title">${esc(e.title)}</div>
     ${ggPriceStatHTML('Retail',r,oldR,lowR)}
     ${ggPriceStatHTML('Key',k,oldK,lowK)}
   </div>`;
 }
-function ggPriceErrCardHTML(title){
-  return`<div class="ggr-card err"><div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div></div>`;
+function ggPriceErrCardHTML(title,appid){
+  return`<div class="ggr-card err" data-appid="${esc(String(appid))}" tabindex="0"><div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div></div>`;
 }
 
 // Shows/hides the modal's running-vs-idle chrome (progress bar, Hide/Cancel
@@ -5269,6 +5275,8 @@ function _ggSetButtonsForState(){
     closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';refreshBtn.style.display='';
     progWrap.style.display='none';
   }
+  refreshBtn.disabled=_ggIdleLoading;
+  refreshBtn.textContent=_ggIdleLoading?'Loading…':'Refresh Now';
 }
 
 // Entry point for "Check Live Prices" — opens the modal showing what the
@@ -5278,13 +5286,21 @@ function _ggSetButtonsForState(){
 async function openGgFetchModalIdle(){
   if(_ggFetchRunning){_showGgFetchModal();return}
   _showGgFetchModal();
+  // Refresh Now stays disabled until this settles — see _ggIdleLoading.
+  _ggIdleLoading=true;
   _ggSetButtonsForState();
   document.getElementById('ggFetchStatus').textContent='';
   const metaEl=document.getElementById('ggFetchMeta');
   const gridEl=document.getElementById('ggFetchGrid');
   metaEl.textContent='Loading last results…';
   gridEl.innerHTML='';
+  function doneLoading(){
+    _ggIdleLoading=false;
+    _ggSetButtonsForState();
+    return !_ggFetchRunning; // false = a run took over while this was loading — its own view already took over, skip touching the grid/meta
+  }
   if(!SHEET_URL){
+    doneLoading();
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">Connect a sheet to check live prices.</div>`;
     return;
@@ -5294,12 +5310,12 @@ async function openGgFetchModalIdle(){
     const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now(),{mode:'cors'});
     rows=await res.json();
   }catch(e){
-    if(_ggFetchRunning)return; // a run started while this was loading — its own view already took over
+    if(!doneLoading())return;
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">Couldn't load last results.</div>`;
     return;
   }
-  if(_ggFetchRunning)return;
+  if(!doneLoading())return;
   if(!Array.isArray(rows)||!rows.length){
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">No price checks recorded yet — click Refresh Now to run one.</div>`;
@@ -5311,6 +5327,7 @@ async function openGgFetchModalIdle(){
     title:r.title,retail:r.retail,keyshop:r.keyshop,
     oldRetail:r.prevRetail,oldKeyshop:r.prevKeyshop,
     lowRetail:r.lowRetail,lowKeyshop:r.lowKeyshop,
+    appid:r.appid,
   })).join('');
 }
 
@@ -5404,9 +5421,10 @@ async function runGGDealsFetch(){
             title:g.title,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,
             oldRetail:before?before.retail:NaN,oldKeyshop:before?before.keyshop:NaN,
             lowRetail:before?before.lowRetail:0,lowKeyshop:before?before.lowKeyshop:0,
+            appid:g.steamAppId,
           }));
         }else{
-          cardsHtml.push(ggPriceErrCardHTML(g.title));
+          cardsHtml.push(ggPriceErrCardHTML(g.title,g.steamAppId));
         }
       });
       fetched+=batch.length;
@@ -5498,6 +5516,27 @@ function _closeGgFetchModal(){
 document.getElementById('ggFetchOv').addEventListener('click',e=>{if(e.target===document.getElementById('ggFetchOv'))_ggFetchTryClose();});
 document.getElementById('ggFetchBubble').onclick=_showGgFetchModal;
 document.getElementById('ggFetchRefresh').onclick=()=>runGGDealsFetch();
+
+// Result cards are clickable — jump straight to that game's side panel.
+// A live run keeps going in the background (same as Hide) rather than
+// being cancelled by navigating away; an idle/finished modal just closes.
+function _ggFetchGoToGame(appid){
+  const g=games.find(x=>String(x.steamAppId)===String(appid));
+  if(!g)return;
+  if(_ggFetchRunning)_hideGgFetchModal();else _closeGgFetchModal();
+  openPanel(g.id);
+}
+document.getElementById('ggFetchGrid').addEventListener('click',e=>{
+  const card=e.target.closest('.ggr-card[data-appid]');
+  if(card)_ggFetchGoToGame(card.dataset.appid);
+});
+document.getElementById('ggFetchGrid').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const card=e.target.closest('.ggr-card[data-appid]');
+  if(!card)return;
+  e.preventDefault();
+  _ggFetchGoToGame(card.dataset.appid);
+});
 window._ggFetchTryClose=_ggFetchTryClose;
 window._ggFetchIsOpen=()=>document.getElementById('ggFetchOv').classList.contains('on')||_ggFetchHidden;
 
