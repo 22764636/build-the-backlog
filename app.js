@@ -5297,8 +5297,13 @@ function _ggSetButtonsForState(){
   refreshBtn.textContent=notReady?'Loading…':'Refresh Now';
 }
 
-// All/Up/Down filter over the result cards — Up/Down match a card's own
-// .up/.ok status class (see ggPriceCardHTML) via the grid's [data-filter]
+// All/Down/Up Filter Pills over the result cards — real Filter Pills
+// (.fbar-pill, same component as the sidebar's Priority/Platform/Play
+// status/Hotness filters), not a selector-tab lookalike: each pill's own
+// color is fixed (blue/green/magenta) and always visible, opacity alone
+// carries selected state (handled by .fbar-pill/.selected CSS already),
+// and every pill always shows a live count. Down/Up match a card's own
+// .ok/.up status class (see ggPriceCardHTML) via the grid's [data-filter]
 // attribute, so hiding is pure CSS and needs no per-card bookkeeping.
 function _ggShowFilterRow(show){
   const row=document.getElementById('ggFilterRow');
@@ -5308,23 +5313,31 @@ function _ggSetCardFilter(filter){
   const gridEl=document.getElementById('ggFetchGrid');
   if(!gridEl)return;
   gridEl.dataset.filter=filter;
-  document.querySelectorAll('#ggFilterRow .ggr-filter-pill').forEach(b=>{
-    b.classList.toggle('on',b.dataset.filter===filter);
+  document.querySelectorAll('#ggFilterRow .fbar-pill').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.filter===filter);
   });
-  _ggUpdateFilterEmptyState();
+  _ggUpdateFilterUI();
 }
-function _ggUpdateFilterEmptyState(){
+function _ggUpdateFilterUI(){
   const gridEl=document.getElementById('ggFetchGrid');
   const emptyEl=document.getElementById('ggFilterEmpty');
-  if(!gridEl||!emptyEl)return;
-  const filter=gridEl.dataset.filter||'all';
-  const cards=gridEl.querySelectorAll('.ggr-card');
+  if(!gridEl)return;
+  const cards=[...gridEl.querySelectorAll('.ggr-card')];
+  const downCount=cards.filter(c=>c.classList.contains('ok')).length;
+  const upCount=cards.filter(c=>c.classList.contains('up')).length;
+  const allCountEl=document.getElementById('ggFilterCountAll');
+  const downCountEl=document.getElementById('ggFilterCountDown');
+  const upCountEl=document.getElementById('ggFilterCountUp');
+  if(allCountEl)allCountEl.textContent=cards.length;
+  if(downCountEl)downCountEl.textContent=downCount;
+  if(upCountEl)upCountEl.textContent=upCount;
+  if(!emptyEl)return;
   if(!cards.length){emptyEl.style.display='none';return;}
-  const matchClass=filter==='up'?'up':filter==='down'?'ok':null;
-  const anyMatch=!matchClass||[...cards].some(c=>c.classList.contains(matchClass));
-  emptyEl.style.display=anyMatch?'none':'';
+  const filter=gridEl.dataset.filter||'all';
+  const matchCount=filter==='up'?upCount:filter==='down'?downCount:cards.length;
+  emptyEl.style.display=matchCount?'none':'';
 }
-document.querySelectorAll('#ggFilterRow .ggr-filter-pill').forEach(btn=>{
+document.querySelectorAll('#ggFilterRow .fbar-pill').forEach(btn=>{
   btn.onclick=()=>_ggSetCardFilter(btn.dataset.filter);
 });
 
@@ -5484,7 +5497,7 @@ async function runGGDealsFetch(){
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
-      _ggUpdateFilterEmptyState();
+      _ggUpdateFilterUI();
 
       if(SHEET_URL&&priceEntries.length){
         try{

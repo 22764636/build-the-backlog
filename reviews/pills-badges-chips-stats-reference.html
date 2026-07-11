@@ -286,6 +286,23 @@
             <td colspan="4" class="v-note">All 4 tiers share the exact same colors above</td></tr>
         </table>
       </div>
+
+      <div class="el-block">
+        <div class="el-hdr"><span class="el-hdr-name">Live Prices result filter</span><span class="el-hdr-class">.fbar-pill</span></div>
+        <div class="el-hdr-usage">Check-Live-Prices modal — filters the result card grid by price direction. Fixed 3-color set (not data-driven like the others above), but same component/states.</div>
+        <table class="v-table">
+          <tr><th>Value</th><th>Preview</th><th>Background</th><th>BG var</th><th>Text</th><th>Text var</th></tr>
+          <tr><td class="v-name">All</td><td class="v-preview" style="background:var(--s1);border-radius:6px"><button class="fbar-pill selected" style="background:#02b3fc;color:#031329">All<span class="fbar-pill-count fpc-dark">3</span></button></td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#02b3fc')">#02b3fc</span></td><td class="varname">var(--blue)</td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#031329')">#031329</span></td><td class="varname">—</td></tr>
+          <tr><td class="v-name">Down</td><td class="v-preview" style="background:var(--s1);border-radius:6px"><button class="fbar-pill" style="background:#9cff00;color:#031329">Down<span class="fbar-pill-count fpc-dark">1</span></button></td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#9cff00')">#9cff00</span></td><td class="varname">var(--green)</td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#031329')">#031329</span></td><td class="varname">—</td></tr>
+          <tr><td class="v-name">Up</td><td class="v-preview" style="background:var(--s1);border-radius:6px"><button class="fbar-pill" style="background:#ff00aa;color:#031329">Up<span class="fbar-pill-count fpc-dark">1</span></button></td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#ff00aa')">#ff00aa</span></td><td class="varname">var(--magenta)</td>
+            <td><span class="hexcopy" onclick="copyHex(this,'#031329')">#031329</span></td><td class="varname">—</td></tr>
+        </table>
+      </div>
     </div>
   </div>
 
