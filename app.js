@@ -5266,13 +5266,17 @@ function ggPriceCardHTML(e){
   else if((hasOldR&&r>oldR)||(hasOldK&&k>oldK))cls='up';
   else if(!hasOldR&&!hasOldK)cls='ok';
   return`<div class="ggr-card ${cls}" data-appid="${esc(String(e.appid))}" tabindex="0">
+    <button class="qb qr ggr-exclude" title="Exclude from Live Price checks" onclick="event.stopPropagation();_ggExcludeGame('${esc(String(e.appid))}')">${IC.close}</button>
     <div class="ggr-title">${esc(e.title)}</div>
     ${ggPriceStatHTML('Retail',r,oldR,lowR)}
     ${ggPriceStatHTML('Key',k,oldK,lowK)}
   </div>`;
 }
 function ggPriceErrCardHTML(title,appid){
-  return`<div class="ggr-card err" data-appid="${esc(String(appid))}" tabindex="0"><div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div></div>`;
+  return`<div class="ggr-card err" data-appid="${esc(String(appid))}" tabindex="0">
+    <button class="qb qr ggr-exclude" title="Exclude from Live Price checks" onclick="event.stopPropagation();_ggExcludeGame('${esc(String(appid))}')">${IC.close}</button>
+    <div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div>
+  </div>`;
 }
 
 // Shows/hides the modal's running-vs-idle chrome (progress bar, Hide/Cancel
@@ -5345,6 +5349,38 @@ document.querySelectorAll('#ggFilterRow .fbar-pill').forEach(btn=>{
   btn.onclick=()=>_ggSetCardFilter(btn.dataset.filter);
 });
 
+// GG.deals's API key is capped at 1000 records/hour (each Steam App ID in a
+// batch = 1 record). RateLog rows are written per batch by logFetch() but
+// were never read back — this is what actually enforces the cap, shared
+// across devices since it lives in the sheet, not local state.
+async function ggRateBudgetUsed(){
+  if(!SHEET_URL)return 0;
+  try{
+    const res=await fetch(SHEET_URL+'?action=getRateLog&_='+Date.now()+_tok(),{mode:'cors'});
+    const json=await res.json();
+    const entries=Array.isArray(json.entries)?json.entries:[];
+    return entries.reduce((s,e)=>s+(Number(e.count)||0),0);
+  }catch(e){return 0;}
+}
+function _ggRenderRateInfo(used){
+  const el=document.getElementById('ggFetchRateInfo');
+  if(!el)return;
+  if(!SHEET_URL){el.textContent='';return;}
+  const remaining=Math.max(0,1000-used);
+  el.textContent=`${remaining} of 1000 GG.deals checks left this hour`;
+}
+// Every game with a Steam App ID sorts by its own hotness, highest first —
+// same rule live runs already followed via the eligible-list sort, applied
+// here too so the reconstructed "last results" view (whose order otherwise
+// comes from PriceHistory's fetched_at/appid, not hotness) always matches.
+function _ggSortRowsByHotness(rows){
+  const hotnessOf=appid=>{
+    const g=games.find(x=>String(x.steamAppId)===String(appid));
+    return g?(parseInt(g.hotness)||0):0;
+  };
+  return rows.slice().sort((a,b)=>hotnessOf(b.appid)-hotnessOf(a.appid));
+}
+
 // Entry point for "Check Live Prices" — opens the modal showing what the
 // LAST run found (reconstructed from the PriceHistory sheet via
 // getLatestFetchDiffs), so results are visible from any device, not just
@@ -5369,13 +5405,18 @@ async function openGgFetchModalIdle(){
   if(!SHEET_URL){
     doneLoading();
     metaEl.textContent='';
+    _ggRenderRateInfo(0);
     gridEl.innerHTML=`<div class="ggr-empty">Connect a sheet to check live prices.</div>`;
     return;
   }
-  let rows;
+  let rows,rateUsed=0;
   try{
-    const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now()+_tok(),{mode:'cors'});
+    const [res,used]=await Promise.all([
+      fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now()+_tok(),{mode:'cors'}),
+      ggRateBudgetUsed(),
+    ]);
     rows=await res.json();
+    rateUsed=used;
   }catch(e){
     if(!doneLoading())return;
     metaEl.textContent='';
@@ -5383,11 +5424,13 @@ async function openGgFetchModalIdle(){
     return;
   }
   if(!doneLoading())return;
+  _ggRenderRateInfo(rateUsed);
   if(!Array.isArray(rows)||!rows.length){
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">No price checks recorded yet — click Refresh Now to run one.</div>`;
     return;
   }
+  rows=_ggSortRowsByHotness(rows);
   const latestTs=Math.max(...rows.map(r=>r.fetched_at||0));
   metaEl.textContent=`Last checked ${fmtTimeAgo(latestTs)} · ${rows.length} game${rows.length>1?'s':''}`;
   gridEl.innerHTML=rows.map(r=>ggPriceCardHTML({
@@ -5458,8 +5501,20 @@ async function runGGDealsFetch(){
   history.pushState({ggFetchOpen:true},'','');
   setProgress('Starting…');
 
+  // Shared across devices via RateLog (GG.deals caps the API key at
+  // 1000 records/hour) — read the real current usage once up front, then
+  // track it locally as this run's own batches add to it.
+  let rateUsed=await ggRateBudgetUsed();
+  _ggRenderRateInfo(rateUsed);
+  let rateLimited=false;
+
   for(let b=0;b<batches.length&&!_ggFetchCancelled;b++){
     const batch=batches[b];
+    if(SHEET_URL&&rateUsed+batch.length>1000){
+      rateLimited=true;
+      setProgress(`GG.deals hourly limit reached — ${fetched} of ${total} checked, ${total-fetched} left for next hour.`);
+      break;
+    }
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
@@ -5498,6 +5553,7 @@ async function runGGDealsFetch(){
         }
       });
       fetched+=batch.length;
+      if(SHEET_URL){rateUsed+=batch.length;_ggRenderRateInfo(rateUsed);}
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
@@ -5543,6 +5599,9 @@ async function runGGDealsFetch(){
 
   if(_ggFetchCancelled){
     setProgress('Cancelled.');
+  }else if(rateLimited){
+    progressEl.textContent=`${fetched} / ${total} fetched`;
+    barEl.style.width=`${total>0?Math.round(fetched/total*100):0}%`;
   }else{
     progressEl.textContent=`${fetched} / ${total} fetched`;
     barEl.style.width='100%';
@@ -5606,6 +5665,19 @@ function _ggFetchGoToGame(appid){
   if(!_ggFetchRunning)document.getElementById('ggFetchBubble').textContent='Live\nPrices';
   _hideGgFetchModal();
   openPanel(g.id);
+}
+// Quick per-card alternative to opening the Edit modal just to flip the
+// same skipGGFetch flag (see fFetchSkip) — the card is the natural place
+// to notice "this one keeps showing up" and act on it immediately.
+function _ggExcludeGame(appid){
+  const g=games.find(x=>String(x.steamAppId)===String(appid));
+  if(!g)return;
+  g.skipGGFetch=true;
+  save(g.id);
+  showToast(`Excluded "${g.title}" from Live Price checks`);
+  const card=document.querySelector(`#ggFetchGrid .ggr-card[data-appid="${appid}"]`);
+  if(card)card.remove();
+  _ggUpdateFilterUI();
 }
 document.getElementById('ggFetchGrid').addEventListener('click',e=>{
   const card=e.target.closest('.ggr-card[data-appid]');
