@@ -5297,6 +5297,37 @@ function _ggSetButtonsForState(){
   refreshBtn.textContent=notReady?'Loading…':'Refresh Now';
 }
 
+// All/Up/Down filter over the result cards — Up/Down match a card's own
+// .up/.ok status class (see ggPriceCardHTML) via the grid's [data-filter]
+// attribute, so hiding is pure CSS and needs no per-card bookkeeping.
+function _ggShowFilterRow(show){
+  const row=document.getElementById('ggFilterRow');
+  if(row)row.style.display=show?'':'none';
+}
+function _ggSetCardFilter(filter){
+  const gridEl=document.getElementById('ggFetchGrid');
+  if(!gridEl)return;
+  gridEl.dataset.filter=filter;
+  document.querySelectorAll('#ggFilterRow .ggr-filter-pill').forEach(b=>{
+    b.classList.toggle('on',b.dataset.filter===filter);
+  });
+  _ggUpdateFilterEmptyState();
+}
+function _ggUpdateFilterEmptyState(){
+  const gridEl=document.getElementById('ggFetchGrid');
+  const emptyEl=document.getElementById('ggFilterEmpty');
+  if(!gridEl||!emptyEl)return;
+  const filter=gridEl.dataset.filter||'all';
+  const cards=gridEl.querySelectorAll('.ggr-card');
+  if(!cards.length){emptyEl.style.display='none';return;}
+  const matchClass=filter==='up'?'up':filter==='down'?'ok':null;
+  const anyMatch=!matchClass||[...cards].some(c=>c.classList.contains(matchClass));
+  emptyEl.style.display=anyMatch?'none':'';
+}
+document.querySelectorAll('#ggFilterRow .ggr-filter-pill').forEach(btn=>{
+  btn.onclick=()=>_ggSetCardFilter(btn.dataset.filter);
+});
+
 // Entry point for "Check Live Prices" — opens the modal showing what the
 // LAST run found (reconstructed from the PriceHistory sheet via
 // getLatestFetchDiffs), so results are visible from any device, not just
@@ -5312,6 +5343,7 @@ async function openGgFetchModalIdle(){
   const gridEl=document.getElementById('ggFetchGrid');
   metaEl.textContent='Loading last results…';
   gridEl.innerHTML='';
+  _ggShowFilterRow(false);
   function doneLoading(){
     _ggIdleLoading=false;
     _ggSetButtonsForState();
@@ -5347,6 +5379,8 @@ async function openGgFetchModalIdle(){
     lowRetail:r.lowRetail,lowKeyshop:r.lowKeyshop,
     appid:r.appid,
   })).join('');
+  _ggShowFilterRow(true);
+  _ggSetCardFilter('all');
 }
 
 async function runGGDealsFetch(){
@@ -5401,6 +5435,8 @@ async function runGGDealsFetch(){
   document.getElementById('ggFetchConfirmStop').onclick=()=>{_ggFetchCancelled=true;_hideGgConfirm();};
   metaEl.textContent='';
   gridEl.innerHTML='';
+  _ggShowFilterRow(true);
+  _ggSetCardFilter('all');
   ov.classList.add('on');
   history.pushState({ggFetchOpen:true},'','');
   setProgress('Starting…');
@@ -5448,6 +5484,7 @@ async function runGGDealsFetch(){
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
+      _ggUpdateFilterEmptyState();
 
       if(SHEET_URL&&priceEntries.length){
         try{

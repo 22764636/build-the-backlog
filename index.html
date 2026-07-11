@@ -374,6 +374,12 @@
           </div>
         </div>
         <div style="font-size:.82rem;color:var(--amber);min-height:1.2em" id="ggFetchStatus"></div>
+        <div class="ggr-filter-row" id="ggFilterRow" style="display:none">
+          <button type="button" class="ggr-filter-pill on" data-filter="all">All</button>
+          <button type="button" class="ggr-filter-pill" data-filter="up">Up</button>
+          <button type="button" class="ggr-filter-pill" data-filter="down">Down</button>
+        </div>
+        <div class="ggr-empty" id="ggFilterEmpty" style="display:none">No cards match this filter.</div>
         <div class="ggr-grid" id="ggFetchGrid"></div>
       </div>
       <div id="ggFetchConfirm" style="display:none">
