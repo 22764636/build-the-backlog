@@ -6,8 +6,12 @@
 //  Leave empty / unset to use offline mode (localStorage only).
 // ══════════════════════════════════════════
 const SHEET_URL = (typeof window !== 'undefined' && window.BTB_SHEET_URL) || '';
+const SHEET_TOKEN = (typeof window !== 'undefined' && window.BTB_SHEET_TOKEN) || '';
 const GG_WORKER = (typeof window !== 'undefined' && window.BTB_GGDEALS_WORKER) || '';
 let ggPriceCache = {};
+// Appended to every Sheets request URL — the deployment URL ships in the
+// public bundle, so this shared-secret token is what actually gates access.
+function _tok(){return SHEET_TOKEN?'&token='+encodeURIComponent(SHEET_TOKEN):''}
 
 // Use JSONP on file:// (fetch can't read cross-origin responses there);
 // use fetch+CORS on http/https and fall back to JSONP on failure.
@@ -176,12 +180,12 @@ function fetchMeta(force){
         delete window[cbName];try{document.head.removeChild(script)}catch(e){}
         _applyMeta(data);resolve();
       };
-      script.src=SHEET_URL+'?action=getMeta&callback='+cbName+'&_='+Date.now();
+      script.src=SHEET_URL+'?action=getMeta&callback='+cbName+'&_='+Date.now()+_tok();
       script.onerror=()=>{clearTimeout(timeout);delete window[cbName];resolve();};
       document.head.appendChild(script);
     });
   }
-  return fetch(SHEET_URL+'?action=getMeta&_='+Date.now(),{mode:'cors'})
+  return fetch(SHEET_URL+'?action=getMeta&_='+Date.now()+_tok(),{mode:'cors'})
     .then(r=>r.json()).then(_applyMeta).catch(()=>{});
 }
 loadMetaCache();
@@ -318,7 +322,7 @@ function _jsonpLoad(action){
       else resolve(Array.isArray(data)?data:[]);
     };
     script.crossOrigin='anonymous';
-    script.src=SHEET_URL+'?action='+action+'&callback='+cbName+'&_='+Date.now();
+    script.src=SHEET_URL+'?action='+action+'&callback='+cbName+'&_='+Date.now()+_tok();
     script.onerror=()=>{
       clearTimeout(timeout);
       delete window[cbName];
@@ -333,7 +337,7 @@ function loadFromSheet(){
   if(USE_JSONP) return _jsonpLoad('getAll');
   const timeout=new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),14000));
   return Promise.race([
-    fetch(SHEET_URL+'?action=getAll&_='+Date.now(),{mode:'cors'}).then(r=>r.json()),
+    fetch(SHEET_URL+'?action=getAll&_='+Date.now()+_tok(),{mode:'cors'}).then(r=>r.json()),
     timeout
   ]).catch(()=>_jsonpLoad('getAll'));
 }
@@ -397,8 +401,8 @@ function postToSheet(params){
     const qs=Object.entries(params)
       .filter(([k])=>k!=='data')
       .map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v))
-      .join('&');
-    const url=SHEET_URL+(qs?'?'+qs:'');
+      .join('&')+_tok();
+    const url=SHEET_URL+'?'+qs.replace(/^&/,'');
     const body=params.data!==undefined?params.data:null;
     fetch(url,{
       method: body!==null?'POST':'GET',
@@ -4986,7 +4990,7 @@ let _savedPricesReady=false;
 async function loadSavedPrices(){
   if(!SHEET_URL){_savedPricesReady=true;_ggSetButtonsForState();return;}
   try{
-    const res=await fetch(SHEET_URL+'?action=getGamePrices&_='+Date.now(),{mode:'cors'});
+    const res=await fetch(SHEET_URL+'?action=getGamePrices&_='+Date.now()+_tok(),{mode:'cors'});
     const rows=await res.json();
     if(!Array.isArray(rows))return;
     rows.forEach(row=>{
@@ -5051,7 +5055,7 @@ async function renderPriceHistoryChart(g){
   }
   let rows;
   try{
-    const res=await fetch(SHEET_URL+'?action=getPriceHistory&appid='+encodeURIComponent(g.steamAppId)+'&_='+Date.now(),{mode:'cors'});
+    const res=await fetch(SHEET_URL+'?action=getPriceHistory&appid='+encodeURIComponent(g.steamAppId)+'&_='+Date.now()+_tok(),{mode:'cors'});
     rows=await res.json();
   }catch(e){
     const el=mount();
@@ -5370,7 +5374,7 @@ async function openGgFetchModalIdle(){
   }
   let rows;
   try{
-    const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now(),{mode:'cors'});
+    const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now()+_tok(),{mode:'cors'});
     rows=await res.json();
   }catch(e){
     if(!doneLoading())return;
@@ -5501,7 +5505,7 @@ async function runGGDealsFetch(){
 
       if(SHEET_URL&&priceEntries.length){
         try{
-          const r=await fetch(SHEET_URL+'?action=upsertGamePrices',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(priceEntries)});
+          const r=await fetch(SHEET_URL+'?action=upsertGamePrices'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(priceEntries)});
           const result=await r.json();
           if(result.newLows&&result.newLows.length){
             result.newLows.forEach(appid=>{if(ggPriceCache[appid])ggPriceCache[appid].personalLow=true;});
@@ -5515,8 +5519,8 @@ async function runGGDealsFetch(){
           }
           if((result.newLows&&result.newLows.length)||result.lows)dispatchRender();
         }catch(e){}
-        fetch(SHEET_URL+'?action=appendPriceHistory',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
-        fetch(SHEET_URL+'?action=logFetch',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
+        fetch(SHEET_URL+'?action=appendPriceHistory'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
+        fetch(SHEET_URL+'?action=logFetch'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
       }
     }catch(err){
       setProgress(`Error: ${err.message}`);

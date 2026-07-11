@@ -73,7 +73,7 @@ config.example.js       — template for local config
 google-apps-script/
   Code.gs               — Google Apps Script backend
 .github/workflows/
-  pages.yml             — deploys to GitHub Pages, injects SHEET_URL secret into btb-url.js
+  pages.yml             — deploys to GitHub Pages, injects SHEET_URL/SHEET_TOKEN secrets into btb-url.js
 ```
 
 ---
@@ -91,21 +91,23 @@ Games are saved in `localStorage`. No network required.
 
 1. Create a Google Sheet.
 2. Open **Extensions → Apps Script**, paste the contents of `google-apps-script/Code.gs`, and save.
-3. Click **Deploy → New deployment** (Execute as: Me, Who has access: Anyone).
-4. Copy the Web App URL.
-5. Copy `config.example.js` to `btb-url.js` and paste your URL:
+3. **Project Settings (⚙) → Script Properties → add key `BTB_TOKEN`** with a random value (e.g. `openssl rand -hex 24`). The deployment URL alone isn't a secret — it ships in the public app bundle — so this token is what actually gates read/write access to your sheet. Requests without a matching token are rejected.
+4. Click **Deploy → New deployment** (Execute as: Me, Who has access: Anyone).
+5. Copy the Web App URL.
+6. Copy `config.example.js` to `btb-url.js` and paste your URL and token:
 
 ```js
 window.BTB_SHEET_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+window.BTB_SHEET_TOKEN = 'the same value you put in BTB_TOKEN';
 ```
 
-6. Open `index.html`. The sync indicator turns green when connected.
+7. Open `index.html`. The sync indicator turns green when connected.
 
 ### Option C — GitHub Pages (hosted)
 
 1. Fork the repository.
-2. Go to **Settings → Secrets and variables → Actions** and create a secret named `SHEET_URL` with your Apps Script URL.
-3. Push to `main`. The `pages.yml` workflow injects the secret into `btb-url.js` and deploys to the `gh-pages` branch.
+2. Go to **Settings → Secrets and variables → Actions** and create secrets named `SHEET_URL` (your Apps Script URL) and `SHEET_TOKEN` (the same value as the `BTB_TOKEN` script property above).
+3. Push to `main`. The `pages.yml` workflow injects both secrets into `btb-url.js` and deploys to the `gh-pages` branch.
 
 ---
 
