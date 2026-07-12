@@ -1034,6 +1034,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 }
 @media(min-width:641px){.hs-mob{display:none!important}.hs-desk{display:flex!important}}
 @media(min-width:641px){
+  .logo-badge{display:none!important}
   .logo-full{display:block!important}
   .hb-mob{display:none!important}
   #hmenu{display:none!important}
