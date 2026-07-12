@@ -5235,8 +5235,11 @@ function fmtTimeAgo(ts){
 
 // One price field ("Retail"/"Key") inside a live-price result card: current
 // value, a delta badge vs. the price before this run, and either a "low
-// €X" caption or a "★ new low" badge when this result beats the lowest
-// ever recorded for that field.
+// €X" caption or a "★ new low" badge — but only when this *fetch* is what
+// dropped it there (oldV was above the low, newV isn't). A game that has
+// simply sat at its all-time-low price for weeks isn't "new", it's just
+// low; without the oldV>lowV check every settled game re-flags as a new
+// low on every single check, forever.
 function ggPriceStatHTML(label,newV,oldV,lowV){
   if(isNaN(newV)||newV<=0){
     return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val ggr-na">—</span></div>`;
@@ -5248,9 +5251,10 @@ function ggPriceStatHTML(label,newV,oldV,lowV){
     :Math.abs(newV-oldV)<0.005
       ?`<span class="bdg ggr-badge flat">=</span>`
       :`<span class="bdg ggr-badge ${newV<oldV?'down':'up'}">${newV<oldV?'↓':'↑'}€${Math.abs(newV-oldV).toFixed(2)}</span>`;
-  const lowBit=lowV>0
-    ?(newV-lowV<=0.005?`<span class="bdg ggr-badge newlow">★ new low</span>`:`<span class="ggr-lowtext">low €${lowV.toFixed(2)}</span>`)
-    :'';
+  const isNewLow=hasOld&&oldV>lowV+0.005&&newV<=lowV+0.005;
+  const lowBit=!hasOld||lowV<=0
+    ?''
+    :(isNewLow?`<span class="bdg ggr-badge newlow">★ new low</span>`:`<span class="ggr-lowtext">low €${lowV.toFixed(2)}</span>`);
   return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val">${cur}</span>${deltaBadge}${lowBit}</div>`;
 }
 // One result card — shared by the live in-progress grid and the
@@ -5425,7 +5429,15 @@ async function openGgFetchModalIdle(){
   }
   if(!doneLoading())return;
   _ggRenderRateInfo(rateUsed);
-  if(!Array.isArray(rows)||!rows.length){
+  // getLatestFetchDiffs reconstructs the last run from PriceHistory, which
+  // doesn't know about skipGGFetch/delisted/cancelled changes made since —
+  // filter against the current game list so an excluded game's stale
+  // result doesn't keep reappearing here after being removed via the card.
+  rows=(Array.isArray(rows)?rows:[]).filter(r=>{
+    const g=games.find(x=>String(x.steamAppId)===String(r.appid));
+    return g&&!g.skipGGFetch&&!isCancelled(g)&&!g.delisted;
+  });
+  if(!rows.length){
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">No price checks recorded yet — click Refresh Now to run one.</div>`;
     return;
