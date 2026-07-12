@@ -5356,22 +5356,33 @@ document.querySelectorAll('#ggFilterRow .fbar-pill').forEach(btn=>{
 // GG.deals's API key is capped at 1000 records/hour (each Steam App ID in a
 // batch = 1 record). RateLog rows are written per batch by logFetch() but
 // were never read back — this is what actually enforces the cap, shared
-// across devices since it lives in the sheet, not local state.
-async function ggRateBudgetUsed(){
-  if(!SHEET_URL)return 0;
+// across devices since it lives in the sheet, not local state. It's a
+// rolling window, not a hard reset — budget frees up as each logged batch
+// ages past an hour old — so resetAt is the *oldest* entry's expiry: the
+// next moment the used count will actually drop.
+async function ggRateBudget(){
+  if(!SHEET_URL)return{used:0,resetAt:0};
   try{
     const res=await fetch(SHEET_URL+'?action=getRateLog&_='+Date.now()+_tok(),{mode:'cors'});
     const json=await res.json();
     const entries=Array.isArray(json.entries)?json.entries:[];
-    return entries.reduce((s,e)=>s+(Number(e.count)||0),0);
-  }catch(e){return 0;}
+    const used=entries.reduce((s,e)=>s+(Number(e.count)||0),0);
+    const oldestTs=entries.length?Math.min(...entries.map(e=>Number(e.ts)||0)):0;
+    return{used,resetAt:oldestTs?oldestTs+3600000:0};
+  }catch(e){return{used:0,resetAt:0};}
 }
-function _ggRenderRateInfo(used){
+function _ggRenderRateInfo(used,resetAt){
   const el=document.getElementById('ggFetchRateInfo');
   if(!el)return;
   if(!SHEET_URL){el.textContent='';return;}
   const remaining=Math.max(0,1000-used);
-  el.textContent=`${remaining} of 1000 GG.deals checks left this hour`;
+  let resetBit='';
+  if(resetAt){
+    const d=new Date(resetAt);
+    const hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');
+    resetBit=` Resets at ${hh}:${mm}.`;
+  }
+  el.textContent=`${remaining}/1000 left.${resetBit}`;
 }
 // Every game with a Steam App ID sorts by its own hotness, highest first —
 // same rule live runs already followed via the eligible-list sort, applied
@@ -5413,14 +5424,14 @@ async function openGgFetchModalIdle(){
     gridEl.innerHTML=`<div class="ggr-empty">Connect a sheet to check live prices.</div>`;
     return;
   }
-  let rows,rateUsed=0;
+  let rows,rateBudget={used:0,resetAt:0};
   try{
-    const [res,used]=await Promise.all([
+    const [res,budget]=await Promise.all([
       fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now()+_tok(),{mode:'cors'}),
-      ggRateBudgetUsed(),
+      ggRateBudget(),
     ]);
     rows=await res.json();
-    rateUsed=used;
+    rateBudget=budget;
   }catch(e){
     if(!doneLoading())return;
     metaEl.textContent='';
@@ -5428,7 +5439,7 @@ async function openGgFetchModalIdle(){
     return;
   }
   if(!doneLoading())return;
-  _ggRenderRateInfo(rateUsed);
+  _ggRenderRateInfo(rateBudget.used,rateBudget.resetAt);
   // getLatestFetchDiffs reconstructs the last run from PriceHistory, which
   // doesn't know about skipGGFetch/delisted/cancelled changes made since —
   // filter against the current game list so an excluded game's stale
@@ -5515,9 +5526,12 @@ async function runGGDealsFetch(){
 
   // Shared across devices via RateLog (GG.deals caps the API key at
   // 1000 records/hour) — read the real current usage once up front, then
-  // track it locally as this run's own batches add to it.
-  let rateUsed=await ggRateBudgetUsed();
-  _ggRenderRateInfo(rateUsed);
+  // track it locally as this run's own batches add to it. resetAt only
+  // moves forward as the *oldest* logged entry ages out, which this run's
+  // own (newer) batches can't affect, so it's safe to read once.
+  const rateBudget=await ggRateBudget();
+  let rateUsed=rateBudget.used;
+  _ggRenderRateInfo(rateUsed,rateBudget.resetAt);
   let rateLimited=false;
 
   for(let b=0;b<batches.length&&!_ggFetchCancelled;b++){
@@ -5565,7 +5579,7 @@ async function runGGDealsFetch(){
         }
       });
       fetched+=batch.length;
-      if(SHEET_URL){rateUsed+=batch.length;_ggRenderRateInfo(rateUsed);}
+      if(SHEET_URL){rateUsed+=batch.length;_ggRenderRateInfo(rateUsed,rateBudget.resetAt);}
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
