@@ -4,10 +4,14 @@
 //  Setup:
 //  1. Open your Google Sheet → Extensions → Apps Script
 //  2. Paste this entire file, replacing any existing code
-//  3. Deploy → New deployment → Web app
+//  3. Project Settings (⚙) → Script Properties → add key "BTB_TOKEN" with a
+//     random value (e.g. `openssl rand -hex 24`) — this is the shared
+//     secret every request must present; see isAuthorized() below
+//  4. Deploy → New deployment → Web app
 //       Execute as: Me
 //       Who has access: Anyone
-//  4. Copy the deployment URL and paste it into app.js as SHEET_URL
+//  5. Copy the deployment URL and paste it into app.js as SHEET_URL, and
+//     the same BTB_TOKEN value as SHEET_TOKEN
 // ============================================================
 
 const SHEET_NAME = 'Games';
@@ -17,6 +21,18 @@ const RATE_LOG_SHEET = 'RateLog';
 const GAME_PRICES_SHEET = 'GamePrices';
 const PRICE_HISTORY_SHEET = 'PriceHistory';
 
+// ── Auth: shared-secret token check ──────────────────────────
+// The deployment URL alone is not a secret — it ships in the public app
+// bundle. Set Project Settings → Script Properties → key "BTB_TOKEN" to a
+// random string (e.g. output of `openssl rand -hex 24`), then pass the same
+// value as window.BTB_SHEET_TOKEN in the app. Every request must include a
+// matching ?token=... or it's rejected. Until BTB_TOKEN is set, all requests
+// are rejected — this fails closed, not open.
+function isAuthorized(params) {
+  const expected = PropertiesService.getScriptProperties().getProperty('BTB_TOKEN');
+  return !!expected && params.token === expected;
+}
+
 // ── Entry point ──────────────────────────────────────────────
 function doGet(e) {
   const params = e.parameter;
@@ -24,19 +40,23 @@ function doGet(e) {
   const callback = params.callback || '';
 
   let result;
-  try {
-    switch (action) {
-      case 'getAll':      result = getAll();      break;
-      case 'getMeta':     result = getMeta();     break;
-      case 'getPlatStores': result = getPlatStores(); break;
-      case 'getRateLog':    result = getRateLog();      break;
-      case 'getGamePrices': result = getGamePrices();   break;
-      case 'getPriceHistory': result = getPriceHistory(params.appid); break;
-      case 'getLatestFetchDiffs': result = getLatestFetchDiffs(); break;
-      default:              result = { error: 'Unknown action: ' + action };
+  if (!isAuthorized(params)) {
+    result = { error: 'Unauthorized' };
+  } else {
+    try {
+      switch (action) {
+        case 'getAll':      result = getAll();      break;
+        case 'getMeta':     result = getMeta();     break;
+        case 'getPlatStores': result = getPlatStores(); break;
+        case 'getRateLog':    result = getRateLog();      break;
+        case 'getGamePrices': result = getGamePrices();   break;
+        case 'getPriceHistory': result = getPriceHistory(params.appid); break;
+        case 'getLatestFetchDiffs': result = getLatestFetchDiffs(); break;
+        default:              result = { error: 'Unknown action: ' + action };
+      }
+    } catch (err) {
+      result = { error: err.message };
     }
-  } catch (err) {
-    result = { error: err.message };
   }
 
   const json = JSON.stringify(result);
@@ -54,18 +74,22 @@ function doPost(e) {
   const action = params.action || '';
 
   let result;
-  try {
-    switch (action) {
-      case 'setRows':   result = setRows(JSON.parse(e.postData.contents));   break;
-      case 'setAll':    result = setAll(JSON.parse(e.postData.contents));    break;
-      case 'deleteRow': result = deleteRow(params.id);                       break;
-      case 'upsertGamePrices':  result = upsertGamePrices(JSON.parse(e.postData.contents));  break;
-      case 'appendPriceHistory': result = appendPriceHistory(JSON.parse(e.postData.contents)); break;
-      case 'logFetch':  result = logFetch(JSON.parse(e.postData.contents));  break;
-      default:         result = { error: 'Unknown action: ' + action };
+  if (!isAuthorized(params)) {
+    result = { error: 'Unauthorized' };
+  } else {
+    try {
+      switch (action) {
+        case 'setRows':   result = setRows(JSON.parse(e.postData.contents));   break;
+        case 'setAll':    result = setAll(JSON.parse(e.postData.contents));    break;
+        case 'deleteRow': result = deleteRow(params.id);                       break;
+        case 'upsertGamePrices':  result = upsertGamePrices(JSON.parse(e.postData.contents));  break;
+        case 'appendPriceHistory': result = appendPriceHistory(JSON.parse(e.postData.contents)); break;
+        case 'logFetch':  result = logFetch(JSON.parse(e.postData.contents));  break;
+        default:         result = { error: 'Unknown action: ' + action };
+      }
+    } catch (err) {
+      result = { error: err.message };
     }
-  } catch (err) {
-    result = { error: err.message };
   }
 
   return ContentService.createTextOutput(JSON.stringify(result))

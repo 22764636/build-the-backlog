@@ -17,9 +17,11 @@ jobs:
       - name: Write secrets to btb-url.js
         env:
           SHEET_URL: ${{ secrets.SHEET_URL }}
+          SHEET_TOKEN: ${{ secrets.SHEET_TOKEN }}
           GGDEALS_WORKER: ${{ secrets.GGDEALS_WORKER }}
         run: |
           printf 'window.BTB_SHEET_URL = "%s";\n' "$SHEET_URL" > btb-url.js
+          printf 'window.BTB_SHEET_TOKEN = "%s";\n' "$SHEET_TOKEN" >> btb-url.js
           printf 'window.BTB_GGDEALS_WORKER = "%s";\n' "$GGDEALS_WORKER" >> btb-url.js
           echo "btb-url.js: $(wc -c < btb-url.js) bytes"
 

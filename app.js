@@ -6,8 +6,12 @@
 //  Leave empty / unset to use offline mode (localStorage only).
 // ══════════════════════════════════════════
 const SHEET_URL = (typeof window !== 'undefined' && window.BTB_SHEET_URL) || '';
+const SHEET_TOKEN = (typeof window !== 'undefined' && window.BTB_SHEET_TOKEN) || '';
 const GG_WORKER = (typeof window !== 'undefined' && window.BTB_GGDEALS_WORKER) || '';
 let ggPriceCache = {};
+// Appended to every Sheets request URL — the deployment URL ships in the
+// public bundle, so this shared-secret token is what actually gates access.
+function _tok(){return SHEET_TOKEN?'&token='+encodeURIComponent(SHEET_TOKEN):''}
 
 // Use JSONP on file:// (fetch can't read cross-origin responses there);
 // use fetch+CORS on http/https and fall back to JSONP on failure.
@@ -176,12 +180,12 @@ function fetchMeta(force){
         delete window[cbName];try{document.head.removeChild(script)}catch(e){}
         _applyMeta(data);resolve();
       };
-      script.src=SHEET_URL+'?action=getMeta&callback='+cbName+'&_='+Date.now();
+      script.src=SHEET_URL+'?action=getMeta&callback='+cbName+'&_='+Date.now()+_tok();
       script.onerror=()=>{clearTimeout(timeout);delete window[cbName];resolve();};
       document.head.appendChild(script);
     });
   }
-  return fetch(SHEET_URL+'?action=getMeta&_='+Date.now(),{mode:'cors'})
+  return fetch(SHEET_URL+'?action=getMeta&_='+Date.now()+_tok(),{mode:'cors'})
     .then(r=>r.json()).then(_applyMeta).catch(()=>{});
 }
 loadMetaCache();
@@ -318,7 +322,7 @@ function _jsonpLoad(action){
       else resolve(Array.isArray(data)?data:[]);
     };
     script.crossOrigin='anonymous';
-    script.src=SHEET_URL+'?action='+action+'&callback='+cbName+'&_='+Date.now();
+    script.src=SHEET_URL+'?action='+action+'&callback='+cbName+'&_='+Date.now()+_tok();
     script.onerror=()=>{
       clearTimeout(timeout);
       delete window[cbName];
@@ -333,7 +337,7 @@ function loadFromSheet(){
   if(USE_JSONP) return _jsonpLoad('getAll');
   const timeout=new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),14000));
   return Promise.race([
-    fetch(SHEET_URL+'?action=getAll&_='+Date.now(),{mode:'cors'}).then(r=>r.json()),
+    fetch(SHEET_URL+'?action=getAll&_='+Date.now()+_tok(),{mode:'cors'}).then(r=>r.json()),
     timeout
   ]).catch(()=>_jsonpLoad('getAll'));
 }
@@ -397,8 +401,8 @@ function postToSheet(params){
     const qs=Object.entries(params)
       .filter(([k])=>k!=='data')
       .map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v))
-      .join('&');
-    const url=SHEET_URL+(qs?'?'+qs:'');
+      .join('&')+_tok();
+    const url=SHEET_URL+'?'+qs.replace(/^&/,'');
     const body=params.data!==undefined?params.data:null;
     fetch(url,{
       method: body!==null?'POST':'GET',
@@ -4986,7 +4990,7 @@ let _savedPricesReady=false;
 async function loadSavedPrices(){
   if(!SHEET_URL){_savedPricesReady=true;_ggSetButtonsForState();return;}
   try{
-    const res=await fetch(SHEET_URL+'?action=getGamePrices&_='+Date.now(),{mode:'cors'});
+    const res=await fetch(SHEET_URL+'?action=getGamePrices&_='+Date.now()+_tok(),{mode:'cors'});
     const rows=await res.json();
     if(!Array.isArray(rows))return;
     rows.forEach(row=>{
@@ -5051,7 +5055,7 @@ async function renderPriceHistoryChart(g){
   }
   let rows;
   try{
-    const res=await fetch(SHEET_URL+'?action=getPriceHistory&appid='+encodeURIComponent(g.steamAppId)+'&_='+Date.now(),{mode:'cors'});
+    const res=await fetch(SHEET_URL+'?action=getPriceHistory&appid='+encodeURIComponent(g.steamAppId)+'&_='+Date.now()+_tok(),{mode:'cors'});
     rows=await res.json();
   }catch(e){
     const el=mount();
@@ -5262,13 +5266,17 @@ function ggPriceCardHTML(e){
   else if((hasOldR&&r>oldR)||(hasOldK&&k>oldK))cls='up';
   else if(!hasOldR&&!hasOldK)cls='ok';
   return`<div class="ggr-card ${cls}" data-appid="${esc(String(e.appid))}" tabindex="0">
+    <button class="qb qr ggr-exclude" title="Exclude from Live Price checks" onclick="event.stopPropagation();_ggExcludeGame('${esc(String(e.appid))}')">${IC.close}</button>
     <div class="ggr-title">${esc(e.title)}</div>
     ${ggPriceStatHTML('Retail',r,oldR,lowR)}
     ${ggPriceStatHTML('Key',k,oldK,lowK)}
   </div>`;
 }
 function ggPriceErrCardHTML(title,appid){
-  return`<div class="ggr-card err" data-appid="${esc(String(appid))}" tabindex="0"><div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div></div>`;
+  return`<div class="ggr-card err" data-appid="${esc(String(appid))}" tabindex="0">
+    <button class="qb qr ggr-exclude" title="Exclude from Live Price checks" onclick="event.stopPropagation();_ggExcludeGame('${esc(String(appid))}')">${IC.close}</button>
+    <div class="ggr-title">${esc(title)}</div><div class="ggr-errline">No price data</div>
+  </div>`;
 }
 
 // Shows/hides the modal's running-vs-idle chrome (progress bar, Hide/Cancel
@@ -5341,6 +5349,38 @@ document.querySelectorAll('#ggFilterRow .fbar-pill').forEach(btn=>{
   btn.onclick=()=>_ggSetCardFilter(btn.dataset.filter);
 });
 
+// GG.deals's API key is capped at 1000 records/hour (each Steam App ID in a
+// batch = 1 record). RateLog rows are written per batch by logFetch() but
+// were never read back — this is what actually enforces the cap, shared
+// across devices since it lives in the sheet, not local state.
+async function ggRateBudgetUsed(){
+  if(!SHEET_URL)return 0;
+  try{
+    const res=await fetch(SHEET_URL+'?action=getRateLog&_='+Date.now()+_tok(),{mode:'cors'});
+    const json=await res.json();
+    const entries=Array.isArray(json.entries)?json.entries:[];
+    return entries.reduce((s,e)=>s+(Number(e.count)||0),0);
+  }catch(e){return 0;}
+}
+function _ggRenderRateInfo(used){
+  const el=document.getElementById('ggFetchRateInfo');
+  if(!el)return;
+  if(!SHEET_URL){el.textContent='';return;}
+  const remaining=Math.max(0,1000-used);
+  el.textContent=`${remaining} of 1000 GG.deals checks left this hour`;
+}
+// Every game with a Steam App ID sorts by its own hotness, highest first —
+// same rule live runs already followed via the eligible-list sort, applied
+// here too so the reconstructed "last results" view (whose order otherwise
+// comes from PriceHistory's fetched_at/appid, not hotness) always matches.
+function _ggSortRowsByHotness(rows){
+  const hotnessOf=appid=>{
+    const g=games.find(x=>String(x.steamAppId)===String(appid));
+    return g?(parseInt(g.hotness)||0):0;
+  };
+  return rows.slice().sort((a,b)=>hotnessOf(b.appid)-hotnessOf(a.appid));
+}
+
 // Entry point for "Check Live Prices" — opens the modal showing what the
 // LAST run found (reconstructed from the PriceHistory sheet via
 // getLatestFetchDiffs), so results are visible from any device, not just
@@ -5365,13 +5405,18 @@ async function openGgFetchModalIdle(){
   if(!SHEET_URL){
     doneLoading();
     metaEl.textContent='';
+    _ggRenderRateInfo(0);
     gridEl.innerHTML=`<div class="ggr-empty">Connect a sheet to check live prices.</div>`;
     return;
   }
-  let rows;
+  let rows,rateUsed=0;
   try{
-    const res=await fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now(),{mode:'cors'});
+    const [res,used]=await Promise.all([
+      fetch(SHEET_URL+'?action=getLatestFetchDiffs&_='+Date.now()+_tok(),{mode:'cors'}),
+      ggRateBudgetUsed(),
+    ]);
     rows=await res.json();
+    rateUsed=used;
   }catch(e){
     if(!doneLoading())return;
     metaEl.textContent='';
@@ -5379,11 +5424,13 @@ async function openGgFetchModalIdle(){
     return;
   }
   if(!doneLoading())return;
+  _ggRenderRateInfo(rateUsed);
   if(!Array.isArray(rows)||!rows.length){
     metaEl.textContent='';
     gridEl.innerHTML=`<div class="ggr-empty">No price checks recorded yet — click Refresh Now to run one.</div>`;
     return;
   }
+  rows=_ggSortRowsByHotness(rows);
   const latestTs=Math.max(...rows.map(r=>r.fetched_at||0));
   metaEl.textContent=`Last checked ${fmtTimeAgo(latestTs)} · ${rows.length} game${rows.length>1?'s':''}`;
   gridEl.innerHTML=rows.map(r=>ggPriceCardHTML({
@@ -5454,8 +5501,20 @@ async function runGGDealsFetch(){
   history.pushState({ggFetchOpen:true},'','');
   setProgress('Starting…');
 
+  // Shared across devices via RateLog (GG.deals caps the API key at
+  // 1000 records/hour) — read the real current usage once up front, then
+  // track it locally as this run's own batches add to it.
+  let rateUsed=await ggRateBudgetUsed();
+  _ggRenderRateInfo(rateUsed);
+  let rateLimited=false;
+
   for(let b=0;b<batches.length&&!_ggFetchCancelled;b++){
     const batch=batches[b];
+    if(SHEET_URL&&rateUsed+batch.length>1000){
+      rateLimited=true;
+      setProgress(`GG.deals hourly limit reached — ${fetched} of ${total} checked, ${total-fetched} left for next hour.`);
+      break;
+    }
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
@@ -5494,6 +5553,7 @@ async function runGGDealsFetch(){
         }
       });
       fetched+=batch.length;
+      if(SHEET_URL){rateUsed+=batch.length;_ggRenderRateInfo(rateUsed);}
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
@@ -5501,7 +5561,7 @@ async function runGGDealsFetch(){
 
       if(SHEET_URL&&priceEntries.length){
         try{
-          const r=await fetch(SHEET_URL+'?action=upsertGamePrices',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(priceEntries)});
+          const r=await fetch(SHEET_URL+'?action=upsertGamePrices'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(priceEntries)});
           const result=await r.json();
           if(result.newLows&&result.newLows.length){
             result.newLows.forEach(appid=>{if(ggPriceCache[appid])ggPriceCache[appid].personalLow=true;});
@@ -5515,8 +5575,8 @@ async function runGGDealsFetch(){
           }
           if((result.newLows&&result.newLows.length)||result.lows)dispatchRender();
         }catch(e){}
-        fetch(SHEET_URL+'?action=appendPriceHistory',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
-        fetch(SHEET_URL+'?action=logFetch',{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
+        fetch(SHEET_URL+'?action=appendPriceHistory'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
+        fetch(SHEET_URL+'?action=logFetch'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
       }
     }catch(err){
       setProgress(`Error: ${err.message}`);
@@ -5539,6 +5599,9 @@ async function runGGDealsFetch(){
 
   if(_ggFetchCancelled){
     setProgress('Cancelled.');
+  }else if(rateLimited){
+    progressEl.textContent=`${fetched} / ${total} fetched`;
+    barEl.style.width=`${total>0?Math.round(fetched/total*100):0}%`;
   }else{
     progressEl.textContent=`${fetched} / ${total} fetched`;
     barEl.style.width='100%';
@@ -5602,6 +5665,19 @@ function _ggFetchGoToGame(appid){
   if(!_ggFetchRunning)document.getElementById('ggFetchBubble').textContent='Live\nPrices';
   _hideGgFetchModal();
   openPanel(g.id);
+}
+// Quick per-card alternative to opening the Edit modal just to flip the
+// same skipGGFetch flag (see fFetchSkip) — the card is the natural place
+// to notice "this one keeps showing up" and act on it immediately.
+function _ggExcludeGame(appid){
+  const g=games.find(x=>String(x.steamAppId)===String(appid));
+  if(!g)return;
+  g.skipGGFetch=true;
+  save(g.id);
+  showToast(`Excluded "${g.title}" from Live Price checks`);
+  const card=document.querySelector(`#ggFetchGrid .ggr-card[data-appid="${appid}"]`);
+  if(card)card.remove();
+  _ggUpdateFilterUI();
 }
 document.getElementById('ggFetchGrid').addEventListener('click',e=>{
   const card=e.target.closest('.ggr-card[data-appid]');
