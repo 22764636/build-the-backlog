@@ -352,6 +352,10 @@
         <div class="mt" style="color:var(--pink)">Stop Fetching Prices?</div>
         <div style="font-size:.85rem;color:var(--t2);margin:.7rem 0 0">Still fetching. Stop now, or let it keep running in the background.</div>
       </div>
+      <div id="ggResumePrompt" style="display:none">
+        <div class="mt" style="color:var(--amber)">Resume Price Check?</div>
+        <div id="ggResumeText" style="font-size:.85rem;color:var(--t2);margin:.7rem 0 0"></div>
+      </div>
     </div>
     <div class="ma" id="ggFetchMainBar">
       <button class="mb2" id="ggFetchClose" style="display:none">Close</button>
@@ -362,6 +366,10 @@
     <div class="ma" id="ggFetchConfirmBar" style="display:none">
       <button class="mb2" id="ggFetchConfirmContinue">Continue</button>
       <button class="mb2 d" id="ggFetchConfirmStop">Stop</button>
+    </div>
+    <div class="ma" id="ggResumeBar" style="display:none">
+      <button class="mb2" id="ggResumeDiscardBtn">Discard</button>
+      <button class="mb2 p" id="ggResumeBtn">Resume</button>
     </div>
   </div>
 </div>

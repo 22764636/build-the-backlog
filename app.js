@@ -4460,19 +4460,34 @@ document.addEventListener('keydown',function(e){
     return{releaseDate:raw};
   }
 
+  const RDC_RUN_KEY='btb_rdc_run';
+
   async function run(){
     // Already running — bring the existing progress modal back into view
     // instead of starting a second, overlapping fetch loop over the same
     // targets (that used to be possible by just clicking this again).
     if(_rdcRunning){_showRdc();return}
     if(OFFLINE){showToast('Offline — cannot reach Steam.');return}
-    const targets=games.filter(g=>g.steamAppId&&isGameUnreleased(g)&&!isCancelled(g));
-    if(!targets.length){showToast('No unreleased Steam games found.');return}
+    const allTargets=games.filter(g=>g.steamAppId&&isGameUnreleased(g)&&!isCancelled(g));
+    if(!allTargets.length){showToast('No unreleased Steam games found.');return}
+
+    // If the OS killed a backgrounded run last time, doneSet holds what it
+    // already got through — skip those instead of re-hitting Steam for
+    // games we just checked. If everything currently eligible is already in
+    // doneSet (nothing left to skip to), treat it as a fresh run instead.
+    const resumeRun=_runLoad(RDC_RUN_KEY);
+    const doneSet=new Set(resumeRun?resumeRun.done:[]);
+    let targets=allTargets.filter(g=>!doneSet.has(String(g.steamAppId)));
+    const resuming=doneSet.size>0&&targets.length>0;
+    if(!targets.length){doneSet.clear();targets=allTargets;}
+    const startedAt=resumeRun&&resuming?resumeRun.startedAt:Date.now();
 
     ov.classList.add('on');
     history.pushState({rdcovOpen:true},'','');
     log.innerHTML='';
-    summary.textContent=`Checking ${targets.length} game${targets.length>1?'s':''}…`;
+    summary.textContent=resuming
+      ?`Resuming — ${doneSet.size} already checked, ${targets.length} left…`
+      :`Checking ${targets.length} game${targets.length>1?'s':''}…`;
     _rdcRunning=true;_rdcAborted=false;_rdcHidden=false;
     setMenuRunning(['hmRdcBtn','dhDatesBtn'],true);
     _hideConfirm();
@@ -4514,6 +4529,9 @@ document.addEventListener('keydown',function(e){
         failed++;
       }
 
+      doneSet.add(String(g.steamAppId));
+      _runSave(RDC_RUN_KEY,{done:[...doneSet],startedAt});
+
       if(i<targets.length-1&&!_rdcAborted)await new Promise(r=>setTimeout(r,400));
     }
 
@@ -4523,8 +4541,10 @@ document.addEventListener('keydown',function(e){
     closeBtn.style.display='';hideBtn.style.display='none';cancelBtn.style.display='none';
     if(_rdcAborted){
       summary.textContent=`Stopped — ${updated} updated, ${unchanged} unchanged${failed?`, ${failed} failed`:''}`;
+      _runClear(RDC_RUN_KEY); // explicit Stop means don't offer to resume it later
     }else{
       summary.textContent=`Done — ${updated} updated, ${unchanged} unchanged${failed?`, ${failed} failed`:''}`;
+      _runClear(RDC_RUN_KEY);
     }
     if(_rdcHidden){bubble.textContent='Done';}
     if(updated)dispatchRender();
@@ -5086,8 +5106,31 @@ document.addEventListener('keydown',function(e){
 })();
 
 // ══════════════════════════════════════════
+//  RESUMABLE BACKGROUND RUNS
+//  A backgrounded PWA can get its page killed by the OS at any time — there's
+//  no API to prevent or even reliably detect that in advance — so a long
+//  batched fetch loop (Live Prices, Release Date Check) can lose all of its
+//  in-memory progress mid-run. Each such loop persists its remaining work to
+//  localStorage as it goes, so the next load can pick up where it left off
+//  instead of silently redoing (and for Live Prices, re-billing against the
+//  shared hourly rate limit) work that already happened.
+// ══════════════════════════════════════════
+const RUN_RESUME_MAX_AGE_MS=6*60*60*1000; // ignore/discard a run left dangling longer than this
+function _runSave(key,state){try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
+function _runLoad(key){
+  try{
+    const s=localStorage.getItem(key);if(!s)return null;
+    const state=JSON.parse(s);
+    if(!state||!state.startedAt||Date.now()-state.startedAt>RUN_RESUME_MAX_AGE_MS){localStorage.removeItem(key);return null}
+    return state;
+  }catch(e){return null}
+}
+function _runClear(key){try{localStorage.removeItem(key)}catch(e){}}
+
+// ══════════════════════════════════════════
 //  GG.DEALS LIVE PRICES
 // ══════════════════════════════════════════
+const GG_RUN_KEY='btb_gg_run';
 let _ggFetchCancelled=false;
 let _ggFetchHidden=false;
 let _ggFetchRunning=false;
@@ -5528,13 +5571,47 @@ function _ggSortRowsByHotness(rows){
   return rows.slice().sort((a,b)=>hotnessOf(b.appid)-hotnessOf(a.appid));
 }
 
+// Shown instead of the normal idle view when a run got interrupted (e.g. the
+// OS killed a backgrounded PWA mid-fetch) and left resumable progress behind.
+function _showGgResumePrompt(resume){
+  _showGgFetchModal();
+  document.getElementById('ggFetchMain').style.display='none';
+  document.getElementById('ggFetchConfirm').style.display='none';
+  document.getElementById('ggFetchMainBar').style.display='none';
+  document.getElementById('ggFetchConfirmBar').style.display='none';
+  const promptEl=document.getElementById('ggResumePrompt');
+  const barEl=document.getElementById('ggResumeBar');
+  promptEl.style.display='';
+  barEl.style.display='flex';
+  const left=resume.total-resume.fetched;
+  document.getElementById('ggResumeText').textContent=
+    `Your last price check was interrupted after ${resume.fetched} of ${resume.total} games. Resume the remaining ${left}?`;
+  document.getElementById('ggResumeBtn').onclick=()=>{
+    promptEl.style.display='none';barEl.style.display='none';
+    document.getElementById('ggFetchMain').style.display='';
+    document.getElementById('ggFetchMainBar').style.display='flex';
+    runGGDealsFetch(resume);
+  };
+  document.getElementById('ggResumeDiscardBtn').onclick=()=>{
+    _runClear(GG_RUN_KEY);
+    promptEl.style.display='none';barEl.style.display='none';
+    document.getElementById('ggFetchMain').style.display='';
+    document.getElementById('ggFetchMainBar').style.display='flex';
+    openGgFetchModalIdle(true);
+  };
+}
+
 // Entry point for "Check Live Prices" — opens the modal showing what the
 // LAST run found (reconstructed from the PriceHistory sheet via
 // getLatestFetchDiffs), so results are visible from any device, not just
 // the one that ran the fetch. "Refresh Now" inside kicks off a real run.
-async function openGgFetchModalIdle(){
+async function openGgFetchModalIdle(skipShow){
   if(_ggFetchRunning){_showGgFetchModal();return}
-  _showGgFetchModal();
+  if(!skipShow){
+    const resume=_runLoad(GG_RUN_KEY);
+    if(resume){_showGgResumePrompt(resume);return}
+  }
+  if(!skipShow)_showGgFetchModal();
   // Refresh Now stays disabled until this settles — see _ggIdleLoading.
   _ggIdleLoading=true;
   _ggSetButtonsForState();
@@ -5598,11 +5675,9 @@ async function openGgFetchModalIdle(){
   _ggSetCardFilter('all');
 }
 
-async function runGGDealsFetch(){
-  if(_ggFetchRunning){_showGgFetchModal();return}
-  if(!GG_WORKER){showToast('GG.deals worker not configured.');return;}
+function _ggEligibleGames(){
   const today=todayISO();
-  const eligible=games.filter(g=>
+  return games.filter(g=>
     (g.status==='wishlist'||(g.status==='bought'&&g.steamWishlist))&&
     g.steamAppId&&
     g.releaseDate&&
@@ -5612,12 +5687,26 @@ async function runGGDealsFetch(){
     !g.delisted&&
     !g.skipGGFetch
   ).sort((a,b)=>(parseInt(b.hotness)||0)-(parseInt(a.hotness)||0));
-  if(!eligible.length){showToast('All released wishlist games already have prices.');return;}
+}
+async function runGGDealsFetch(resumeState){
+  if(_ggFetchRunning){_showGgFetchModal();return}
+  if(!GG_WORKER){showToast('GG.deals worker not configured.');return;}
+
+  let eligible,total,fetched,startedAt;
+  if(resumeState){
+    const remainSet=new Set(resumeState.remaining);
+    eligible=games.filter(g=>remainSet.has(String(g.steamAppId)));
+    if(!eligible.length){_runClear(GG_RUN_KEY);showToast('Nothing left to resume — those games are no longer eligible.');return;}
+    total=resumeState.total;fetched=resumeState.fetched;startedAt=resumeState.startedAt;
+  }else{
+    eligible=_ggEligibleGames();
+    if(!eligible.length){showToast('All released wishlist games already have prices.');return;}
+    total=eligible.length;fetched=0;startedAt=Date.now();
+  }
 
   const batches=[];
   for(let i=0;i<eligible.length;i+=100)batches.push(eligible.slice(i,i+100));
-  const total=eligible.length;
-  let fetched=0;
+  _runSave(GG_RUN_KEY,{remaining:eligible.map(g=>String(g.steamAppId)),total,fetched,startedAt});
   _ggFetchCancelled=false;
   _ggFetchHidden=false;
   _ggFetchRunning=true;
@@ -5712,6 +5801,7 @@ async function runGGDealsFetch(){
       });
       fetched+=batch.length;
       if(SHEET_URL){rateUsed+=batch.length;_ggRenderRateInfo(rateUsed,rateBudget.resetAt);}
+      _runSave(GG_RUN_KEY,{remaining:batches.slice(b+1).flat().map(g=>String(g.steamAppId)),total,fetched,startedAt});
       dispatchRender();
       setProgress(`Batch ${b+1} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
@@ -5757,13 +5847,17 @@ async function runGGDealsFetch(){
 
   if(_ggFetchCancelled){
     setProgress('Cancelled.');
+    _runClear(GG_RUN_KEY); // an explicit Stop means don't offer to resume it later
   }else if(rateLimited){
     progressEl.textContent=`${fetched} / ${total} fetched`;
     barEl.style.width=`${total>0?Math.round(fetched/total*100):0}%`;
+    // Left in localStorage on purpose — picks back up automatically once the
+    // hourly rate limit window rolls over, without re-billing already-fetched games.
   }else{
     progressEl.textContent=`${fetched} / ${total} fetched`;
     barEl.style.width='100%';
     statusEl.textContent='All done!';
+    _runClear(GG_RUN_KEY);
   }
   metaEl.textContent=`Checked just now · ${fetched} game${fetched===1?'':'s'}`;
   _ggFetchRunning=false;_hideGgConfirm();
