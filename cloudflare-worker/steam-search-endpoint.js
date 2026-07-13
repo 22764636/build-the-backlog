@@ -1,3 +1,27 @@
+// current script
+export default {
+  async fetch(req) {
+    const id = new URL(req.url).searchParams.get("appid");
+
+    if (!id) {
+      return new Response("Missing ?appid= parameter", { status: 400 });
+    }
+
+    const res = await fetch(
+      `https://store.steampowered.com/api/appdetails/?cc=italian&l=english&appids=${id}`
+    );
+
+    const data = await res.json();
+
+    return Response.json(data, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=300"
+      }
+    });
+  }
+};
+
 // Addition for the existing steam-proxy Cloudflare Worker
 // (https://steam-proxy-cm26.carmine-migliore26.workers.dev), which today only
 // proxies single-appID lookups via `?appid=`. This snippet is NOT a full worker —
