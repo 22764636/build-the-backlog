@@ -5401,7 +5401,6 @@ function ggPriceCardHTML(e){
   let cls='skip';
   if((hasOldR&&r<oldR)||(hasOldK&&k<oldK))cls='ok';
   else if((hasOldR&&r>oldR)||(hasOldK&&k>oldK))cls='up';
-  else if(!hasOldR&&!hasOldK)cls='ok';
   return`<div class="ggr-card ${cls}" data-appid="${esc(String(e.appid))}" tabindex="0">
     <button class="qb qr ggr-exclude" title="Exclude from Live Price checks" onclick="event.stopPropagation();_ggExcludeGame('${esc(String(e.appid))}')">${IC.close}</button>
     <div class="ggr-title">${esc(e.title)}</div>
