@@ -15,7 +15,7 @@ export default {
     const search = url.searchParams.get("search");
     if (search) {
       const res = await fetch(
-        `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(search)}&l=english&cc=italian`
+        `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(search)}&l=english&cc=it`
       );
       const data = await res.json();
       return Response.json(data, { headers });
