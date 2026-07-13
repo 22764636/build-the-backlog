@@ -2973,6 +2973,7 @@ window.addEventListener('popstate',function(){
   if(window._plcIsOpen&&window._plcIsOpen()){if(window._plcTryClose&&!window._plcTryClose())history.pushState({plcovOpen:true},'','');return;}
   if(window._ssIsOpen&&window._ssIsOpen()){window._ssTryClose&&window._ssTryClose();return;}
   if(window._tkIsOpen&&window._tkIsOpen()){window._tkTryClose&&window._tkTryClose();return;}
+  if(window._nuIsOpen&&window._nuIsOpen()){window._nuTryClose&&window._nuTryClose();return;}
   const fbar=document.getElementById('fbar');
   if(fbar&&fbar.classList.contains('on')){window._rawCloseFbar&&window._rawCloseFbar();return;}
   if(document.getElementById('panel').classList.contains('on')){
@@ -4319,6 +4320,7 @@ document.addEventListener('keydown',function(e){
     if(document.getElementById('rmov').classList.contains('on')){history.back();return}
     if(document.getElementById('riov').classList.contains('on')){history.back();return}
     if(document.getElementById('wlovConfirm').classList.contains('on')){history.back();return}
+    if(document.getElementById('nuov').classList.contains('on')){history.back();return}
     if(document.getElementById('calOv').style.display!=='none'){closeCalendar();return}
     if(document.getElementById('panel').classList.contains('on')){closePanel();return}
     return;
@@ -4943,6 +4945,103 @@ document.addEventListener('keydown',function(e){
 
   window.openTradeKeys=open;
   [['hmTradeKeysBtn','hmenu'],['dhTradeKeysBtn','dhmenu']].forEach(([btnId,menuId])=>{
+    const btn=document.getElementById(btnId);
+    if(!btn)return;
+    btn.onclick=()=>{
+      document.getElementById(menuId).classList.remove('on');
+      open();
+    };
+  });
+})();
+
+// ══════════════════════════════════════════
+//  NEXT UP PICKER — random pick from whatever the
+//  Collection filters currently show (no picker-owned
+//  weighting; narrowing the pool is the filter bar's job)
+// ══════════════════════════════════════════
+(function(){
+  const ov=document.getElementById('nuov');
+  if(!ov)return;
+  const stage=document.getElementById('nuStage');
+  const sub=document.getElementById('nuSub');
+  const closeBtn=document.getElementById('nuClose');
+  const rerollBtn=document.getElementById('nuReroll');
+  let _pool=[];
+  let _timer=null;
+  let _lastId=null;
+
+  function pool(){
+    // Collection games under the active filters, minus DLC already
+    // shown nested under their parent — those aren't standalone picks.
+    return collectionFiltered().filter(g=>!(g.type==='dlc'&&findParentGame(g)));
+  }
+
+  function faceHTML(g){
+    const coverUrl=g.cover||(g.steamAppId?sc(g.steamAppId):'');
+    const cImg=coverUrl?`<img src="${esc(coverUrl)}" alt="" onerror="this.style.display='none';this.previousElementSibling.style.display='flex'">`:'';
+    const phStyle=coverUrl?'style="display:none"':'';
+    return`<div class="nu-shuffle-face"><div class="cc"><div class="cph" ${phStyle}>🎮</div>${cImg}</div></div><div class="ct nu-shuffle-title">${esc(g.title||'')}</div>`;
+  }
+
+  function renderEmpty(){
+    sub.textContent='';
+    stage.innerHTML=`<div class="nu-empty">No games match your current Collection filters — adjust them in the filter bar and try again.</div>`;
+    rerollBtn.style.display='none';
+  }
+
+  function shuffle(ticks,onDone){
+    let i=0;
+    (function tick(){
+      stage.innerHTML=faceHTML(_pool[Math.floor(Math.random()*_pool.length)]);
+      i++;
+      if(i<ticks){_timer=setTimeout(tick,50+260*Math.pow(i/ticks,2));}
+      else onDone();
+    })();
+  }
+
+  function land(){
+    let pick=_pool[Math.floor(Math.random()*_pool.length)];
+    if(_pool.length>1&&pick.id===_lastId){
+      pick=_pool[(_pool.findIndex(g=>g.id===pick.id)+1)%_pool.length];
+    }
+    _lastId=pick.id;
+    stage.innerHTML=`<div class="gg nu-result">${colCardHTML(pick)}</div>`;
+    const card=stage.querySelector('.gc');
+    const go=()=>{_closeNu();openPanel(pick.id);};
+    card.addEventListener('click',go);
+    card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')go();});
+    rerollBtn.style.display=_pool.length>1?'':'none';
+  }
+
+  function run(ticks){
+    rerollBtn.style.display='none';
+    shuffle(ticks,land);
+  }
+
+  function _closeNu(){
+    clearTimeout(_timer);_timer=null;
+    ov.classList.remove('on');
+    if(history.state&&history.state.nuovOpen)history.replaceState(null,'','');
+  }
+  window._nuTryClose=function(){_closeNu();return true;};
+  window._nuIsOpen=()=>ov.classList.contains('on');
+  closeBtn.onclick=_closeNu;
+  ov.addEventListener('click',e=>{if(e.target===ov)_closeNu();});
+
+  function open(){
+    _pool=pool();
+    _lastId=null;
+    ov.classList.add('on');
+    history.pushState({nuovOpen:true},'','');
+    if(!_pool.length){renderEmpty();return;}
+    sub.textContent=`Choosing from ${_pool.length} game${_pool.length!==1?'s':''} matching your current Collection filters`;
+    run(12+Math.floor(Math.random()*4));
+  }
+
+  rerollBtn.onclick=()=>{if(_pool.length)run(7+Math.floor(Math.random()*3));};
+
+  window.openNextUp=open;
+  [['hmNextUpBtn','hmenu'],['dhNextUpBtn','dhmenu']].forEach(([btnId,menuId])=>{
     const btn=document.getElementById(btnId);
     if(!btn)return;
     btn.onclick=()=>{
