@@ -549,6 +549,8 @@ button{text-transform:none;letter-spacing:0}
 .dd-opt:hover{background:#02b3fc15;color:var(--text)}
 .dd-opt.active{background:#02b3fc18;color:var(--blue)}
 .dd-opt-count{font-size:.62rem;color:var(--t3);flex-shrink:0;margin-left:auto;padding-left:.4rem}
+.dd-opt-steam{gap:.5rem}
+.dd-opt-thumb{width:46px;height:22px;object-fit:cover;border-radius:2px;flex-shrink:0}
 
 /* cover preview */
 .cprev-wrap{width:100%;height:85px;border-radius:var(--r);margin-top:.35rem;position:relative;overflow:hidden}
