@@ -317,14 +317,13 @@ function getLatestFetchDiffs() {
     else break;
   }
 
-  // Latest row per appid within the run, and the most recent row per appid
-  // from BEFORE the run started (to diff against).
-  const latestByAppid = {};
-  const priorByAppid = {};
-  all.forEach(r => {
-    if (r.fetched_at >= runStartTs) latestByAppid[r.appid] = r;
-    else priorByAppid[r.appid] = r; // overwritten while walking forward — ends up as the latest pre-run row
-  });
+  // Group each appid's own rows (ascending) so the diff baseline is always
+  // "this game's own previous fetch" — not clipped at the run boundary,
+  // which would skip past a same-session recheck (e.g. an interrupted run
+  // resumed a few minutes later, landing inside the same 30-min window as
+  // its own earlier attempt) and wrongly diff against a much older price.
+  const byAppid = {};
+  all.forEach(r => { (byAppid[r.appid] = byAppid[r.appid] || []).push(r); });
 
   const lowsByAppid = {};
   const gpSheet = ss.getSheetByName(GAME_PRICES_SHEET);
@@ -342,22 +341,25 @@ function getLatestFetchDiffs() {
     }
   }
 
-  return Object.keys(latestByAppid).map(appid => {
-    const cur = latestByAppid[appid];
-    const prev = priorByAppid[appid];
-    const low = lowsByAppid[appid] || { retail: 0, keyshop: 0 };
-    return {
-      appid: appid,
-      title: cur.title,
-      fetched_at: cur.fetched_at,
-      retail: cur.retail,
-      keyshop: cur.keyshop,
-      prevRetail: prev ? prev.retail : 0,
-      prevKeyshop: prev ? prev.keyshop : 0,
-      lowRetail: low.retail,
-      lowKeyshop: low.keyshop,
-    };
-  }).sort((a, b) => b.fetched_at - a.fetched_at);
+  return Object.keys(byAppid)
+    .filter(appid => byAppid[appid][byAppid[appid].length - 1].fetched_at >= runStartTs)
+    .map(appid => {
+      const arr = byAppid[appid];
+      const cur = arr[arr.length - 1];
+      const prev = arr.length > 1 ? arr[arr.length - 2] : null;
+      const low = lowsByAppid[appid] || { retail: 0, keyshop: 0 };
+      return {
+        appid: appid,
+        title: cur.title,
+        fetched_at: cur.fetched_at,
+        retail: cur.retail,
+        keyshop: cur.keyshop,
+        prevRetail: prev ? prev.retail : 0,
+        prevKeyshop: prev ? prev.keyshop : 0,
+        lowRetail: low.retail,
+        lowKeyshop: low.keyshop,
+      };
+    }).sort((a, b) => b.fetched_at - a.fetched_at);
 }
 
 // ── GG.deals rate-limit log: append + prune rows older than 1h ──
