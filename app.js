@@ -3523,7 +3523,7 @@ const _searchStoreDd=debounce(async(term)=>{
     const res=await fetch(`${STEAM_WORKER}/?search=${encodeURIComponent(term)}`);
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     const json=await res.json();
-    const items=(json.items||[]).filter(it=>it.name&&(it.type==='game'||it.type==='dlc')).slice(0,8);
+    const items=(json.items||[]).filter(it=>it.name).slice(0,8);
     if(!items.length){dd.classList.remove('on');return}
     dd.innerHTML=items.map(it=>`<div class="dd-opt dd-opt-steam" data-appid="${esc(it.id)}">${it.tiny_image?`<img class="dd-opt-thumb" src="${esc(it.tiny_image)}" alt="">`:''}<span>${esc(it.name)}</span></div>`).join('');
     dd.classList.add('on');
