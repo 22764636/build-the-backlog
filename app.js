@@ -3200,7 +3200,7 @@ document.getElementById('tagsInput').addEventListener('input',updateTagsDd);
 document.getElementById('tagsInput').addEventListener('focus',updateTagsDd);
 document.getElementById('tagsInput').addEventListener('blur',()=>_closeDdOnBlur('tagsDd'));
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.genre-wrap')){document.getElementById('genreDd').classList.remove('on');document.getElementById('tagsDd').classList.remove('on');const bdd=document.getElementById('btcColDd');if(bdd)bdd.classList.remove('on');const mdd=document.getElementById('fColColDd');if(mdd)mdd.classList.remove('on');const idd=document.getElementById('colInlineDd');if(idd)idd.classList.remove('on');const bsd=document.getElementById('btcStoreDd');if(bsd)bsd.classList.remove('on');const fsd=document.getElementById('fColStoreDd');if(fsd)fsd.classList.remove('on');}
+  if(!e.target.closest('.genre-wrap')){document.getElementById('genreDd').classList.remove('on');document.getElementById('tagsDd').classList.remove('on');const bdd=document.getElementById('btcColDd');if(bdd)bdd.classList.remove('on');const mdd=document.getElementById('fColColDd');if(mdd)mdd.classList.remove('on');const idd=document.getElementById('colInlineDd');if(idd)idd.classList.remove('on');const bsd=document.getElementById('btcStoreDd');if(bsd)bsd.classList.remove('on');const fsd=document.getElementById('fColStoreDd');if(fsd)fsd.classList.remove('on');const std=document.getElementById('storeDd');if(std)std.classList.remove('on');}
   if(!e.target.closest('#devGWrap'))document.getElementById('devDd').classList.remove('on');
   if(!e.target.closest('#pubGWrap'))document.getElementById('pubDd').classList.remove('on');
 });
@@ -3356,10 +3356,11 @@ async function steamAutoFill(appId,{fromUrl=false}={}){
       storeEl.value=`https://store.steampowered.com/app/${appId}/`;filled.push('store link');
     }
 
-    // Genres — push into chip array, skip dupes
+    // Genres — only accept ones already used elsewhere in the app; skip dupes
     if(d.genres&&d.genres.length){
       const incoming=d.genres.map(g=>g.description).filter(Boolean);
-      const added=incoming.filter(g=>!cGenres.includes(g));
+      const known=allGenres();
+      const added=incoming.filter(g=>known.includes(g)&&!cGenres.includes(g));
       if(added.length){cGenres.push(...added);renderGenres();filled.push('genres')}
     }
 
@@ -3512,6 +3513,39 @@ document.getElementById('fStore').addEventListener('blur',()=>{
   // Always fetch — title will be overwritten with the correct API name (fromUrl=true)
   steamAutoFill(parsed.appId,{fromUrl:true});
 });
+
+// ══════════════════════════════════════════
+//  STEAM TITLE SEARCH (store link field)
+// ══════════════════════════════════════════
+const _searchStoreDd=debounce(async(term)=>{
+  const dd=document.getElementById('storeDd');
+  try{
+    const res=await fetch(`${STEAM_WORKER}/?search=${encodeURIComponent(term)}`);
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const json=await res.json();
+    const items=(json.items||[]).filter(it=>it.name&&(it.type==='game'||it.type==='dlc')).slice(0,8);
+    if(!items.length){dd.classList.remove('on');return}
+    dd.innerHTML=items.map(it=>`<div class="dd-opt dd-opt-steam" data-appid="${esc(it.id)}">${it.tiny_image?`<img class="dd-opt-thumb" src="${esc(it.tiny_image)}" alt="">`:''}<span>${esc(it.name)}</span></div>`).join('');
+    dd.classList.add('on');
+    dd.querySelectorAll('.dd-opt-steam').forEach(el=>{
+      el.onclick=()=>{
+        const appId=el.dataset.appid;
+        document.getElementById('fAppId').value=appId;
+        document.getElementById('fStore').value=`https://store.steampowered.com/app/${appId}/`;
+        dd.classList.remove('on');
+        checkAppIdDup();
+        steamAutoFill(appId,{fromUrl:true});
+      };
+    });
+  }catch(err){dd.classList.remove('on');}
+},350);
+document.getElementById('fStore').addEventListener('input',()=>{
+  const raw=document.getElementById('fStore').value.trim();
+  const dd=document.getElementById('storeDd');
+  if(!raw||extractAppId(raw)||raw.length<2){dd.classList.remove('on');return}
+  _searchStoreDd(raw);
+});
+document.getElementById('fStore').addEventListener('blur',()=>_closeDdOnBlur('storeDd'));
 
 // ══════════════════════════════════════════
 //  PRIORITY BUTTONS IN MODAL

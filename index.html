@@ -597,8 +597,11 @@
     <div class="mt" id="modalTitle">Add game</div>
     <!-- Row 1: Store link full-width -->
     <div class="fr">
-      <label>Store link <span style="color:var(--t3);font-size:.62rem;text-transform:none;letter-spacing:0">— paste Steam URL to auto-fill Title &amp; App ID</span></label>
-      <input type="url" id="fStore" placeholder="https://store.steampowered.com/app/…">
+      <label>Store link <span style="color:var(--t3);font-size:.62rem;text-transform:none;letter-spacing:0">— paste a Steam URL/App ID, or type a title to search</span></label>
+      <div class="genre-wrap">
+        <input type="url" id="fStore" placeholder="https://store.steampowered.com/app/… or search by title" autocomplete="off">
+        <div class="genre-dd" id="storeDd"></div>
+      </div>
     </div>
     <!-- Row 2: Title + App ID -->
     <div class="fg2">
