@@ -594,9 +594,9 @@ button{text-transform:none;letter-spacing:0}
 .tba-btn.on{background:#f472b6;border-color:transparent;color:#031329}
 
 /* overlays */
-#riov,#rmov,#btcov,#rdcov,#plcov,#wlovConfirm,#preorderConfirm,#ggFetchOv,#tkov{display:none;position:fixed;inset:0;background:rgba(3,19,41,.8);backdrop-filter:blur(4px);
+#riov,#rmov,#btcov,#rdcov,#plcov,#wlovConfirm,#preorderConfirm,#ggFetchOv,#tkov,#nuov{display:none;position:fixed;inset:0;background:rgba(3,19,41,.8);backdrop-filter:blur(4px);
   z-index:300;align-items:center;justify-content:center;padding:1rem}
-#riov.on,#rmov.on,#btcov.on,#rdcov.on,#plcov.on,#wlovConfirm.on,#preorderConfirm.on,#ggFetchOv.on,#tkov.on{display:flex}
+#riov.on,#rmov.on,#btcov.on,#rdcov.on,#plcov.on,#wlovConfirm.on,#preorderConfirm.on,#ggFetchOv.on,#tkov.on,#nuov.on{display:flex}
 /* #ssov is a full-page dashboard overlay (like #calOv), not a centered
    modal — its display/position/z-index live inline in index.html, this
    only adds the .on hook so JS-toggling the class is enough on its own. */
@@ -608,6 +608,19 @@ button{text-transform:none;letter-spacing:0}
 #plcLog .plc-ok{color:var(--green)}
 #plcLog .plc-skip{color:var(--t3)}
 #plcLog .plc-err{color:var(--pink)}
+/* Next Up picker — slot-machine reveal over the real .gc/.cc card markup,
+   so the landed card is pixel-identical to a collection grid card. */
+.nu-body{text-align:center}
+.nu-sub{font-size:.72rem;color:var(--t2);margin:-.3rem 0 .8rem}
+.nu-stage{min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem}
+.nu-shuffle-face{width:180px;margin:0 auto}
+.nu-shuffle-face .cc{border-radius:var(--r);animation:nuTick .16s ease-out}
+.nu-shuffle-title{max-width:180px}
+@keyframes nuTick{from{transform:scale(.96);opacity:.55}to{transform:scale(1);opacity:1}}
+.nu-result{grid-template-columns:minmax(180px,220px)!important;margin:0 auto}
+.nu-result .gc{animation:nuLand .34s cubic-bezier(.25,1.5,.4,1)}
+@keyframes nuLand{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
+.nu-empty{padding:2.5rem 1rem;color:var(--t3);font-size:.85rem}
 /* Live Prices result cards — dashboard-style grid replacing the old
    monospace log line, shared by the live in-progress run and the
    reconstructed "last results" idle view (see ggPriceCardHTML in app.js).

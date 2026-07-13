@@ -17,6 +17,7 @@ A personal game backlog manager that runs entirely in the browser — no build s
 - Per-platform entries — each platform tracks its own store, cost, purchase date, and play status
 - Eight play statuses: `UP` · `IP` · `COM` · `SUP` · `UF` · `PDP` · `WNC` · `WNP`
 - Filter by platform (any / exclusive), Steam collection, genre, or play status
+- **Next Up picker** — random pick from whatever the Collection filters currently show, with a slot-machine reveal and reroll
 
 ### Game Details
 - Steam cover art via App ID (or custom image URL)
