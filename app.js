@@ -5809,7 +5809,7 @@ async function runGGDealsFetch(resumeState){
       if(SHEET_URL){rateUsed+=batch.length;_ggRenderRateInfo(rateUsed,rateBudget.resetAt);}
       _runSave(GG_RUN_KEY,{remaining:batches.slice(b+1).flat().map(g=>String(g.steamAppId)),total,fetched,startedAt});
       dispatchRender();
-      setProgress(`Batch ${b+1} done.`);
+      setProgress(`Batch ${b+1} of ${batches.length} done.`);
       gridEl.insertAdjacentHTML('beforeend',cardsHtml.join(''));
       _ggUpdateFilterUI();
 
