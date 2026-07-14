@@ -5823,7 +5823,13 @@ async function runGGDealsFetch(resumeState){
           }
           if((result.newLows&&result.newLows.length)||result.lows)dispatchRender();
         }catch(e){}
-        fetch(SHEET_URL+'?action=appendPriceHistory'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)}).catch(()=>{});
+        // Awaited (not fire-and-forget): getLatestFetchDiffs reconstructs the
+        // idle view straight from this sheet, so if the modal gets closed and
+        // reopened right after the last batch, the write must already be
+        // committed — otherwise the reopen can silently show an older run.
+        try{
+          await fetch(SHEET_URL+'?action=appendPriceHistory'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(historyEntries)});
+        }catch(e){}
         fetch(SHEET_URL+'?action=logFetch'+_tok(),{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({ts:fetchTs,count:batch.length})}).catch(()=>{});
       }
     }catch(err){
