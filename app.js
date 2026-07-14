@@ -5412,9 +5412,9 @@ function fmtTimeAgo(ts){
 // One price field ("Retail"/"Key") inside a live-price result card: current
 // value, a delta badge vs. the price before this run, and either a "low
 // €X" caption or a "★ new low" badge — but only when this *fetch* is what
-// dropped it there (oldV was above the low, newV isn't). A game that has
+// dropped it there (newV is now below the pre-fetch low). A game that has
 // simply sat at its all-time-low price for weeks isn't "new", it's just
-// low; without the oldV>lowV check every settled game re-flags as a new
+// low; without the newV<lowV check every settled game re-flags as a new
 // low on every single check, forever.
 function ggPriceStatHTML(label,newV,oldV,lowV){
   if(isNaN(newV)||newV<=0){
@@ -5427,7 +5427,7 @@ function ggPriceStatHTML(label,newV,oldV,lowV){
     :Math.abs(newV-oldV)<0.005
       ?`<span class="bdg ggr-badge flat">=</span>`
       :`<span class="bdg ggr-badge ${newV<oldV?'down':'up'}">${newV<oldV?'↓':'↑'}€${Math.abs(newV-oldV).toFixed(2)}</span>`;
-  const isNewLow=hasOld&&oldV>lowV+0.005&&newV<=lowV+0.005;
+  const isNewLow=hasOld&&newV<lowV-0.005;
   const lowBit=!hasOld||lowV<=0
     ?''
     :(isNewLow?`<span class="bdg ggr-badge newlow">★ new low</span>`:`<span class="ggr-lowtext">low €${lowV.toFixed(2)}</span>`);
