@@ -1033,6 +1033,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 @keyframes ggPulse2{0%,100%{opacity:.5;transform:translateY(-50%) scale(.85)}50%{opacity:1;transform:translateY(-50%) scale(1.15)}}
 .hmi-theme{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-top:1px solid var(--bd)}
 .hmi-theme-label{font-size:.8rem;font-weight:500;color:var(--t2)}
+.hmi-version{text-align:center;padding:.4rem .75rem;border-top:1px solid var(--bd);font-size:.7rem;color:var(--t3)}
 
 /* ── MOBILE HEADER ── */
 @media(max-width:640px){

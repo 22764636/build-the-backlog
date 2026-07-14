@@ -8,6 +8,10 @@
 const SHEET_URL = (typeof window !== 'undefined' && window.BTB_SHEET_URL) || '';
 const SHEET_TOKEN = (typeof window !== 'undefined' && window.BTB_SHEET_TOKEN) || '';
 const GG_WORKER = (typeof window !== 'undefined' && window.BTB_GGDEALS_WORKER) || '';
+// Bump alongside sw.js's CACHE on every merge that touches app.js/index.html/
+// style.css — the pair is how a deploy can be visually confirmed live instead
+// of trusting a service worker to have actually picked up the new build.
+const APP_VERSION = '28';
 let ggPriceCache = {};
 // Appended to every Sheets request URL — the deployment URL ships in the
 // public bundle, so this shared-secret token is what actually gates access.
@@ -4319,6 +4323,8 @@ function doImport(){
   document.getElementById('dhExpBtn').addEventListener('click',dh(doExport));
   document.getElementById('dhImpBtn').addEventListener('click',dh(doImport));
 })();
+
+document.querySelectorAll('.app-version').forEach(el=>{el.textContent=`v${APP_VERSION}`;});
 
 
 // ── SHORTCUTS POPOVER ──
