@@ -11,8 +11,21 @@ const GG_WORKER = (typeof window !== 'undefined' && window.BTB_GGDEALS_WORKER) |
 // Bump alongside sw.js's CACHE on every merge that touches app.js/index.html/
 // style.css — the pair is how a deploy can be visually confirmed live instead
 // of trusting a service worker to have actually picked up the new build.
-const APP_VERSION = '28';
+const APP_VERSION = '29';
 let ggPriceCache = {};
+// Plain fetch() has no timeout — a stalled request (dead connection, Worker
+// cold-start, upstream throttling) leaves an await stuck forever with no way
+// for a sequential per-game check loop (Release Date Check, Price Lookup,
+// Live Prices) to notice and move on. This aborts and fails fast instead.
+async function fetchWithTimeout(url,ms=20000){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),ms);
+  try{
+    return await fetch(url,{signal:ctrl.signal});
+  }finally{
+    clearTimeout(t);
+  }
+}
 // Appended to every Sheets request URL — the deployment URL ships in the
 // public bundle, so this shared-secret token is what actually gates access.
 function _tok(){return SHEET_TOKEN?'&token='+encodeURIComponent(SHEET_TOKEN):''}
@@ -4509,7 +4522,7 @@ document.addEventListener('keydown',function(e){
       bubble.textContent=`${i+1}\n/${targets.length}`;
 
       try{
-        const res=await fetch(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
+        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
         if(!res.ok)throw new Error(`HTTP ${res.status}`);
         const json=await res.json();
         const entry=json[g.steamAppId];
@@ -4605,7 +4618,7 @@ document.addEventListener('keydown',function(e){
       if(_plcAborted)break;
       const g=targets[i];summary.textContent=`${i+1}/${targets.length} — ${g.title}`;
       try{
-        const res=await fetch(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
+        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
         if(!res.ok)throw new Error(`HTTP ${res.status}`);
         const json=await res.json();const entry=json[g.steamAppId];
         if(!entry||!entry.success||!entry.data){plcLog(`✗ ${g.title} — not found on Steam`,'plc-err');failed++;continue;}
@@ -5771,7 +5784,7 @@ async function runGGDealsFetch(resumeState){
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
-      const res=await fetch(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`);
+      const res=await fetchWithTimeout(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`,30000);
       if(!res.ok)throw new Error(`HTTP ${res.status}`);
       const json=await res.json();
       if(json.error)throw new Error(json.error);
