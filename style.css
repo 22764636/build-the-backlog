@@ -686,6 +686,9 @@ button{text-transform:none;letter-spacing:0}
 .ss-clear{background:none;border:none;color:var(--pink);font-size:.68rem;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0}
 .ss-clear:hover{text-decoration:underline}
+.ss-view-col{background:none;border:1px solid var(--bd2);color:var(--blue);font-size:.68rem;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem .6rem;border-radius:var(--r);transition:all .15s}
+.ss-view-col:hover{background:#02b3fc18;border-color:var(--blue)}
 .ss-empty{color:var(--t3);font-size:.85rem;padding:2rem 0;text-align:center}
 
 /* KPI row — stat tiles (label + big proportional-figure value), not the
@@ -1226,6 +1229,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 /* Section body */
 .fbar-sec-body{padding:.35rem .75rem .55rem}
 .fbar-section-always .fbar-sec-body{display:block!important}
+/* Sub-list label — two lists (Year/Month) sharing one accordion section */
+.fbar-sec-subhdr{font-family:'Rajdhani',sans-serif;font-size:.66rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:.5rem 0 .25rem}
+.fbar-sec-subhdr:first-child{margin-top:0}
 
 /* Toolbar row (search + logic + clear) */
 .fbar-sec-toolbar{display:flex;align-items:center;gap:.35rem;margin-bottom:.4rem;flex-wrap:wrap}
