@@ -431,26 +431,28 @@
 
       <div id="ssEmpty" class="ss-empty" style="display:none">No purchases match these filters.</div>
       <div class="ss-grid" id="ssGrid">
-        <div class="ss-card ss-card-wide" id="ssTrendCard">
-          <div class="ss-card-hdr">Spend over time</div>
-          <div class="ss-linewrap" id="ssMonthChart"></div>
-          <div class="ss-undated-note" id="ssUndatedNote" style="display:none"></div>
+        <div class="ss-card ss-card-wide" id="ssTrendCard" data-card="trend">
+          <div class="ss-card-hdr"><span>Spend over time</span><span class="ss-card-toggle">▾</span></div>
+          <div class="ss-card-body">
+            <div class="ss-linewrap" id="ssMonthChart"></div>
+            <div class="ss-undated-note" id="ssUndatedNote" style="display:none"></div>
+          </div>
         </div>
-        <div class="ss-card">
-          <div class="ss-card-hdr">Spend by platform</div>
-          <div class="ss-hbars" id="ssPlatChart"></div>
+        <div class="ss-card" data-card="platform">
+          <div class="ss-card-hdr"><span>Spend by platform</span><span class="ss-card-toggle">▾</span></div>
+          <div class="ss-card-body"><div class="ss-hbars" id="ssPlatChart"></div></div>
         </div>
-        <div class="ss-card">
-          <div class="ss-card-hdr">Spend by store</div>
-          <div class="ss-hbars" id="ssStoreChart"></div>
+        <div class="ss-card" data-card="store">
+          <div class="ss-card-hdr"><span>Spend by store</span><span class="ss-card-toggle">▾</span></div>
+          <div class="ss-card-body"><div class="ss-hbars" id="ssStoreChart"></div></div>
         </div>
-        <div class="ss-card">
-          <div class="ss-card-hdr">Spend by year</div>
-          <div class="ss-hbars" id="ssYearChart"></div>
+        <div class="ss-card" data-card="year">
+          <div class="ss-card-hdr"><span>Spend by year</span><span class="ss-card-toggle">▾</span></div>
+          <div class="ss-card-body"><div class="ss-hbars" id="ssYearChart"></div></div>
         </div>
-        <div class="ss-card">
-          <div class="ss-card-hdr">Spend by month</div>
-          <div class="ss-hbars" id="ssCalMonthChart"></div>
+        <div class="ss-card" data-card="month">
+          <div class="ss-card-hdr"><span>Spend by month</span><span class="ss-card-toggle">▾</span></div>
+          <div class="ss-card-body"><div class="ss-hbars" id="ssCalMonthChart"></div></div>
         </div>
       </div>
     </div>

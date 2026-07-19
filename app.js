@@ -4669,6 +4669,52 @@ document.addEventListener('keydown',function(e){
   const trendCard=document.getElementById('ssTrendCard');
   const undatedEl=document.getElementById('ssUndatedNote');
 
+  // Card collapse state — user overrides persist per card key; anything the
+  // user hasn't touched falls back to a live default, which is "expanded"
+  // for every card except Store on a mobile viewport (checked at open()
+  // time, not cached, so rotating the device changes what "default" means).
+  const SS_CARD_KEY='btb_ss_card_collapse';
+  function getSsCardOverrides(){
+    try{return JSON.parse(localStorage.getItem(SS_CARD_KEY))||{}}catch(e){return{}}
+  }
+  function setSsCardOverrides(o){localStorage.setItem(SS_CARD_KEY,JSON.stringify(o))}
+  function ssCardDefaultCollapsed(key){return key==='store'&&window.innerWidth<=640;}
+  function applyCardCollapse(){
+    const overrides=getSsCardOverrides();
+    gridEl.querySelectorAll('.ss-card[data-card]').forEach(card=>{
+      const key=card.dataset.card;
+      const body=card.querySelector('.ss-card-body');
+      if(!body)return;
+      const collapsed=key in overrides?overrides[key]:ssCardDefaultCollapsed(key);
+      card.classList.toggle('collapsed',collapsed);
+      body.style.maxHeight=collapsed?'0':'none';
+    });
+  }
+  function toggleCard(card){
+    const key=card.dataset.card;
+    const body=card.querySelector('.ss-card-body');
+    if(!body)return;
+    const collapsing=!card.classList.contains('collapsed');
+    if(collapsing){
+      body.style.maxHeight=body.scrollHeight+'px';
+      requestAnimationFrame(()=>{body.style.maxHeight='0';card.classList.add('collapsed');});
+    } else {
+      card.classList.remove('collapsed');
+      body.style.maxHeight=body.scrollHeight+'px';
+      body.addEventListener('transitionend',function te(){
+        if(!card.classList.contains('collapsed'))body.style.maxHeight='none';
+        body.removeEventListener('transitionend',te);
+      });
+    }
+    const overrides=getSsCardOverrides();
+    overrides[key]=collapsing;
+    setSsCardOverrides(overrides);
+  }
+  gridEl.querySelectorAll('.ss-card[data-card]').forEach(card=>{
+    const hdr=card.querySelector('.ss-card-hdr');
+    if(hdr)hdr.addEventListener('click',()=>toggleCard(card));
+  });
+
   // All four are Sets, toggled the same way on click — plain click, no
   // modifier key, works identically on desktop and mobile. Year/Month used
   // to be a single continuous from/to date range; that made multi-select
@@ -4961,6 +5007,7 @@ document.addEventListener('keydown',function(e){
     ov.classList.add('on');
     ov.style.display='flex';
     history.pushState({ssovOpen:true},'','');
+    applyCardCollapse();
     render();
   }
 
