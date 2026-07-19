@@ -208,6 +208,7 @@ function fetchMeta(force){
 loadMetaCache();
 
 const PLATFORM_ORDER=['Steam','Epic Games','GOG','Other PC','Nintendo','PS','Xbox'];
+const MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function syncLegacyFromPurchases(g){
   const p0=g.purchases&&g.purchases[0];
   g.cost=p0?p0.cost||'':'';
@@ -918,6 +919,12 @@ let cGenres=[],cTags=[],cStars=0;
 let fGenres=new Set(),fTags=new Set(),fPrios=new Set();
 let fGenreLogic='or',fTagLogic='or',fPrioMode='upto';
 let cfGenres=new Set(),cfGenreLogic='or',cfPlats=new Set(),cfPlatLogic='or',cfPlatClosed=false;
+// Store/Year/Month are always OR-within (a single purchase has exactly one
+// store and one date, so "AND" within a dimension can never match) and
+// compound together onto the SAME purchase entry — see collectionFiltered().
+// Month values are calendar-month abbreviations ('Jan'..'Dec'), matching
+// Spend Stats' "every February across every year" semantics.
+let cfStores=new Set(),cfYears=new Set(),cfMonths=new Set();
 
 // ══════════════════════════════════════════
 //  HELPERS
@@ -1176,6 +1183,19 @@ function collectionFiltered(){
       const baseMatch=cfPlatLogic==='and'?[...cfPlats].every(p=>owned.includes(p)):owned.some(p=>cfPlats.has(p));
       if(!baseMatch)return false;
       if(cfPlatClosed&&!owned.every(p=>cfPlats.has(p)))return false;
+    }
+    if(cfStores.size>0||cfYears.size>0||cfMonths.size>0){
+      // Store/Year/Month must all match on the SAME purchase — independent
+      // per-dimension checks would let "GOG" from one purchase and "March
+      // 2023" from an unrelated purchase of the same game both pass.
+      const match=gamePurchases(g).some(p=>{
+        if(cfStores.size>0&&!cfStores.has(p.store||''))return false;
+        const d=normaliseDate(p.purchaseDate);
+        if(cfYears.size>0&&!(d&&cfYears.has(d.slice(0,4))))return false;
+        if(cfMonths.size>0&&!(d&&cfMonths.has(MONTH_NAMES[parseInt(d.slice(5,7),10)-1])))return false;
+        return true;
+      });
+      if(!match)return false;
     }
     return true;
   });
@@ -4113,6 +4133,9 @@ function saveHash(){
     if(cfGenres.size){p.set('cg',[...cfGenres].join('|'));if(cfGenreLogic!=='or')p.set('cgl',cfGenreLogic);}
     if(cfPlayStatus.size)p.set('cps',[...cfPlayStatus].join('|'));
     if(cfPlats.size){p.set('cp',[...cfPlats].join('|'));if(cfPlatLogic!=='or')p.set('cpl',cfPlatLogic);if(cfPlatClosed)p.set('cpc','1');}
+    if(cfStores.size)p.set('cst',[...cfStores].join('|'));
+    if(cfYears.size)p.set('cy',[...cfYears].join('|'));
+    if(cfMonths.size)p.set('cm',[...cfMonths].join('|'));
     if(cfSteamCol.size){p.set('cc',[...cfSteamCol].join('|'));if(cfSteamColLogic!=='or')p.set('ccl',cfSteamColLogic);}
   } else {
     const ss=document.getElementById('sortSel');
@@ -4164,6 +4187,9 @@ function restoreFromHash(){
     // back-compat with links shared before the OR/AND + open/closed switch
     else if(p.has('cpm')){const m=p.get('cpm');cfPlatLogic=m==='all'?'and':'or';cfPlatClosed=m==='only';}
     else if(p.has('cpe')){cfPlatLogic='and';cfPlatClosed=true;}
+    if(p.has('cst'))cfStores=new Set(p.get('cst').split('|').filter(Boolean));
+    if(p.has('cy'))cfYears=new Set(p.get('cy').split('|').filter(Boolean));
+    if(p.has('cm'))cfMonths=new Set(p.get('cm').split('|').filter(Boolean));
     if(p.has('cc'))cfSteamCol=new Set(p.get('cc').split('|').filter(Boolean));
     if(p.has('ccl'))cfSteamColLogic=p.get('ccl');
     if(appMode==='collection')setAppMode('collection');
@@ -4669,6 +4695,52 @@ document.addEventListener('keydown',function(e){
   const trendCard=document.getElementById('ssTrendCard');
   const undatedEl=document.getElementById('ssUndatedNote');
 
+  // Card collapse state — user overrides persist per card key; anything the
+  // user hasn't touched falls back to a live default, which is "expanded"
+  // for every card except Store on a mobile viewport (checked at open()
+  // time, not cached, so rotating the device changes what "default" means).
+  const SS_CARD_KEY='btb_ss_card_collapse';
+  function getSsCardOverrides(){
+    try{return JSON.parse(localStorage.getItem(SS_CARD_KEY))||{}}catch(e){return{}}
+  }
+  function setSsCardOverrides(o){localStorage.setItem(SS_CARD_KEY,JSON.stringify(o))}
+  function ssCardDefaultCollapsed(key){return key==='store'&&window.innerWidth<=640;}
+  function applyCardCollapse(){
+    const overrides=getSsCardOverrides();
+    gridEl.querySelectorAll('.ss-card[data-card]').forEach(card=>{
+      const key=card.dataset.card;
+      const body=card.querySelector('.ss-card-body');
+      if(!body)return;
+      const collapsed=key in overrides?overrides[key]:ssCardDefaultCollapsed(key);
+      card.classList.toggle('collapsed',collapsed);
+      body.style.maxHeight=collapsed?'0':'none';
+    });
+  }
+  function toggleCard(card){
+    const key=card.dataset.card;
+    const body=card.querySelector('.ss-card-body');
+    if(!body)return;
+    const collapsing=!card.classList.contains('collapsed');
+    if(collapsing){
+      body.style.maxHeight=body.scrollHeight+'px';
+      requestAnimationFrame(()=>{body.style.maxHeight='0';card.classList.add('collapsed');});
+    } else {
+      card.classList.remove('collapsed');
+      body.style.maxHeight=body.scrollHeight+'px';
+      body.addEventListener('transitionend',function te(){
+        if(!card.classList.contains('collapsed'))body.style.maxHeight='none';
+        body.removeEventListener('transitionend',te);
+      });
+    }
+    const overrides=getSsCardOverrides();
+    overrides[key]=collapsing;
+    setSsCardOverrides(overrides);
+  }
+  gridEl.querySelectorAll('.ss-card[data-card]').forEach(card=>{
+    const hdr=card.querySelector('.ss-card-hdr');
+    if(hdr)hdr.addEventListener('click',()=>toggleCard(card));
+  });
+
   // All four are Sets, toggled the same way on click — plain click, no
   // modifier key, works identically on desktop and mobile. Year/Month used
   // to be a single continuous from/to date range; that made multi-select
@@ -4680,15 +4752,67 @@ document.addEventListener('keydown',function(e){
   let ssYears=new Set();
   let ssMonths=new Set(); // calendar month numbers 1-12
 
-  function _closeSs(){
+  // "View in Collection" replaces the Collection filters with whatever's
+  // currently selected here — but that replacement is only for the
+  // duration of this peek. The Collection filters that were active *before*
+  // the button was clicked are snapshotted once and restored the next time
+  // this dashboard is closed by any path other than the button itself
+  // (X, backdrop click, mobile back). Clicking the button again while
+  // already in that temporary state updates the preview without touching
+  // the original snapshot, so however many times it's used, one real close
+  // always gets you back to what you had.
+  let _ssColSnapshot=null;
+  function _snapshotCollectionFilters(){
+    return{
+      cfGenres:new Set(cfGenres),cfGenreLogic,
+      cfPlayStatus:new Set(cfPlayStatus),
+      cfPlats:new Set(cfPlats),cfPlatLogic,cfPlatClosed,
+      cfSteamCol:new Set(cfSteamCol),cfSteamColLogic,
+      cfStores:new Set(cfStores),cfYears:new Set(cfYears),cfMonths:new Set(cfMonths)
+    };
+  }
+  function _applyCollectionFilters(s){
+    cfGenres=s.cfGenres;cfGenreLogic=s.cfGenreLogic;
+    cfPlayStatus=s.cfPlayStatus;
+    cfPlats=s.cfPlats;cfPlatLogic=s.cfPlatLogic;cfPlatClosed=s.cfPlatClosed;
+    cfSteamCol=s.cfSteamCol;cfSteamColLogic=s.cfSteamColLogic;
+    cfStores=s.cfStores;cfYears=s.cfYears;cfMonths=s.cfMonths;
+  }
+  function _refreshCollectionFilterUi(){
+    if(appMode==='collection')renderCollection();
+    if(window.syncFbarBadges)window.syncFbarBadges();
+    if(window._fbarRefreshAll)window._fbarRefreshAll();
+    if(typeof saveHash==='function')saveHash();
+  }
+
+  function _closeSs(fromViewCollection){
     ov.classList.remove('on');
     ov.style.display='none';
     if(history.state&&history.state.ssovOpen)history.replaceState(null,'','');
+    if(!fromViewCollection&&_ssColSnapshot){
+      _applyCollectionFilters(_ssColSnapshot);
+      _ssColSnapshot=null;
+      _refreshCollectionFilterUi();
+    }
   }
   window._ssTryClose=function(){_closeSs();return true;};
   window._ssIsOpen=()=>ov.classList.contains('on');
-  closeBtn.onclick=_closeSs;
+  closeBtn.onclick=()=>_closeSs();
   ov.addEventListener('click',e=>{if(e.target===ov)_closeSs();});
+
+  const viewCollectionBtn=document.getElementById('ssViewCollection');
+  if(viewCollectionBtn)viewCollectionBtn.onclick=()=>{
+    if(!_ssColSnapshot)_ssColSnapshot=_snapshotCollectionFilters();
+    cfGenres=new Set();cfPlayStatus=new Set();cfSteamCol=new Set();
+    cfPlatLogic='or';cfPlatClosed=false;
+    cfPlats=new Set(ssPlats);
+    cfStores=new Set(ssStores);
+    cfYears=new Set(ssYears);
+    cfMonths=new Set([...ssMonths].map(m=>MONTH_NAMES[m-1]));
+    setAppMode('collection');
+    _refreshCollectionFilterUi();
+    _closeSs(true);
+  };
 
   // All money actually spent on owned games — one entry per platform purchase.
   function purchaseRecords(){
@@ -4730,8 +4854,7 @@ document.addEventListener('keydown',function(e){
 
   function monthLabel(ym){
     const[y,m]=ym.split('-');
-    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return`${names[parseInt(m,10)-1]} '${y.slice(2)}`;
+    return`${MONTH_NAMES[parseInt(m,10)-1]} '${y.slice(2)}`;
   }
 
   function renderKpis(recs){
@@ -4778,7 +4901,6 @@ document.addEventListener('keydown',function(e){
   // (which is per specific YYYY-MM instance, not per calendar position).
   // Clickable: toggles ssMonths, same as every other dimension.
   function renderCalMonthChart(recs){
-    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const byM={};
     recs.forEach(r=>{
       if(!r.date)return;
@@ -4787,7 +4909,7 @@ document.addEventListener('keydown',function(e){
       byM[m]=(byM[m]||0)+r.cost;
     });
     const rows=Object.keys(byM).map(Number).sort((a,b)=>a-b)
-      .map(m=>({key:String(m),label:names[m-1],val:byM[m],color:'var(--blue)',selected:ssMonths.has(m)}));
+      .map(m=>({key:String(m),label:MONTH_NAMES[m-1],val:byM[m],color:'var(--blue)',selected:ssMonths.has(m)}));
     renderHBars('ssCalMonthChart',rows,k=>{
       const m=parseInt(k,10);
       ssMonths.has(m)?ssMonths.delete(m):ssMonths.add(m);
@@ -4961,6 +5083,7 @@ document.addEventListener('keydown',function(e){
     ov.classList.add('on');
     ov.style.display='flex';
     history.pushState({ssovOpen:true},'','');
+    applyCardCollapse();
     render();
   }
 
@@ -6211,6 +6334,8 @@ function _closeAllFloating(){
   wireAccordion('fbar-cgenre-toggle','fbar-cgenre-body');
   wireAccordion('fbar-cplay-toggle','fbar-cplay-body');
   wireAccordion('fbar-cplat-toggle','fbar-cplat-body');
+  wireAccordion('fbar-cstore-toggle','fbar-cstore-body');
+  wireAccordion('fbar-cdate-toggle','fbar-cdate-body');
   wireAccordion('fbar-ccol-toggle','fbar-ccol-body');
 
   // ── Hotness tier chips ──
@@ -6440,6 +6565,51 @@ function _closeAllFloating(){
   }
   document.getElementById('fbar-cplat-clear').onclick=()=>{cfPlats=new Set();renderCollection();syncFbarBadges();refreshFbarCPlat();};
 
+  // ── Wire collection store ──
+  function refreshFbarCStore(){
+    renderGenreTagList(
+      document.getElementById('fbar-cstore-list'),
+      null,null,
+      ()=>cfStores,(s)=>{cfStores=s;},()=>'or',()=>{},
+      ()=>{const freq={};games.filter(g=>g.status==='bought').forEach(g=>gamePurchases(g).forEach(p=>{if(p.store)freq[p.store]=(freq[p.store]||0)+1}));return Object.keys(freq).sort().map(v=>({value:v,count:freq[v]}));},
+      renderCollection
+    );
+  }
+  document.getElementById('fbar-cstore-clear').onclick=()=>{cfStores=new Set();renderCollection();syncFbarBadges();refreshFbarCStore();};
+
+  // ── Wire collection purchase date (Year + Month, both OR-only, share one Clear) ──
+  function refreshFbarCDate(){
+    renderGenreTagList(
+      document.getElementById('fbar-cyear-list'),
+      null,null,
+      ()=>cfYears,(s)=>{cfYears=s;},()=>'or',()=>{},
+      ()=>{
+        const freq={};
+        games.filter(g=>g.status==='bought').forEach(g=>gamePurchases(g).forEach(p=>{
+          const d=normaliseDate(p.purchaseDate);
+          if(d)freq[d.slice(0,4)]=(freq[d.slice(0,4)]||0)+1;
+        }));
+        return Object.keys(freq).sort((a,b)=>b.localeCompare(a)).map(v=>({value:v,count:freq[v]}));
+      },
+      renderCollection
+    );
+    renderGenreTagList(
+      document.getElementById('fbar-cmonth-list'),
+      null,null,
+      ()=>cfMonths,(s)=>{cfMonths=s;},()=>'or',()=>{},
+      ()=>{
+        const freq={};
+        games.filter(g=>g.status==='bought').forEach(g=>gamePurchases(g).forEach(p=>{
+          const d=normaliseDate(p.purchaseDate);
+          if(d){const m=parseInt(d.slice(5,7),10);if(m)freq[MONTH_NAMES[m-1]]=(freq[MONTH_NAMES[m-1]]||0)+1;}
+        }));
+        return MONTH_NAMES.filter(n=>freq[n]).map(v=>({value:v,count:freq[v]}));
+      },
+      renderCollection
+    );
+  }
+  document.getElementById('fbar-cdate-clear').onclick=()=>{cfYears=new Set();cfMonths=new Set();renderCollection();syncFbarBadges();refreshFbarCDate();};
+
   // ── Wire collection steam collection ──
   function refreshFbarCCol(){
     renderGenreTagList(
@@ -6458,7 +6628,7 @@ function _closeAllFloating(){
   // ── Clear all ──
   document.getElementById('fbarClearAll').onclick=()=>{
     if(appMode==='collection'){
-      cfGenres=new Set();cfPlayStatus=new Set();cfPlats=new Set();cfSteamCol=new Set();
+      cfGenres=new Set();cfPlayStatus=new Set();cfPlats=new Set();cfStores=new Set();cfYears=new Set();cfMonths=new Set();cfSteamCol=new Set();
       renderCollection();
     } else {
       fGenres=new Set();fTags=new Set();fPrios=new Set();
@@ -6478,12 +6648,14 @@ function _closeAllFloating(){
     else if(toggleId==='fbar-cgenre-toggle')refreshFbarCGenre();
     else if(toggleId==='fbar-cplay-toggle')refreshFbarCPlay();
     else if(toggleId==='fbar-cplat-toggle')refreshFbarCPlat();
+    else if(toggleId==='fbar-cstore-toggle')refreshFbarCStore();
+    else if(toggleId==='fbar-cdate-toggle')refreshFbarCDate();
     else if(toggleId==='fbar-ccol-toggle')refreshFbarCCol();
   }
   function _fbarRefreshAll(){
     fbarUpdateSlider=()=>{};  // no-op: slider replaced by chips
     ['fbar-genre-toggle','fbar-tags-toggle','fbar-prio-toggle','fbar-hot-toggle',
-     'fbar-cgenre-toggle','fbar-cplay-toggle','fbar-cplat-toggle','fbar-ccol-toggle'].forEach(id=>{
+     'fbar-cgenre-toggle','fbar-cplay-toggle','fbar-cplat-toggle','fbar-cstore-toggle','fbar-cdate-toggle','fbar-ccol-toggle'].forEach(id=>{
       const btn=document.getElementById(id);
       if(btn&&btn.classList.contains('open'))_fbarRefreshSection(id);
     });
@@ -6502,13 +6674,15 @@ function _closeAllFloating(){
     sb('fbar-cgenre-badge',cfGenres.size);
     sb('fbar-cplay-badge',cfPlayStatus.size);
     sb('fbar-cplat-badge',cfPlats.size);
+    sb('fbar-cstore-badge',cfStores.size);
+    sb('fbar-cdate-badge',cfYears.size+cfMonths.size);
     sb('fbar-ccol-badge',cfSteamCol.size);
     const hotActive=(hrMinVal>0||hrMaxVal<100)?1:0;
     sb('fbar-hot-badge',hotActive);
     // Total badge
     let total;
     if(appMode==='collection'){
-      total=cfGenres.size+cfPlayStatus.size+cfPlats.size+cfSteamCol.size;
+      total=cfGenres.size+cfPlayStatus.size+cfPlats.size+cfStores.size+cfYears.size+cfMonths.size+cfSteamCol.size;
     } else {
       total=fGenres.size+fTags.size+fPrios.size+(hotActive?1:0);
     }
@@ -6534,6 +6708,9 @@ function _closeAllFloating(){
       [...cfGenres].forEach(v=>chips.push({label:'Genre',val:v,rm:()=>{cfGenres.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
       [...cfPlayStatus].forEach(v=>chips.push({label:'Status',val:v,rm:()=>{cfPlayStatus.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
       [...cfPlats].forEach(v=>chips.push({label:'Platform',val:v,rm:()=>{cfPlats.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
+      [...cfStores].forEach(v=>chips.push({label:'Store',val:v,rm:()=>{cfStores.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
+      [...cfYears].forEach(v=>chips.push({label:'Year',val:v,rm:()=>{cfYears.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
+      [...cfMonths].forEach(v=>chips.push({label:'Month',val:v,rm:()=>{cfMonths.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
       [...cfSteamCol].forEach(v=>chips.push({label:'Collection',val:v,rm:()=>{cfSteamCol.delete(v);renderCollection();syncFbarBadges();_fbarRefreshAll();}}));
     }
     if(!chips.length){el.innerHTML='';return;}

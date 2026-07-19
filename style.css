@@ -686,6 +686,9 @@ button{text-transform:none;letter-spacing:0}
 .ss-clear{background:none;border:none;color:var(--pink);font-size:.68rem;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem 0}
 .ss-clear:hover{text-decoration:underline}
+.ss-view-col{background:none;border:1px solid var(--bd2);color:var(--blue);font-size:.68rem;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:.35rem .6rem;border-radius:var(--r);transition:all .15s}
+.ss-view-col:hover{background:#02b3fc18;border-color:var(--blue)}
 .ss-empty{color:var(--t3);font-size:.85rem;padding:2rem 0;text-align:center}
 
 /* KPI row — stat tiles (label + big proportional-figure value), not the
@@ -695,12 +698,20 @@ button{text-transform:none;letter-spacing:0}
 .ss-kpi-label{font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:.3rem}
 .ss-kpi-val{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.6rem;color:var(--blue);line-height:1.1}
 
-/* Chart card grid */
+/* Chart card grid — each card header doubles as a collapse toggle (same
+   chevron convention as .sl/.sl-toggle: down when expanded, rotated -90deg
+   when collapsed). Body height animates via max-height, like .sb-body. */
 .ss-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
 .ss-card{background:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:1rem;min-width:0}
 .ss-card-wide{grid-column:1/-1}
 .ss-card-hdr{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.85rem;
-  color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.8rem}
+  color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.8rem;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  cursor:pointer;user-select:none;-webkit-user-select:none}
+.ss-card-toggle{font-size:.6rem;color:var(--t3);flex-shrink:0;transition:transform .2s;line-height:1}
+.ss-card.collapsed .ss-card-toggle{transform:rotate(-90deg)}
+.ss-card-body{overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1)}
+.ss-card.collapsed .ss-card-body{max-height:0!important}
 
 /* Horizontal bars — spend by platform/store/year/month. 4px rounded
    data-end at the free end only, square where the fill meets the
@@ -1218,6 +1229,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) s
 /* Section body */
 .fbar-sec-body{padding:.35rem .75rem .55rem}
 .fbar-section-always .fbar-sec-body{display:block!important}
+/* Sub-list label — two lists (Year/Month) sharing one accordion section */
+.fbar-sec-subhdr{font-family:'Rajdhani',sans-serif;font-size:.66rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:.5rem 0 .25rem}
+.fbar-sec-subhdr:first-child{margin-top:0}
 
 /* Toolbar row (search + logic + clear) */
 .fbar-sec-toolbar{display:flex;align-items:center;gap:.35rem;margin-bottom:.4rem;flex-wrap:wrap}
