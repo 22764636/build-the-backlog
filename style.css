@@ -248,6 +248,7 @@ button{text-transform:none;letter-spacing:0}
 .ggp-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--green);background:#0a1a0acc;border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
 .ggp-hist-low{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#ffd700;background:#1a140acc;border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
 .ggp-notrack{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:var(--muted);background:rgba(3,19,41,.6);border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
+.ggp-disc{font-weight:700;font-size:.56rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;color:#c4a0ff;background:#1c0f3acc;border-radius:4px;padding:2px 6px;white-space:nowrap;user-select:none;-webkit-user-select:none}
 .gg.lv .ggp-ov{display:none}
 /* side panel — Live Price section: same .ggp-* tags as the card overlay, plain row instead of an absolute-positioned strip */
 .pv-liveprice{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-height:1.1rem}
@@ -668,6 +669,7 @@ button{text-transform:none;letter-spacing:0}
 .ggr-badge.down{color:var(--green);background:#0a1a0acc}
 .ggr-badge.up{color:var(--magenta);background:#1a0a14cc}
 .ggr-badge.newlow{color:#ffd700;background:#1a140acc}
+.ggr-badge.disc{color:#c4a0ff;background:#1c0f3acc}
 .b-delisted{background:#cc6600;color:#fff;font-size:.56rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;line-height:1.4;pointer-events:none;white-space:nowrap;user-select:none;-webkit-user-select:none}
 
 /* SPEND STATS DASHBOARD — full-page overlay, same #calOv pattern */

@@ -11,8 +11,21 @@ const GG_WORKER = (typeof window !== 'undefined' && window.BTB_GGDEALS_WORKER) |
 // Bump alongside sw.js's CACHE on every merge that touches app.js/index.html/
 // style.css — the pair is how a deploy can be visually confirmed live instead
 // of trusting a service worker to have actually picked up the new build.
-const APP_VERSION = '28';
+const APP_VERSION = '29';
 let ggPriceCache = {};
+// Plain fetch() has no timeout — a stalled request (dead connection, Worker
+// cold-start, upstream throttling) leaves an await stuck forever with no way
+// for a sequential per-game check loop (Release Date Check, Price Lookup,
+// Live Prices) to notice and move on. This aborts and fails fast instead.
+async function fetchWithTimeout(url,ms=20000){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),ms);
+  try{
+    return await fetch(url,{signal:ctrl.signal});
+  }finally{
+    clearTimeout(t);
+  }
+}
 // Appended to every Sheets request URL — the deployment URL ships in the
 // public bundle, so this shared-secret token is what actually gates access.
 function _tok(){return SHEET_TOKEN?'&token='+encodeURIComponent(SHEET_TOKEN):''}
@@ -2504,17 +2517,27 @@ function openPanel(id){
     </div>`;
 
   // Live Price — see ggPriceTags() for eligibility/data rules; same badges
-  // as the wishlist card overlay. The chart below is just the current
-  // price's trend, so it lives in the same section instead of a separate
-  // one — showing the same number twice (badge row + chart's last point)
-  // read as two different facts otherwise. Chart is fetched async after
-  // the panel body is in the DOM (see renderPriceHistoryChart, called
-  // below); this just emits the placeholder it mounts into.
+  // as the wishlist card overlay, plus a discount-% badge per price (against
+  // g.price, the game's own tracked list price) that the card overlay skips
+  // to stay compact. The chart below is just the current price's trend, so
+  // it lives in the same section instead of a separate one — showing the
+  // same number twice (badge row + chart's last point) read as two
+  // different facts otherwise. Chart is fetched async after the panel body
+  // is in the DOM (see renderPriceHistoryChart, called below); this just
+  // emits the placeholder it mounts into.
   let _priceHistTracked=false;
   {
     const _tags=ggPriceTags(g);
     if(_tags){
-      const _row=_tags.notrack?`<span class="ggp-notrack">€ Non Tracked</span>`:`${_tags.retailStr}${_tags.badgeStr}${_tags.keysStr}`;
+      let _discRetail='',_discKey='';
+      if(!_tags.notrack){
+        const _gp=ggPriceCache[g.steamAppId];
+        const _pctR=ggDiscountPct(parseFloat(_gp&&_gp.retail),g.price);
+        const _pctK=ggDiscountPct(parseFloat(_gp&&_gp.keyshop),g.price);
+        _discRetail=_pctR!=null?`<span class="ggp-disc">-${_pctR}%</span>`:'';
+        _discKey=_pctK!=null?`<span class="ggp-disc">-${_pctK}%</span>`:'';
+      }
+      const _row=_tags.notrack?`<span class="ggp-notrack">€ Non Tracked</span>`:`${_tags.retailStr}${_discRetail}${_tags.badgeStr}${_tags.keysStr}${_discKey}`;
       _priceHistTracked=!_tags.notrack;
       const _chart=_priceHistTracked?`<div class="ph-chart" id="phChart"><div class="ph-empty">Loading…</div></div>`:'';
       b+=`<div class="ps"><div class="psl">${t('pLivePrice')}</div><div class="pv-liveprice">${_row}</div>${_chart}</div>`;
@@ -4509,7 +4532,7 @@ document.addEventListener('keydown',function(e){
       bubble.textContent=`${i+1}\n/${targets.length}`;
 
       try{
-        const res=await fetch(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
+        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
         if(!res.ok)throw new Error(`HTTP ${res.status}`);
         const json=await res.json();
         const entry=json[g.steamAppId];
@@ -4605,7 +4628,7 @@ document.addEventListener('keydown',function(e){
       if(_plcAborted)break;
       const g=targets[i];summary.textContent=`${i+1}/${targets.length} — ${g.title}`;
       try{
-        const res=await fetch(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
+        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
         if(!res.ok)throw new Error(`HTTP ${res.status}`);
         const json=await res.json();const entry=json[g.steamAppId];
         if(!entry||!entry.success||!entry.data){plcLog(`✗ ${g.title} — not found on Steam`,'plc-err');failed++;continue;}
@@ -5415,6 +5438,16 @@ function fmtTimeAgo(ts){
   return`${dt.getDate()} ${_months[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
+// % off the game's own tracked list price (g.price) — the same reference
+// used for the card's €X.XX price and spend stats, not GG.deals' own
+// "historical low". null when there's nothing to compare or the live price
+// isn't actually below list (a markup isn't a discount worth flagging).
+function ggDiscountPct(liveV,gamePrice){
+  const gp=parseFloat(gamePrice);
+  if(isNaN(liveV)||liveV<=0||isNaN(gp)||gp<=0)return null;
+  const pct=Math.round((1-liveV/gp)*100);
+  return pct>0?pct:null;
+}
 // One price field ("Retail"/"Key") inside a live-price result card: current
 // value, a delta badge vs. the price before this run, and either a "low
 // €X" caption or a "★ new low" badge — but only when this *fetch* is what
@@ -5422,7 +5455,7 @@ function fmtTimeAgo(ts){
 // simply sat at its all-time-low price for weeks isn't "new", it's just
 // low; without the newV<lowV check every settled game re-flags as a new
 // low on every single check, forever.
-function ggPriceStatHTML(label,newV,oldV,lowV){
+function ggPriceStatHTML(label,newV,oldV,lowV,gamePrice){
   if(isNaN(newV)||newV<=0){
     return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val ggr-na">—</span></div>`;
   }
@@ -5437,7 +5470,9 @@ function ggPriceStatHTML(label,newV,oldV,lowV){
   const lowBit=!hasOld||lowV<=0
     ?''
     :(isNewLow?`<span class="bdg ggr-badge newlow">★ new low</span>`:`<span class="ggr-lowtext">low €${lowV.toFixed(2)}</span>`);
-  return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val">${cur}</span>${deltaBadge}${lowBit}</div>`;
+  const discPct=ggDiscountPct(newV,gamePrice);
+  const discBadge=discPct!=null?`<span class="bdg ggr-badge disc">-${discPct}%</span>`:'';
+  return`<div class="ggr-price"><span class="ggr-price-lbl">${label}</span><span class="ggr-price-val">${cur}</span>${discBadge}${deltaBadge}${lowBit}</div>`;
 }
 // One result card — shared by the live in-progress grid and the
 // reconstructed "last results" idle view, so both look identical.
@@ -5453,8 +5488,8 @@ function ggPriceCardHTML(e){
   return`<div class="ggr-card ${cls}" data-appid="${esc(String(e.appid))}" tabindex="0">
     <button class="qb qr ggr-exclude" title="Exclude from Live Price checks" onclick="event.stopPropagation();_ggExcludeGame('${esc(String(e.appid))}')">${IC.close}</button>
     <div class="ggr-title">${esc(e.title)}</div>
-    ${ggPriceStatHTML('Retail',r,oldR,lowR)}
-    ${ggPriceStatHTML('Key',k,oldK,lowK)}
+    ${ggPriceStatHTML('Retail',r,oldR,lowR,e.price)}
+    ${ggPriceStatHTML('Key',k,oldK,lowK,e.price)}
   </div>`;
 }
 function ggPriceErrCardHTML(title,appid){
@@ -5671,12 +5706,15 @@ async function openGgFetchModalIdle(skipShow){
   rows=_ggSortRowsByHotness(rows);
   const latestTs=Math.max(...rows.map(r=>r.fetched_at||0));
   metaEl.textContent=`Last checked ${fmtTimeAgo(latestTs)} · ${rows.length} game${rows.length>1?'s':''}`;
-  gridEl.innerHTML=rows.map(r=>ggPriceCardHTML({
-    title:r.title,retail:r.retail,keyshop:r.keyshop,
-    oldRetail:r.prevRetail,oldKeyshop:r.prevKeyshop,
-    lowRetail:r.lowRetail,lowKeyshop:r.lowKeyshop,
-    appid:r.appid,
-  })).join('');
+  gridEl.innerHTML=rows.map(r=>{
+    const g=games.find(x=>String(x.steamAppId)===String(r.appid));
+    return ggPriceCardHTML({
+      title:r.title,retail:r.retail,keyshop:r.keyshop,
+      oldRetail:r.prevRetail,oldKeyshop:r.prevKeyshop,
+      lowRetail:r.lowRetail,lowKeyshop:r.lowKeyshop,
+      appid:r.appid,price:g?g.price:null,
+    });
+  }).join('');
   _ggShowFilterRow(true);
   _ggSetCardFilter('all');
 }
@@ -5771,7 +5809,7 @@ async function runGGDealsFetch(resumeState){
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
-      const res=await fetch(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`);
+      const res=await fetchWithTimeout(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`,30000);
       if(!res.ok)throw new Error(`HTTP ${res.status}`);
       const json=await res.json();
       if(json.error)throw new Error(json.error);
@@ -5799,7 +5837,7 @@ async function runGGDealsFetch(resumeState){
             title:g.title,retail:d.prices.currentRetail,keyshop:d.prices.currentKeyshops,
             oldRetail:before?before.retail:NaN,oldKeyshop:before?before.keyshop:NaN,
             lowRetail:before?before.lowRetail:0,lowKeyshop:before?before.lowKeyshop:0,
-            appid:g.steamAppId,
+            appid:g.steamAppId,price:g.price,
           }));
         }else{
           cardsHtml.push(ggPriceErrCardHTML(g.title,g.steamAppId));
