@@ -1162,11 +1162,15 @@ function collectionFiltered(){
   return games.filter(g=>{
     if(g.status!=='bought')return false;
     if(q&&!(g.title||'').toLowerCase().includes(q)&&!(g.steamAppId&&String(g.steamAppId)===q.replace(/\D/g,'')))return false;
-    if(cfPlayStatus.size>0&&!cfPlayStatus.has(g.playStatus||'Unplayed'))return false;
-    if(cfSteamCol.size>0){
-      const gc2=(g.steamCollection||[]).map(colLabel);
-      const colMatch=cfSteamColLogic==='and'?[...cfSteamCol].every(c=>gc2.includes(c)):[...cfSteamCol].some(c=>gc2.includes(c));
-      if(!colMatch)return false;
+    // DLCs don't track Play Status or Steam Collection, so these two filters
+    // simply don't apply to them — a DLC never gets excluded by either.
+    if(g.type!=='dlc'){
+      if(cfPlayStatus.size>0&&!cfPlayStatus.has(g.playStatus||'Unplayed'))return false;
+      if(cfSteamCol.size>0){
+        const gc2=(g.steamCollection||[]).map(colLabel);
+        const colMatch=cfSteamColLogic==='and'?[...cfSteamCol].every(c=>gc2.includes(c)):[...cfSteamCol].some(c=>gc2.includes(c));
+        if(!colMatch)return false;
+      }
     }
     if(cfGenres.size>0){
       const gg=g.genres&&g.genres.length?g.genres:(g.genre?[g.genre]:[]);
@@ -1594,7 +1598,7 @@ function colCardHTML(g){
   const gid_s=String(g.id);
   const ps=g.playStatus||'Unplayed';
   const psM=PS_META[ps]||{code:'UP',cls:'ps-UP'};
-  const psBadgeCard=`<span class="col-ps-badge ${psM.cls}">${psM.code}<span class="ps-tip">${esc(ps)}</span></span>`;
+  const psBadgeCard=g.type==='dlc'?'':`<span class="col-ps-badge ${psM.cls}">${psM.code}<span class="ps-tip">${esc(ps)}</span></span>`;
   const _purchases=gamePurchases(g);
   const _filtCostRaw=cfPlats.size>0?gameFilteredCost(g,cfPlats):gameTotalCost(g);
   const _filtCost=_filtCostRaw===null?null:_filtCostRaw;
@@ -1644,7 +1648,7 @@ function colRowHTML(g){
   const thumb=coverUrl
     ?`<img class="col-row-thumb" src="${esc(coverUrl)}" alt="" onerror="this.style.display='none'">`
     :`<div class="col-row-thumb-ph">🎮</div>`;
-  const tags=(g.steamCollection&&g.steamCollection.length)
+  const tags=(g.type!=='dlc'&&g.steamCollection&&g.steamCollection.length)
     ?g.steamCollection.slice(0,3).map(s=>`<span class="col-row-tag">${esc(colLabel(s))}</span>`).join('')
     :'';
   const ps=g.playStatus||'Unplayed';
@@ -1653,7 +1657,7 @@ function colRowHTML(g){
     ${thumb}
     <span class="col-row-title">${esc(g.title)}</span>
     <div class="col-row-tags">${tags}</div>
-    ${psBadgeHTML(ps)}
+    ${g.type==='dlc'?'':psBadgeHTML(ps)}
     <div class="swipe-hint-r">${IC.hintPlus}</div>
     <div class="swipe-hint-l">${IC.hintBack}</div>
   </div>`;
@@ -2233,7 +2237,7 @@ document.getElementById('preorderConfirmBtn').onclick=()=>{
   if(id)openCollectionModal(id);
 };
 
-let btcId=null,cBtcCol=[],btcAddPlatMode=false,btcSelPlat='Steam';
+let btcId=null,cBtcCol=[],btcAddPlatMode=false,btcSelPlat='Steam',btcIsDlc=false;
 
 const STEAM_COLLECTIONS=[
   '001_TO TRY NEXT','002A_STARTED',"002B_DOESN'T FINISH",'002C_ROGUELIKE',
@@ -2262,7 +2266,7 @@ function _btcSelectPlat(plat){
     pill.style.borderColor=active?'transparent':'';
   });
   const colSec=document.getElementById('btcColSection');
-  if(colSec)colSec.style.display=plat==='Steam'?'':'none';
+  if(colSec)colSec.style.display=(plat==='Steam'&&!btcIsDlc)?'':'none';
   const bsi=document.getElementById('btcStoreInput');if(bsi)bsi.value='';
   document.getElementById('btcStore').value='';
   const bsd=document.getElementById('btcStoreDd');if(bsd)bsd.classList.remove('on');
@@ -2270,6 +2274,9 @@ function _btcSelectPlat(plat){
 function _openBtcModal(id,addPlatMode){
   btcId=id;cBtcCol=[];btcAddPlatMode=addPlatMode;
   const g=games.find(x=>x.id===id);
+  btcIsDlc=!!(g&&g.type==='dlc');
+  const psRow=document.getElementById('btcPlayStatusRow');
+  if(psRow)psRow.style.display=btcIsDlc?'none':'';
   document.getElementById('btcTitle').textContent=g?g.title:'';
   document.getElementById('btcModalTitle').textContent=addPlatMode?'Add Platform':'Move to Collection';
   document.getElementById('btcConfirm').textContent=addPlatMode?'Save Platform':'Add to Collection';
@@ -2483,12 +2490,13 @@ function _buildPlatTabContent(g,plat){
 
   const psSpan=`<span class="col-ps-badge ${psM.cls}">${psM.code} · ${esc(ps)}</span>`;
 
-  const twoCol=isSteam
+  // DLCs don't track Play Status or Steam Collection — purchase info only.
+  const twoCol=g.type==='dlc'?'':(isSteam
     ?`<div class="coll-2col">
         <div class="coll-2col-cell"><div class="purch-lbl">Status</div>${psSpan}</div>
         <div class="coll-2col-cell coll-chips-row"><div class="purch-lbl" style="width:100%;text-align:center">Collection</div>${(p.steamCollection||[]).map(s=>`<span class="cich-ro">${esc(colLabel(s))}</span>`).join('')||'<span style="color:var(--t3);font-size:.75rem">—</span>'}</div>
       </div>`
-    :`<div class="coll-play-row"><div><div class="purch-lbl" style="text-align:center;margin-bottom:.25rem">Status</div>${psSpan}</div></div>`;
+    :`<div class="coll-play-row"><div><div class="purch-lbl" style="text-align:center;margin-bottom:.25rem">Status</div>${psSpan}</div></div>`);
 
   return`${purchaseSection}${twoCol}`;
 }
@@ -3522,6 +3530,16 @@ function setTbaState(on){
 document.getElementById('tbaBtn').addEventListener('click',()=>setTbaState(true));
 document.getElementById('tbaBtnOff').addEventListener('click',()=>setTbaState(false));
 
+// DLCs don't track Play Status or Steam Collection — hides both from the
+// collection fields whenever Type is DLC, on top of Steam Collection's
+// existing platform-based visibility.
+function _syncModalColDlcVisibility(){
+  const isDlc=document.getElementById('fType').value==='dlc';
+  const psRow=document.getElementById('fColPlayStatusRow');
+  if(psRow)psRow.style.display=isDlc?'none':'';
+  const stCol=document.getElementById('fColSteamSection');
+  if(stCol)stCol.style.display=(_modalColPlat==='Steam'&&!isDlc)?'':'none';
+}
 function setGameType(v){
   document.getElementById('fType').value=v;
   document.getElementById('fTypeGame').classList.toggle('on',v!=='dlc');
@@ -3537,6 +3555,7 @@ function setGameType(v){
     if(parSearch){parSearch.disabled=true;parSearch.value='';}
     if(parHidden)parHidden.value='';
   }
+  _syncModalColDlcVisibility();
 }
 document.getElementById('fTypeGame').onclick=()=>setGameType('game');
 document.getElementById('fTypeDlc').onclick=()=>setGameType('dlc');
@@ -3720,7 +3739,7 @@ function openAddCollection(){
     _modalColPlat='Steam';_renderModalColPlatPills();
     const fcd=document.getElementById('fColDate');
     if(fcd){const n=new Date();fcd.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`}
-    const stCol=document.getElementById('fColSteamSection');if(stCol)stCol.style.display='';
+    _syncModalColDlcVisibility();
   }
   const swRow=document.getElementById('steamWishlistRow');if(swRow)swRow.style.display='none';
   _modalAddType='collection';
@@ -3741,7 +3760,7 @@ function _renderModalColPlatPills(){
 }
 function _setModalColPlat(plat){
   _modalColPlat=plat;_renderModalColPlatPills();
-  const stCol=document.getElementById('fColSteamSection');if(stCol)stCol.style.display=plat==='Steam'?'':'none';
+  _syncModalColDlcVisibility();
   const lbl=document.getElementById('fColStoreInput');
   const inp=document.getElementById('fColStore');
   if(editId){
@@ -3840,8 +3859,7 @@ function openEdit(id){
     colSec.style.display='block';
     _modalColPlat=gamePurchases(g)[0]?.platform||'Steam';
     _renderModalColPlatPills();
-    const stCol=document.getElementById('fColSteamSection');
-    if(stCol)stCol.style.display=_modalColPlat==='Steam'?'':'none';
+    _syncModalColDlcVisibility();
     const p0=gamePurchases(g)[0]||{};
     const storeVal=p0.store||g.store||'';
     const fcs=document.getElementById('fColStore');if(fcs)fcs.value=storeVal;
@@ -6502,7 +6520,7 @@ function _closeAllFloating(){
     const list=document.getElementById('fbar-cplay-list');if(!list)return;
     const order=['Unplayed','In Progress','Completed','Superseded','Unfinishable','Played on Different Platform','Will Never Complete','Will Never Play'];
     const freq={};
-    games.filter(g=>g.status==='bought').forEach(g=>{const s=g.playStatus||'Unplayed';freq[s]=(freq[s]||0)+1;});
+    games.filter(g=>g.status==='bought'&&g.type!=='dlc').forEach(g=>{const s=g.playStatus||'Unplayed';freq[s]=(freq[s]||0)+1;});
     const opts=order.filter(s=>freq[s]>0);
     if(!opts.length){list.innerHTML=`<div class="fbar-opt" style="color:var(--t3);cursor:default">No options</div>`;return;}
     list.innerHTML=`<div class="fbar-pills">${opts.map(v=>{
@@ -6617,7 +6635,7 @@ function _closeAllFloating(){
       document.getElementById('fbar-ccol-search'),
       document.getElementById('fbar-ccol-logic'),
       ()=>cfSteamCol,(s)=>{cfSteamCol=s;},()=>cfSteamColLogic,(l)=>{cfSteamColLogic=l;},
-      ()=>{const freq={};games.filter(g=>g.status==='bought').forEach(g=>(g.steamCollection||[]).forEach(c=>{if(c)freq[colLabel(c)]=(freq[colLabel(c)]||0)+1}));return Object.keys(freq).sort().map(v=>({value:v,count:freq[v]}));},
+      ()=>{const freq={};games.filter(g=>g.status==='bought'&&g.type!=='dlc').forEach(g=>(g.steamCollection||[]).forEach(c=>{if(c)freq[colLabel(c)]=(freq[colLabel(c)]||0)+1}));return Object.keys(freq).sort().map(v=>({value:v,count:freq[v]}));},
       renderCollection
     );
   }
