@@ -3385,7 +3385,7 @@ async function steamAutoFill(appId,{fromUrl=false}={}){
   if(!appId)return;
   steamStatus('Fetching from Steam…','loading');
   try{
-    const res=await fetch(`${STEAM_WORKER}/?appid=${appId}`);
+    const res=await fetch(`${STEAM_WORKER}/?appid=${appId}&_=${Date.now()}`);
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     const json=await res.json();
     const entry=json[appId];
@@ -3586,7 +3586,7 @@ document.getElementById('fStore').addEventListener('blur',()=>{
 const _searchStoreDd=debounce(async(term)=>{
   const dd=document.getElementById('storeDd');
   try{
-    const res=await fetch(`${STEAM_WORKER}/?search=${encodeURIComponent(term)}`);
+    const res=await fetch(`${STEAM_WORKER}/?search=${encodeURIComponent(term)}&_=${Date.now()}`);
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     const json=await res.json();
     const items=(json.items||[]).filter(it=>it.name).slice(0,8);
@@ -4576,7 +4576,7 @@ document.addEventListener('keydown',function(e){
       bubble.textContent=`${i+1}\n/${targets.length}`;
 
       try{
-        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
+        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}&_=${Date.now()}`);
         if(!res.ok)throw new Error(`HTTP ${res.status}`);
         const json=await res.json();
         const entry=json[g.steamAppId];
@@ -4672,7 +4672,7 @@ document.addEventListener('keydown',function(e){
       if(_plcAborted)break;
       const g=targets[i];summary.textContent=`${i+1}/${targets.length} — ${g.title}`;
       try{
-        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}`);
+        const res=await fetchWithTimeout(`${STEAM_WORKER}/?appid=${g.steamAppId}&_=${Date.now()}`);
         if(!res.ok)throw new Error(`HTTP ${res.status}`);
         const json=await res.json();const entry=json[g.steamAppId];
         if(!entry||!entry.success||!entry.data){plcLog(`✗ ${g.title} — not found on Steam`,'plc-err');failed++;continue;}
@@ -5950,7 +5950,7 @@ async function runGGDealsFetch(resumeState){
     setProgress(`Fetching batch ${b+1} of ${batches.length}…`);
     try{
       const ids=batch.map(g=>g.steamAppId).join(',');
-      const res=await fetchWithTimeout(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it`,30000);
+      const res=await fetchWithTimeout(`${GG_WORKER}?ids=${encodeURIComponent(ids)}&region=it&_=${Date.now()}`,30000);
       if(!res.ok)throw new Error(`HTTP ${res.status}`);
       const json=await res.json();
       if(json.error)throw new Error(json.error);
