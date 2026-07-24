@@ -4454,7 +4454,7 @@ document.addEventListener('keydown',function(e){
 (function(){
   const ov=document.getElementById('rdcov');
   const summary=document.getElementById('rdcSummary');
-  const log=document.getElementById('rdcLog');
+  const grid=document.getElementById('rdcGrid');
   const mainView=document.getElementById('rdcMain');
   const mainBar=document.getElementById('rdcMainBar');
   const confirmBar=document.getElementById('rdcConfirmBar');
@@ -4515,13 +4515,45 @@ document.addEventListener('keydown',function(e){
   window._rdcTryClose=_rdcTryClose;
   window._rdcIsOpen=()=>ov.classList.contains('on')||_rdcHidden;
 
-  function rdcLog(msg,cls){
-    const d=document.createElement('div');
-    d.className=cls||'';
-    d.textContent=msg;
-    log.appendChild(d);
-    log.scrollTop=log.scrollHeight;
+  // One result card — same .ggr-card component and colour convention as the
+  // Live Prices grid: lime border for "changed", cyan for "confirmed same",
+  // pink for "couldn't check". Clickable straight through to the side panel,
+  // same delegated click/keydown handling as #ggFetchGrid.
+  function rdcCardHTML(e){
+    return`<div class="ggr-card ${e.updated?'ok':'skip'}" data-appid="${esc(String(e.appid))}" tabindex="0">
+      <div class="ggr-title">${esc(e.title)}</div>
+      <div class="ggr-price">
+        <span class="ggr-price-lbl">Date</span>
+        <span class="ggr-price-val">${esc(e.newRd||'(empty)')}</span>
+        ${e.updated?'':'<span class="bdg ggr-badge flat">=</span>'}
+      </div>
+      ${e.updated?`<div class="ggr-lowtext">was ${esc(e.oldRd||'(empty)')}</div>`:''}
+    </div>`;
   }
+  function rdcErrCardHTML(title,appid){
+    return`<div class="ggr-card err" data-appid="${esc(String(appid))}" tabindex="0">
+      <div class="ggr-title">${esc(title)}</div>
+      <div class="ggr-errline">No Steam data</div>
+    </div>`;
+  }
+  function _rdcGoToGame(appid){
+    const g=games.find(x=>String(x.steamAppId)===String(appid));
+    if(!g)return;
+    if(!_rdcRunning)bubble.textContent='Release\nDate';
+    _hideRdc();
+    openPanel(g.id);
+  }
+  grid.addEventListener('click',e=>{
+    const card=e.target.closest('.ggr-card[data-appid]');
+    if(card)_rdcGoToGame(card.dataset.appid);
+  });
+  grid.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    const card=e.target.closest('.ggr-card[data-appid]');
+    if(!card)return;
+    e.preventDefault();
+    _rdcGoToGame(card.dataset.appid);
+  });
 
   // Parse a Steam release_date object into releaseDate (ISO date or display text)
   function parseSteamDate(relObj){
@@ -4557,7 +4589,7 @@ document.addEventListener('keydown',function(e){
 
     ov.classList.add('on');
     history.pushState({rdcovOpen:true},'','');
-    log.innerHTML='';
+    grid.innerHTML='';
     summary.textContent=resuming
       ?`Resuming — ${doneSet.size} already checked, ${targets.length} left…`
       :`Checking ${targets.length} game${targets.length>1?'s':''}…`;
@@ -4581,7 +4613,7 @@ document.addEventListener('keydown',function(e){
         const json=await res.json();
         const entry=json[g.steamAppId];
         if(!entry||!entry.success||!entry.data){
-          rdcLog(`✗ ${g.title} — no Steam data`,'rdc-err');
+          grid.insertAdjacentHTML('beforeend',rdcErrCardHTML(g.title,g.steamAppId));
           failed++;continue;
         }
 
@@ -4591,14 +4623,14 @@ document.addEventListener('keydown',function(e){
         if(newRd!==oldRd){
           const gg=games.find(x=>x.id===g.id);
           if(gg){gg.releaseDate=newRd;save(gg.id);}
-          rdcLog(`✔ ${g.title}  ${oldRd||'(empty)'} → ${newRd||'(empty)'}`, 'rdc-ok');
+          grid.insertAdjacentHTML('beforeend',rdcCardHTML({title:g.title,appid:g.steamAppId,oldRd,newRd,updated:true}));
           updated++;
         }else{
-          rdcLog(`— ${g.title}  ${oldRd||'(empty)'}`, 'rdc-skip');
+          grid.insertAdjacentHTML('beforeend',rdcCardHTML({title:g.title,appid:g.steamAppId,oldRd,newRd,updated:false}));
           unchanged++;
         }
       }catch(err){
-        rdcLog(`✗ ${g.title} — ${err.message}`,'rdc-err');
+        grid.insertAdjacentHTML('beforeend',rdcErrCardHTML(g.title,g.steamAppId));
         failed++;
       }
 
